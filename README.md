@@ -12,7 +12,7 @@ Plataforma de atendimento ao cliente da Mobílli Rentals, baseada no [Chatwoot](
 GitHub (develop)
     └── GitHub Actions (build & deploy)
             ├── Build: docker/Dockerfile → ghcr.io/mobillirentals/chatwoot:latest
-            └── Deploy: SSH → Azure VM (20.206.91.136)
+            └── Deploy: SSH → Azure VM
                             └── Docker Compose
                                     ├── rails       (API + Dashboard)
                                     ├── sidekiq     (jobs em background)
@@ -76,8 +76,10 @@ terraform apply    # aplicar mudanças
 ## Acesso à VM
 
 ```bash
-ssh chatwoot@20.206.91.136
+ssh chatwoot@<IP_DA_VM>
 ```
+
+> O IP e demais detalhes de acesso estão no `terraform/terraform.tfstate` (local, não versionado).
 
 Arquivos em `/opt/chatwoot/`:
 - `.env.production` — variáveis de ambiente (não versionado)
