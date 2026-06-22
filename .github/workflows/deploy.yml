@@ -51,8 +51,8 @@ jobs:
           script: |
             echo "$GHCR_TOKEN" | docker login ghcr.io -u mobillirentals --password-stdin
             cd /opt/chatwoot
-            docker compose -f docker-compose.production.yml pull
-            docker compose -f docker-compose.production.yml up -d --remove-orphans
+            docker compose --env-file .env.production -f docker-compose.production.yml pull
+            docker compose --env-file .env.production -f docker-compose.production.yml up -d --remove-orphans
             docker image prune -f
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
