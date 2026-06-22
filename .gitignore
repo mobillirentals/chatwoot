@@ -29,6 +29,15 @@ master.key
 
 # Ignore env files
 .env
+.env.production
+.env.staging
+
+# Terraform — credenciais e estado local
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
 
 public/uploads
 public/packs*

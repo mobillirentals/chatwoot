@@ -1,0 +1,69 @@
+#cloud-config
+# Bootstrap da VM Chatwoot — executado uma vez na primeira inicialização
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - git
+  - htop
+  - ufw
+  - certbot
+  - python3-certbot-nginx
+
+runcmd:
+  # ── Docker ─────────────────────────────────────────────────────────
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ${admin_username}
+  - systemctl enable docker
+  - systemctl start docker
+
+  # ── Diretórios da aplicação ─────────────────────────────────────────
+  - mkdir -p /opt/chatwoot/nginx
+  - mkdir -p /opt/chatwoot/scripts
+  - chown -R ${admin_username}:${admin_username} /opt/chatwoot
+
+  # ── Certbot: script de inicialização ───────────────────────────────
+  - |
+    cat > /opt/chatwoot/scripts/certbot-init.sh << 'CERTBOT'
+    #!/bin/bash
+    set -e
+    certbot certonly \
+      --standalone \
+      --non-interactive \
+      --agree-tos \
+      --email ${letsencrypt_email} \
+      -d ${domain}
+    echo "✅ Certificado emitido para ${domain}"
+    echo "   Caminho: /etc/letsencrypt/live/${domain}/"
+    CERTBOT
+  - chmod +x /opt/chatwoot/scripts/certbot-init.sh
+
+  # ── Renovação automática do certificado ────────────────────────────
+  - |
+    echo "0 3 * * * root certbot renew --quiet --post-hook 'docker compose -f /opt/chatwoot/docker-compose.production.yaml restart nginx'" \
+      > /etc/cron.d/certbot-renew
+  - chmod 644 /etc/cron.d/certbot-renew
+
+  # ── UFW (firewall) ─────────────────────────────────────────────────
+  - ufw allow OpenSSH
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+
+  # ── Swap (evita OOM em VMs com pouca RAM) ──────────────────────────
+  - fallocate -l 2G /swapfile
+  - chmod 600 /swapfile
+  - mkswap /swapfile
+  - swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+final_message: |
+  ✅ Bootstrap concluído em $UPTIME segundos.
+  Docker instalado, UFW ativo, diretório /opt/chatwoot pronto.
+  Próximo passo: copiar docker-compose.production.yaml e .env.production para /opt/chatwoot/

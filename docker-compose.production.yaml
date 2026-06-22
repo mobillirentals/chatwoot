@@ -1,16 +1,16 @@
-version: '3'
-
 services:
+  # ── App (Rails + Sidekiq) ────────────────────────────────────────────
   base: &base
     image: chatwoot/chatwoot:latest
-    env_file: .env ## Change this file for customized env variables
+    env_file: .env.production
     volumes:
       - storage_data:/app/storage
+    restart: "no"
 
   rails:
     <<: *base
     depends_on:
-      - postgres
+      - chatwoot-db
       - redis
     ports:
       - '127.0.0.1:3000:3000'
@@ -20,44 +20,76 @@ services:
       - INSTALLATION_ENV=docker
     entrypoint: docker/entrypoints/rails.sh
     command: ['bundle', 'exec', 'rails', 's', '-p', '3000', '-b', '0.0.0.0']
-    restart: always
 
   sidekiq:
     <<: *base
     depends_on:
-      - postgres
+      - chatwoot-db
       - redis
     environment:
       - NODE_ENV=production
       - RAILS_ENV=production
       - INSTALLATION_ENV=docker
     command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
-    restart: always
 
-  postgres:
+  # ── Banco de Dados ───────────────────────────────────────────────────
+  chatwoot-db:
     image: pgvector/pgvector:pg16
-    restart: always
+    restart: unless-stopped
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=chatwoot
-      - POSTGRES_USER=postgres
-      # Please provide your own password.
-      - POSTGRES_PASSWORD=
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-chatwoot_production}
 
+  # ── Redis ─────────────────────────────────────────────────────────────
   redis:
-    image: redis:alpine
-    restart: always
-    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
-    env_file: .env
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    env_file: .env.production
     volumes:
       - redis_data:/data
     ports:
       - '127.0.0.1:6379:6379'
 
+  # ── Nginx (HTTPS / reverse proxy) ────────────────────────────────────
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    depends_on:
+      - rails
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/chatwoot.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - nginx_logs:/var/log/nginx
+
+  # ── Bot de Atendimento ───────────────────────────────────────────────
+  # Descomente após criar o Agent Bot no painel e preencher BOT_TOKEN no .env.production
+  # chatwoot-bot:
+  #   image: node:20-alpine
+  #   working_dir: /app
+  #   command: ["node", "server.js"]
+  #   volumes:
+  #     - ./chatwoot-bot:/app:delegated
+  #   environment:
+  #     - CHATWOOT_BASE_URL=http://rails:3000
+  #     - BOT_TOKEN=${BOT_TOKEN}
+  #     - ACCOUNT_ID=${ACCOUNT_ID}
+  #     - PORT=3001
+  #   depends_on:
+  #     - rails
+  #   restart: unless-stopped
+
 volumes:
   storage_data:
   postgres_data:
   redis_data:
+  nginx_logs:

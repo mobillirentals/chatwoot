@@ -73,6 +73,7 @@ services:
       - packs:/app/public/packs
       - cache:/app/tmp/cache
       - bundle:/usr/local/bundle
+      - pnpm_store:/root/.local/share/pnpm
     ports:
       - "3036:3036" # Vite dev server
     environment:
@@ -86,13 +87,14 @@ services:
     image: pgvector/pgvector:pg16
     restart: always
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres:/data/postgres
     environment:
       - POSTGRES_DB=chatwoot
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=
+      - POSTGRES_HOST_AUTH_METHOD=trust
 
   redis:
     image: redis:alpine
@@ -117,3 +119,4 @@ volumes:
   node_modules:
   cache:
   bundle:
+  pnpm_store:

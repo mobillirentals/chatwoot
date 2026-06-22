@@ -1,0 +1,28 @@
+# Copie este arquivo para terraform.tfvars e preencha os valores reais.
+# NUNCA faça commit de terraform.tfvars (já está no .gitignore).
+
+# Portal Azure → Assinaturas → ID da Assinatura
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Região — brazilsouth é São Paulo
+location = "brazilsouth"
+
+# Tamanho da VM (Standard_D2s_v3 = 2vCPU/8GB — produção)
+vm_size = "Standard_D2s_v3"
+
+# Disco do sistema operacional em GB
+os_disk_size_gb = 64
+
+# Usuário SSH da VM
+admin_username = "chatwoot"
+
+# Cole o conteúdo da sua chave pública SSH:
+#   cat ~/.ssh/id_rsa.pub   (Linux/Mac)
+#   type %USERPROFILE%\.ssh\id_rsa.pub   (Windows)
+ssh_public_key = "ssh-rsa AAAA..."
+
+# Domínio final do Chatwoot
+domain = "chat.mobillirentals.com.br"
+
+# E-mail para o Let's Encrypt
+letsencrypt_email = "ti@mobillirentals.com.br"
