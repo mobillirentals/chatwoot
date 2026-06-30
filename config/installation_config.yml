@@ -179,7 +179,30 @@
   display_title: 'Azure App Secret'
   locked: false
   type: secret
-# End of Microsoft Email Channel Config
+# MARK: Microsoft SSO Config
+- name: AZURE_CLIENT_ID
+  display_title: 'Azure SSO Client ID'
+  value:
+  locked: false
+  description: 'Azure App Registration Client ID for SSO login. Requires app restart to apply.'
+- name: AZURE_CLIENT_SECRET
+  display_title: 'Azure SSO Client Secret'
+  value:
+  locked: false
+  type: secret
+  description: 'Azure App Registration Client Secret for SSO login. Requires app restart to apply.'
+- name: AZURE_TENANT_ID
+  display_title: 'Azure Tenant ID'
+  value: common
+  locked: false
+  description: 'Azure AD Tenant ID. Use "common" for multi-tenant apps. Requires app restart to apply.'
+- name: ENABLE_MICROSOFT_SSO_LOGIN
+  display_title: 'Enable Microsoft SSO login'
+  value: true
+  locked: false
+  description: 'Show the Microsoft SSO button on the login page when credentials are configured'
+  type: boolean
+# End of Microsoft SSO Config
 
 # MARK: Captain Config
 - name: CAPTAIN_OPEN_AI_API_KEY
@@ -494,6 +517,15 @@
   description: 'Show Google OAuth as a login option when credentials are configured'
   type: boolean
 ## ------ End of Configs added for Google OAuth ------ ##
+
+## ------ Configs added for Email Login ------ ##
+- name: ENABLE_EMAIL_LOGIN
+  display_title: 'Enable Email/Password login'
+  value: true
+  locked: false
+  description: 'Show the email and password form on the login page. Disable to enforce SSO-only login.'
+  type: boolean
+## ------ End of Configs added for Email Login ------ ##
 
 ## ------ Configs added for SAML SSO ------ ##
 - name: ENABLE_SAML_SSO_LOGIN
