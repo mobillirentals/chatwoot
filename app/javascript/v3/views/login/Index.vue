@@ -15,6 +15,7 @@ import { SESSION_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import SimpleDivider from '../../components/Divider/SimpleDivider.vue';
 import FormInput from '../../components/Form/Input.vue';
 import GoogleOAuthButton from '../../components/GoogleOauth/Button.vue';
+import MicrosoftOAuthButton from '../../components/MicrosoftOauth/Button.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -35,6 +36,7 @@ export default {
   components: {
     FormInput,
     GoogleOAuthButton,
+    MicrosoftOAuthButton,
     Spinner,
     NextButton,
     SimpleDivider,
@@ -100,6 +102,15 @@ export default {
         Boolean(window.chatwootConfig.googleOAuthClientId)
       );
     },
+    showMicrosoftOAuth() {
+      return (
+        this.allowedLoginMethods.includes('entra_id') &&
+        Boolean(window.chatwootConfig.azureClientId)
+      );
+    },
+    showEmailLogin() {
+      return window.chatwootConfig.emailLoginEnabled !== 'false';
+    },
     showSignupLink() {
       return window.chatwootConfig.signupEnabled === 'true';
     },
@@ -110,6 +121,12 @@ export default {
   created() {
     if (this.ssoAuthToken) {
       this.submitLogin();
+    }
+    if (this.$route?.query?.sso_activated) {
+      useAlert(this.$t('LOGIN.SSO.ACCOUNT_ACTIVATED'));
+      this.$router.replace({
+        query: { ...this.$route.query, sso_activated: undefined },
+      });
     }
     if (this.authError) {
       const messageKey = ERROR_MESSAGES[this.authError] ?? 'LOGIN.API.UNAUTH';
@@ -344,29 +361,11 @@ export default {
       }"
     >
       <div v-if="!email">
-        <div class="flex flex-col gap-4">
-          <GoogleOAuthButton v-if="showGoogleOAuth" />
-          <div v-if="showSamlLogin" class="text-center">
-            <router-link
-              to="/app/login/sso"
-              class="inline-flex justify-center w-full px-4 py-3 items-center bg-n-background dark:bg-n-solid-3 rounded-md shadow-sm ring-1 ring-inset ring-n-container dark:ring-n-container focus:outline-offset-0 hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
-            >
-              <Icon
-                icon="i-lucide-lock-keyhole"
-                class="size-5 text-n-slate-11"
-              />
-              <span class="ml-2 text-base font-medium text-n-slate-12">
-                {{ $t('LOGIN.SAML.LABEL') }}
-              </span>
-            </router-link>
-          </div>
-          <SimpleDivider
-            v-if="showGoogleOAuth || showSamlLogin"
-            :label="$t('COMMON.OR')"
-            class="uppercase"
-          />
-        </div>
-        <form class="space-y-5" @submit.prevent="submitFormLogin">
+        <form
+          v-if="showEmailLogin"
+          class="space-y-5"
+          @submit.prevent="submitFormLogin"
+        >
           <FormInput
             v-model="credentials.email"
             name="email_address"
@@ -412,6 +411,32 @@ export default {
             :is-loading="loginApi.showLoading"
           />
         </form>
+        <div class="flex flex-col gap-4" :class="{ 'mt-4': showEmailLogin }">
+          <SimpleDivider
+            v-if="
+              (showGoogleOAuth || showMicrosoftOAuth || showSamlLogin) &&
+              showEmailLogin
+            "
+            :label="$t('COMMON.OR')"
+            class="uppercase"
+          />
+          <GoogleOAuthButton v-if="showGoogleOAuth" />
+          <MicrosoftOAuthButton v-if="showMicrosoftOAuth" />
+          <div v-if="showSamlLogin" class="text-center">
+            <router-link
+              to="/app/login/sso"
+              class="inline-flex justify-center w-full px-4 py-3 items-center bg-n-background dark:bg-n-solid-3 rounded-md shadow-sm ring-1 ring-inset ring-n-container dark:ring-n-container focus:outline-offset-0 hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
+            >
+              <Icon
+                icon="i-lucide-lock-keyhole"
+                class="size-5 text-n-slate-11"
+              />
+              <span class="ml-2 text-base font-medium text-n-slate-12">
+                {{ $t('LOGIN.SAML.LABEL') }}
+              </span>
+            </router-link>
+          </div>
+        </div>
       </div>
       <div v-else class="flex items-center justify-center">
         <Spinner color-scheme="primary" size="" />

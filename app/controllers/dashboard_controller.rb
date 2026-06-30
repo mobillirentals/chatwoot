@@ -80,6 +80,9 @@ class DashboardController < ActionController::Base
       IS_ENTERPRISE: ChatwootApp.enterprise?,
       AZURE_APP_ID: GlobalConfigService.load('AZURE_APP_ID', ''),
       GIT_SHA: GIT_HASH,
+      ENABLE_EMAIL_LOGIN: email_login_enabled?,
+      AZURE_SSO_CLIENT_ID: InstallationConfig.find_by(name: 'AZURE_CLIENT_ID')&.value.to_s,
+      AZURE_SSO_TENANT_ID: InstallationConfig.find_by(name: 'AZURE_TENANT_ID')&.value.presence || 'common',
       ALLOWED_LOGIN_METHODS: allowed_login_methods,
       ACTIVE_PLATFORM_BANNERS: active_platform_banners
     }
@@ -91,10 +94,22 @@ class DashboardController < ActionController::Base
     PlatformBanner.active.order(created_at: :desc).as_json(only: %i[id banner_message banner_type updated_at])
   end
 
+  def email_login_enabled?
+    return true if GlobalConfigService.load('ENABLE_EMAIL_LOGIN', 'true').to_s != 'false'
+    # Safety guard: never disable email login if no SSO method is configured
+    sso_active = allowed_login_methods.reject { |m| m == 'email' }.any?
+    sso_active ? false : true
+  end
+
   def allowed_login_methods
     methods = ['email']
     methods << 'google_oauth' if GlobalConfigService.load('ENABLE_GOOGLE_OAUTH_LOGIN', 'true').to_s != 'false'
     methods << 'saml' if ChatwootHub.pricing_plan != 'community' && GlobalConfigService.load('ENABLE_SAML_SSO_LOGIN', 'true').to_s != 'false'
+    if InstallationConfig.find_by(name: 'AZURE_CLIENT_ID')&.value.present? &&
+       InstallationConfig.find_by(name: 'AZURE_CLIENT_SECRET')&.value.present? &&
+       GlobalConfigService.load('ENABLE_MICROSOFT_SSO_LOGIN', 'true').to_s != 'false'
+      methods << 'entra_id'
+    end
     methods
   end
 

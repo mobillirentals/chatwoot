@@ -20,8 +20,6 @@ export default {
   },
   data() {
     return {
-      // We need to initialize the component with any
-      // properties that will be used in it
       credentials: {
         confirmPassword: '',
         password: '',
@@ -31,13 +29,21 @@ export default {
         showLoading: false,
       },
       error: '',
+      ssoActivating: false,
     };
   },
+  computed: {
+    isSsoOnlyMode() {
+      return window.chatwootConfig.emailLoginEnabled === 'false';
+    },
+  },
   mounted() {
-    // If url opened without token
-    // redirect to login
     if (!this.resetPasswordToken) {
       window.location = DEFAULT_REDIRECT_URL;
+      return;
+    }
+    if (this.isSsoOnlyMode) {
+      this.activateViaSso();
     }
   },
   validations: {
@@ -60,9 +66,23 @@ export default {
   },
   methods: {
     showAlertMessage(message) {
-      // Reset loading, current selected agent
       this.newPasswordAPI.showLoading = false;
       useAlert(message);
+    },
+    async activateViaSso() {
+      this.ssoActivating = true;
+      const randomPassword = `Sso!${Math.random().toString(36).slice(2, 14)}${Math.random().toString(36).slice(2, 6)}`;
+      try {
+        await setNewPassword({
+          resetPasswordToken: this.resetPasswordToken,
+          password: randomPassword,
+          confirmPassword: randomPassword,
+        });
+        window.location = `${DEFAULT_REDIRECT_URL}?sso_activated=1`;
+      } catch {
+        this.ssoActivating = false;
+        useAlert(this.$t('SET_NEW_PASSWORD.API.ERROR_MESSAGE'));
+      }
     },
     submitForm() {
       this.newPasswordAPI.showLoading = true;
@@ -89,7 +109,22 @@ export default {
   <div
     class="flex flex-col justify-center w-full min-h-screen py-12 bg-n-brand/5 dark:bg-n-background sm:px-6 lg:px-8"
   >
+    <!-- SSO-only mode: auto-activate, no password form -->
+    <div
+      v-if="isSsoOnlyMode"
+      class="bg-white shadow sm:mx-auto sm:w-full sm:max-w-lg dark:bg-n-solid-2 p-11 sm:shadow-lg sm:rounded-lg text-center"
+    >
+      <h1 class="mb-3 text-2xl font-medium text-n-slate-12">
+        {{ $t('SET_NEW_PASSWORD.SSO_ACTIVATING.TITLE') }}
+      </h1>
+      <p class="text-sm text-n-slate-11">
+        {{ $t('SET_NEW_PASSWORD.SSO_ACTIVATING.DESCRIPTION') }}
+      </p>
+    </div>
+
+    <!-- Normal mode: password form -->
     <form
+      v-else
       class="bg-white shadow sm:mx-auto sm:w-full sm:max-w-lg dark:bg-n-solid-2 p-11 sm:shadow-lg sm:rounded-lg"
       @submit.prevent="submitForm"
     >
