@@ -90,6 +90,10 @@ services:
       - SMTP_SECURE=false
       - NEXT_PUBLIC_SMTP_FROM=noreply@mobillirentals.com.br
       - STORAGE_PROVIDER=local
+      - AZURE_AD_CLIENT_ID=${TYPEBOT_AZURE_AD_CLIENT_ID}
+      - AZURE_AD_CLIENT_SECRET=${TYPEBOT_AZURE_AD_CLIENT_SECRET}
+      - AZURE_AD_TENANT_ID=${TYPEBOT_AZURE_AD_TENANT_ID}
+      - NEXT_PUBLIC_AZURE_AD_CLIENT_ID=${TYPEBOT_AZURE_AD_CLIENT_ID}
     volumes:
       - typebot_uploads:/app/apps/builder/public/uploads
 
