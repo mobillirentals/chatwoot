@@ -2,6 +2,26 @@
 
 ## [Não lançado]
 
+## [2026-07-06] — Typebot: bot de atendimento visual
+
+### Adicionado
+- **Typebot Builder** (`https://bot.mobillirentals.com.br`) — editor visual de fluxos de bot, self-hosted
+- **Typebot Viewer** (`https://botviewer.mobillirentals.com.br`) — runtime dos bots publicados
+- `docker-compose.yaml`: serviços `typebot-builder` (porta 3001) e `typebot-viewer` (porta 3002) para ambiente local
+- `docker-compose.production.yml`: serviços Typebot conectados ao PostgreSQL e Redis existentes; variáveis mapeadas a partir de `TYPEBOT_*` no `.env.production`
+- `nginx/typebot.conf`: virtual hosts HTTPS para `bot.` e `botviewer.mobillirentals.com.br` com Let's Encrypt (SAN compartilhada) e HSTS (`max-age=31536000; includeSubDomains`)
+- `.env.typebot`: arquivo de configuração local (gitignored) com MailHog para SMTP em dev
+
+### Infraestrutura
+- Banco `typebot` criado no PostgreSQL de produção (owner: `cw_app`)
+- Certificado SSL emitido via Certbot (válido até 2026-10-04)
+- Migrations Prisma aplicadas automaticamente no primeiro boot (82 migrations)
+- `DISABLE_SIGNUP=true` em produção — acesso restrito ao admin (`ti@mobillirentals.com.br`)
+
+### Scripts operacionais
+- `scripts/octadesk_import.rb`: migração de contatos e conversas do OctaDesk para o Chatwoot
+- `scripts/create_agents.rb`: criação em lote de agentes via API
+
 ## [2026-06-30] — Microsoft Entra ID SSO
 
 ### Adicionado

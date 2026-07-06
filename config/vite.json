@@ -7,7 +7,7 @@
     "autoBuild": false,
     "publicOutputDir": "vite-dev",
     "port": 3036,
-    "host": "localhost"
+    "host": "0.0.0.0"
   },
   "test": {
     "autoBuild": true,
