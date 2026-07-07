@@ -72,14 +72,14 @@ class Typebot::BridgeService
   end
 
   def continue_or_restart(conversation, session_id)
-    response = http_client.post("/api/v1/sessions/#{session_id}/sendMessage", { message: @content }.to_json)
+    response = http_client.post("/api/v1/sendMessage", { message: @content, sessionId: session_id }.to_json)
 
-    if response.status == 404
+    if response.status == 404 || !response.success?
       cleanup_session(conversation)
       return start_session(conversation)
     end
 
-    JSON.parse(response.body) if response.success?
+    JSON.parse(response.body)
   rescue StandardError => e
     Rails.logger.error("[Typebot::BridgeService] sendMessage falhou: #{e.message}")
     nil
