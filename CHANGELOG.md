@@ -2,6 +2,15 @@
 
 ## [Não lançado]
 
+## [2026-07-07] — Correções de infraestrutura e integração API
+
+### Corrigido
+- **nginx `underscores_in_headers on`** em `nginx/chatwoot.conf`: o nginx descartava silenciosamente headers com underscore (ex: `api_access_token`), bloqueando toda autenticação via API token — necessário para o bot fechar conversas e qualquer integração externa via header
+- **DNS nginx dinâmico** (`resolver 127.0.0.11 valid=10s` + `set $upstream`) em `nginx/chatwoot.conf` e `nginx/typebot.conf`: evita 502 Bad Gateway após restart de containers Docker (IPs mudam)
+- **`POSTGRES_USER`** em `docker-compose.production.yml`: variável corrigida para `${POSTGRES_USERNAME}`, eliminando warning a cada `docker compose` command
+
+---
+
 ## [2026-07-07] — Backup automático do PostgreSQL
 
 ### Adicionado
