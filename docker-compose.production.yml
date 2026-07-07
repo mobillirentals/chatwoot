@@ -52,7 +52,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_USER=${POSTGRES_USERNAME}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB:-chatwoot_production}
     # Porta NÃO exposta ao host — acesso apenas pela rede interna Docker
@@ -66,6 +66,62 @@ services:
     volumes:
       - redis_data:/data
 
+  # ── Typebot Builder (editor de fluxos) ─────────────────────
+  typebot-builder:
+    image: baptistearno/typebot-builder:latest
+    restart: unless-stopped
+    depends_on:
+      - chatwoot-db
+    ports:
+      - "127.0.0.1:3001:3000"
+    env_file: .env.production
+    environment:
+      - DATABASE_URL=${TYPEBOT_DATABASE_URL}
+      - NEXTAUTH_URL=${TYPEBOT_NEXTAUTH_URL}
+      - NEXT_PUBLIC_VIEWER_URL=${TYPEBOT_VIEWER_URL}
+      - NEXTAUTH_SECRET=${TYPEBOT_NEXTAUTH_SECRET}
+      - ENCRYPTION_SECRET=${TYPEBOT_ENCRYPTION_SECRET}
+      - ADMIN_EMAIL=${TYPEBOT_ADMIN_EMAIL}
+      - DISABLE_SIGNUP=${TYPEBOT_DISABLE_SIGNUP}
+      - SMTP_HOST=smtp.azurecomm.net
+      - SMTP_PORT=587
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_SECURE=false
+      - NEXT_PUBLIC_SMTP_FROM=noreply@mobillirentals.com.br
+      - STORAGE_PROVIDER=local
+      - AZURE_AD_CLIENT_ID=${TYPEBOT_AZURE_AD_CLIENT_ID}
+      - AZURE_AD_CLIENT_SECRET=${TYPEBOT_AZURE_AD_CLIENT_SECRET}
+      - AZURE_AD_TENANT_ID=${TYPEBOT_AZURE_AD_TENANT_ID}
+      - NEXT_PUBLIC_AZURE_AD_CLIENT_ID=${TYPEBOT_AZURE_AD_CLIENT_ID}
+    volumes:
+      - typebot_uploads:/app/apps/builder/public/uploads
+
+  # ── Typebot Viewer (runtime dos bots) ──────────────────────
+  typebot-viewer:
+    image: baptistearno/typebot-viewer:latest
+    restart: unless-stopped
+    depends_on:
+      - chatwoot-db
+    ports:
+      - "127.0.0.1:3002:3000"
+    env_file: .env.production
+    environment:
+      - DATABASE_URL=${TYPEBOT_DATABASE_URL}
+      - NEXTAUTH_URL=${TYPEBOT_NEXTAUTH_URL}
+      - NEXT_PUBLIC_VIEWER_URL=${TYPEBOT_VIEWER_URL}
+      - NEXTAUTH_SECRET=${TYPEBOT_NEXTAUTH_SECRET}
+      - ENCRYPTION_SECRET=${TYPEBOT_ENCRYPTION_SECRET}
+      - SMTP_HOST=smtp.azurecomm.net
+      - SMTP_PORT=587
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_SECURE=false
+      - NEXT_PUBLIC_SMTP_FROM=noreply@mobillirentals.com.br
+      - STORAGE_PROVIDER=local
+    volumes:
+      - typebot_uploads:/app/apps/builder/public/uploads
+
   # ── Nginx (reverse proxy + SSL) ────────────────────────────
   nginx:
     image: nginx:stable-alpine
@@ -74,14 +130,17 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/chatwoot.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro          # certificado Let's Encrypt
+      - ./nginx:/etc/nginx/conf.d:ro              # carrega todos os .conf do diretório
+      - /etc/letsencrypt:/etc/letsencrypt:ro      # certificados Let's Encrypt
       - nginx_logs:/var/log/nginx
     depends_on:
       - rails
+      - typebot-builder
+      - typebot-viewer
 
 volumes:
   postgres_data:
   redis_data:
   chatwoot_storage:
+  typebot_uploads:
   nginx_logs:

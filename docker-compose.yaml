@@ -35,7 +35,7 @@ services:
       - 3000:3000
     env_file: .env
     environment:
-      - VITE_DEV_SERVER_HOST=vite
+      - VITE_RUBY_HOST=vite
       - NODE_ENV=development
       - RAILS_ENV=development
     entrypoint: docker/entrypoints/rails.sh
@@ -109,6 +109,28 @@ services:
     ports:
       - 1025:1025
       - 8025:8025
+
+  typebot-builder:
+    image: baptistearno/typebot-builder:latest
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - '3001:3000'
+    env_file: .env.typebot
+    environment:
+      - NEXT_PUBLIC_SMTP_FROM=noreply@mobillirentals.com.br
+
+  typebot-viewer:
+    image: baptistearno/typebot-viewer:latest
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - '3002:3000'
+    env_file: .env.typebot
+    environment:
+      - NEXT_PUBLIC_SMTP_FROM=noreply@mobillirentals.com.br
 
 volumes:
   postgres:
