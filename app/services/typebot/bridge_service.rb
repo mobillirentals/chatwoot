@@ -41,9 +41,11 @@ class Typebot::BridgeService
   def processable?
     return false unless @event == 'message_created' && @message_type == 'incoming'
 
-    # Ignora mensagens com mais de 2 minutos (evita processar fila acumulada)
     created_at = @payload[:created_at]
-    return false if created_at.present? && Time.at(created_at.to_i) < 2.minutes.ago
+    if created_at.present?
+      parsed = created_at.is_a?(Numeric) ? Time.at(created_at) : Time.parse(created_at.to_s)
+      return false if parsed < 10.minutes.ago
+    end
 
     true
   end
@@ -70,14 +72,14 @@ class Typebot::BridgeService
   end
 
   def continue_or_restart(conversation, session_id)
-    response = http_client.post("/api/v1/sessions/#{session_id}/sendMessage", { message: @content }.to_json)
+    response = http_client.post("/api/v1/sendMessage", { message: @content, sessionId: session_id }.to_json)
 
-    if response.status == 404
+    if response.status == 404 || !response.success?
       cleanup_session(conversation)
       return start_session(conversation)
     end
 
-    JSON.parse(response.body) if response.success?
+    JSON.parse(response.body)
   rescue StandardError => e
     Rails.logger.error("[Typebot::BridgeService] sendMessage falhou: #{e.message}")
     nil
