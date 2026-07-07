@@ -1,5 +1,5 @@
 class Typebot::BridgeService
-  VIEWER_URL      = ENV.fetch('TYPEBOT_VIEWER_URL', 'https://botviewer.mobillirentals.com.br').freeze
+  VIEWER_URL       = ENV.fetch('TYPEBOT_VIEWER_URL', 'https://botviewer.mobillirentals.com.br').freeze
   BUTTON_MAX_CHARS = 20
 
   def initialize(payload, typebot_id)
@@ -88,7 +88,11 @@ class Typebot::BridgeService
   end
 
   def continue_or_restart(conversation, session_id)
-    response = http_client.post("/api/v1/sendMessage", { message: @content, sessionId: session_id }.to_json)
+    # Quando o WhatsApp devolve um clique de botão, o conteúdo recebido é o
+    # título exibido (possivelmente truncado). Traduzimos de volta ao valor
+    # completo que o Typebot espera, buscando nas mensagens de botão recentes.
+    content  = resolve_button_value(conversation, @content)
+    response = http_client.post("/api/v1/sendMessage", { message: content, sessionId: session_id }.to_json)
 
     if response.status == 404 || !response.success?
       cleanup_session(conversation)
@@ -99,6 +103,22 @@ class Typebot::BridgeService
   rescue StandardError => e
     Rails.logger.error("[Typebot::BridgeService] sendMessage falhou: #{e.message}")
     nil
+  end
+
+  # Procura o valor completo do botão clicado comparando com title e value
+  # da última mensagem input_select enviada pelo bot.
+  def resolve_button_value(conversation, content)
+    last_buttons = conversation.messages
+      .outgoing
+      .where(content_type: :input_select)
+      .order(id: :desc)
+      .first
+
+    return content unless last_buttons
+
+    items = last_buttons.content_attributes['items'] || []
+    matched = items.find { |i| i['title'] == content || i['value'] == content }
+    matched ? matched['value'] : content
   end
 
   def persist_session(conversation, session_id)
@@ -121,8 +141,6 @@ class Typebot::BridgeService
     input       = typebot_response['input']
     is_choice   = input&.dig('type') == 'choice input'
 
-    # Quando há botões, a última mensagem de texto vira o label do input_select
-    # evitando que o WhatsApp entregue os dois fora de ordem
     text_messages = messages
     button_label  = nil
 
@@ -181,9 +199,9 @@ class Typebot::BridgeService
     )
   end
 
-  # WhatsApp botões: limite de 20 chars em UTF-16 (emoji = 2 code units)
+  # WhatsApp limita títulos de botão a 20 code units UTF-16 (emoji = 2)
   def whatsapp_truncate(text)
-    count = 0
+    count  = 0
     result = +''
     text.each_char do |ch|
       units = ch.encode('UTF-16LE').bytesize / 2
