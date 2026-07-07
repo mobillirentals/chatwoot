@@ -44,7 +44,7 @@ class Typebot::BridgeService
     created_at = @payload[:created_at]
     if created_at.present?
       parsed = created_at.is_a?(Numeric) ? Time.at(created_at) : Time.parse(created_at.to_s)
-      return false if parsed < 2.minutes.ago
+      return false if parsed < 10.minutes.ago
     end
 
     true
