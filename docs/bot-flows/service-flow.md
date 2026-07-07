@@ -22,38 +22,49 @@ Construído no Typebot: https://bot.mobillirentals.com.br
 graph TD
     Inicio([Início]) --> Saudacao[Mensagem: Saudação Mobílli]
     Saudacao --> Nome[Coleta: Qual o seu nome?]
-    Nome --> Setor{Como posso ajudar?}
+    Nome --> Menu{Como posso ajudar?}
 
-    %% Financeiro
-    Setor -- 💳 Financeiro / Cobranças --> Fin_Assunto{Qual o assunto?}
-    Fin_Assunto -- Mensalidade / Multas / Franquias --> Transf_Fin[Transferir: Fin. Contas a Receber]
+    %% ── Nível 1: 3 botões ────────────────────────────────────
+    Menu -- 💰 Financeiro --> Fin_Assunto{Qual o assunto?}
+    Menu -- 🤝 Atendimento --> Atend_Setor{Qual o setor?}
+    Menu -- 🆘 Emergência --> Emerg_Tipo{Qual a situação?}
+
+    %% ── Financeiro: 2 botões ─────────────────────────────────
+    Fin_Assunto -- Cobranças --> Transf_Fin[Transferir: Fin. Contas a Receber]
     Fin_Assunto -- Fornecedores --> Transf_Forn[Transferir: Grupo Geral]
 
-    %% Veículo / Manutenção
-    Setor -- 🔧 Veículo / Manutenção --> Veiculo_Assunto{O que precisa?}
-    Veiculo_Assunto -- Agendar revisão --> Link_Revisao[Mensagem: Link de Agendamento] --> Encerrar[Encerrar Conversa]
+    %% ── Atendimento: 3 botões ────────────────────────────────
+    Atend_Setor -- 🔧 Veículo / Oficina --> Veiculo_Assunto{O que precisa?}
+    Atend_Setor -- 📋 Documentos e Dúvidas --> Doc_Assunto{Qual o assunto?}
+    Atend_Setor -- 📣 Ouvidoria --> Ouv_Texto[Coleta: Descreva sua mensagem]
+
+    %% Veículo: 2 botões
+    Veiculo_Assunto -- Agendar revisão --> Link_Revisao[Mensagem: Link de Agendamento]
+    Link_Revisao --> Wait2min[Aguardar 2 minutos]
+    Wait2min --> Pos_Link{Posso ajudar com mais alguma coisa?}
+    Pos_Link -- Sim --> Menu
+    Pos_Link -- Não --> Despedida[Mensagem: Despedida] --> Encerrar[Encerrar]
     Veiculo_Assunto -- Falar com atendente --> Transf_Manut[Transferir: Manutenção]
 
-    %% Documentos e Contratos
-    Setor -- 📋 Documentos e Contratos --> Doc_Assunto{Qual o assunto?}
-    Doc_Assunto -- Documentos para locar --> Doc_Self[Self-service: CNH + CPF + Cartão de crédito]
-    Doc_Self --> Doc_Mais{Ficou alguma dúvida?}
-    Doc_Mais -- Não --> Encerrar
+    %% Documentos: 3 botões
+    Doc_Assunto -- Docs para locar --> Doc_Self[Self-service: CNH + CPF + Cartão]
+    Doc_Self --> Wait_Doc[Aguardar 2 minutos]
+    Wait_Doc --> Doc_Mais{Ficou alguma dúvida?}
+    Doc_Mais -- Não --> Despedida
     Doc_Mais -- Sim --> Transf_Frota[Transferir: Frota - Multas e Doc.]
     Doc_Assunto -- Multas de trânsito --> Transf_Frota
     Doc_Assunto -- Dúvidas contratuais --> Transf_PosVenda[Transferir: Pós-Venda]
 
-    %% Emergência
-    Setor -- 🆘 Emergência --> Emerg_Tipo{Qual a situação?}
-    Emerg_Tipo -- Socorro / Acidente --> Coleta[Coleta: Nome + Placa + Localização + Referência] --> Transf_Socorro[Transferir: Socorro]
-    Emerg_Tipo -- Furto / Roubo --> Msg_Roubo[Mensagem: Alerta + BO] --> Transf_Sinistro[Transferir: Sinistro]
-
-    %% Ouvidoria
-    Setor -- 📣 Ouvidoria --> Ouv_Texto[Coleta: Descreva sua mensagem]
+    %% Ouvidoria: texto livre
     Ouv_Texto --> Transf_Ouv[Transferir: Ouvidoria]
 
-    %% Filas
+    %% ── Emergência: 2 botões ─────────────────────────────────
+    Emerg_Tipo -- Socorro / Acidente --> Coleta[Coleta: Placa + Localização + Referência] --> Transf_Socorro[Transferir: Socorro]
+    Emerg_Tipo -- Furto / Roubo --> Msg_Roubo[Mensagem: Alerta + BO] --> Transf_Sinistro[Transferir: Sinistro]
+
+    %% ── Fila de espera ───────────────────────────────────────
     Transf_Fin --> Fila[Fila: Aguardar Atendente]
+    Transf_Forn --> Fila
     Transf_Manut --> Fila
     Transf_Frota --> Fila
     Transf_PosVenda --> Fila
@@ -70,12 +81,26 @@ graph TD
     classDef encerrar fill:#6c757d,stroke:#333,stroke-width:1px,color:#fff;
 
     class Inicio inicio;
-    class Setor,Fin_Assunto,Veiculo_Assunto,Doc_Assunto,Emerg_Tipo,Doc_Mais decisao;
-    class Saudacao,Nome,Link_Revisao,Msg_Roubo,Coleta mensagem;
+    class Menu,Fin_Assunto,Atend_Setor,Veiculo_Assunto,Doc_Assunto,Emerg_Tipo,Doc_Mais decisao;
+    classDef espera fill:#fff3cd,stroke:#ffc107,stroke-width:1px;
+    class Saudacao,Nome,Link_Revisao,Msg_Roubo,Coleta,Despedida mensagem;
+    class Wait2min,Wait_Doc espera;
     class Doc_Self,Ouv_Texto selfservice;
     class Transf_Fin,Transf_Forn,Transf_Manut,Transf_Frota,Transf_PosVenda,Transf_Socorro,Transf_Sinistro,Transf_Ouv transferencia;
     class Encerrar encerrar;
 ```
+
+### Regra de botões WhatsApp
+
+| Nível | Menu | Botões | OK? |
+|---|---|---|---|
+| 1 | Menu principal | 3 (Financeiro / Atendimento / Emergência) | ✅ |
+| 2 | Financeiro | 2 (Cobranças / Fornecedores) | ✅ |
+| 2 | Atendimento | 3 (Veículo / Documentos / Ouvidoria) | ✅ |
+| 2 | Emergência | 2 (Socorro-Acidente / Furto-Roubo) | ✅ |
+| 3 | Veículo | 2 (Agendar / Atendente) | ✅ |
+| 3 | Documentos | 3 (Docs / Multas / Contrato) | ✅ |
+| 3 | Ouvidoria | texto livre | ✅ |
 
 ---
 

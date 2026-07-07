@@ -2,6 +2,27 @@
 
 ## [Não lançado]
 
+## [2026-07-07] — Typebot: bot de triagem WhatsApp funcional
+
+### Corrigido
+- **`BridgeService#continue_or_restart`**: adicionado recovery automático de sessão travada — quando o Typebot retorna "Invalid message. Please, try again." (usuário digitou texto enquanto aguardava clique de botão), a sessão é encerrada e reiniciada do zero, evitando loop infinito
+- **`BridgeService#send_buttons`**: removido truncamento artificial de títulos de botão (`whatsapp_truncate`) — solução correta é usar labels curtos no Typebot (≤ 20 chars UTF-16) em vez de remendos no código
+- **Endpoint `sendMessage`**: corrigido de `POST /api/v1/sessions/{id}/sendMessage` (inexistente) para `POST /api/v1/sendMessage` com `sessionId` no body
+- **Parsing de `created_at`**: corrigido conversão ISO8601 → timestamp (`.to_i` em string ISO retornava o ano, não Unix timestamp)
+- **Idempotência**: adicionado `last_processed_message_id` em `additional_attributes` para evitar respostas duplicadas quando múltiplos webhooks chegam para a mesma mensagem
+- **Janela de processamento**: aumentada de 2 para 10 minutos para tolerar atraso de entrega do WhatsApp
+
+### Adicionado
+- `app/services/typebot/bridge_service.rb`: serviço de ponte Typebot ↔ Chatwoot
+- `app/jobs/typebot/process_event_job.rb`: job Sidekiq para processamento assíncrono
+- `app/controllers/webhooks/typebot_controller.rb`: endpoint webhook receptor
+- `docs/bot-flows/service-flow.md`: fluxo v2 otimizado (máx. 2 níveis, coleta de nome, self-service para documentação)
+
+### Typebot — regra de labels WhatsApp
+Labels de botão devem ter ≤ 20 code units UTF-16 (emoji = 2 unidades). Único label problemático identificado e corrigido no builder: `📋 Documentos e Dúvidas` → `📋 Docs e Dúvidas`.
+
+---
+
 ## [2026-07-07] — Correções de infraestrutura e integração API
 
 ### Corrigido
