@@ -2,6 +2,12 @@
 
 ## [Não lançado]
 
+## [2026-07-07] — Backup automático do PostgreSQL
+
+### Adicionado
+- `scripts/backup-db.sh`: backup diário dos bancos `chatwoot_production` e `typebot` via `pg_dump` + gzip, com upload automático para Azure Blob Storage e retenção de 7 dias
+- `scripts/setup-backup.sh`: script de setup one-shot para a VM — instala Azure CLI, cria container `chatwoot-backups` no Blob, instala o script e configura cron às 02:00
+
 ## [2026-07-06] — Typebot: bot de atendimento visual
 
 ### Adicionado
