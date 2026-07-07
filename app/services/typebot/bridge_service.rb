@@ -1,6 +1,5 @@
 class Typebot::BridgeService
-  VIEWER_URL       = ENV.fetch('TYPEBOT_VIEWER_URL', 'https://botviewer.mobillirentals.com.br').freeze
-  BUTTON_MAX_CHARS = 20
+  VIEWER_URL = ENV.fetch('TYPEBOT_VIEWER_URL', 'https://botviewer.mobillirentals.com.br').freeze
 
   def initialize(payload, typebot_id)
     @payload      = payload.deep_symbolize_keys
@@ -88,37 +87,27 @@ class Typebot::BridgeService
   end
 
   def continue_or_restart(conversation, session_id)
-    # Quando o WhatsApp devolve um clique de botão, o conteúdo recebido é o
-    # título exibido (possivelmente truncado). Traduzimos de volta ao valor
-    # completo que o Typebot espera, buscando nas mensagens de botão recentes.
-    content  = resolve_button_value(conversation, @content)
-    response = http_client.post("/api/v1/sendMessage", { message: content, sessionId: session_id }.to_json)
+    response = http_client.post("/api/v1/sendMessage", { message: @content, sessionId: session_id }.to_json)
 
     if response.status == 404 || !response.success?
       cleanup_session(conversation)
       return start_session(conversation)
     end
 
-    JSON.parse(response.body)
+    parsed = JSON.parse(response.body)
+
+    # Quando o usuário digita texto livre enquanto o Typebot aguarda um botão,
+    # ele retorna "Invalid message". Reiniciamos a sessão para evitar loop.
+    first_text = extract_text(parsed['messages']&.first || {})
+    if first_text.include?('Invalid message')
+      cleanup_session(conversation)
+      return start_session(conversation)
+    end
+
+    parsed
   rescue StandardError => e
     Rails.logger.error("[Typebot::BridgeService] sendMessage falhou: #{e.message}")
     nil
-  end
-
-  # Procura o valor completo do botão clicado comparando com title e value
-  # da última mensagem input_select enviada pelo bot.
-  def resolve_button_value(conversation, content)
-    last_buttons = conversation.messages
-      .outgoing
-      .where(content_type: :input_select)
-      .order(id: :desc)
-      .first
-
-    return content unless last_buttons
-
-    items = last_buttons.content_attributes['items'] || []
-    matched = items.find { |i| i['title'] == content || i['value'] == content }
-    matched ? matched['value'] : content
   end
 
   def persist_session(conversation, session_id)
@@ -180,9 +169,8 @@ class Typebot::BridgeService
 
   def send_buttons(conversation, input, agent_bot, label = nil)
     items = input['items']&.map do |item|
-      full  = item['content'].to_s
-      title = whatsapp_truncate(full)
-      { title: title, value: full }
+      text = item['content'].to_s
+      { title: text, value: text }
     end
     return if items.blank?
 
@@ -197,19 +185,6 @@ class Typebot::BridgeService
       inbox_id:           conversation.inbox_id,
       sender:             agent_bot
     )
-  end
-
-  # WhatsApp limita títulos de botão a 20 code units UTF-16 (emoji = 2)
-  def whatsapp_truncate(text)
-    count  = 0
-    result = +''
-    text.each_char do |ch|
-      units = ch.encode('UTF-16LE').bytesize / 2
-      break if count + units > BUTTON_MAX_CHARS
-      result << ch
-      count  += units
-    end
-    result
   end
 
   def human_replied?(conversation)
