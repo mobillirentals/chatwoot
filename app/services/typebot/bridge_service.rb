@@ -1,5 +1,6 @@
 class Typebot::BridgeService
-  VIEWER_URL = ENV.fetch('TYPEBOT_VIEWER_URL', 'https://botviewer.mobillirentals.com.br').freeze
+  VIEWER_URL      = ENV.fetch('TYPEBOT_VIEWER_URL', 'https://botviewer.mobillirentals.com.br').freeze
+  BUTTON_MAX_CHARS = 20
 
   def initialize(payload, typebot_id)
     @payload      = payload.deep_symbolize_keys
@@ -15,18 +16,33 @@ class Typebot::BridgeService
     conversation = find_conversation
     return unless conversation
 
-    # Lock por conversa para evitar loop quando múltiplas mensagens chegam simultaneamente
+    # Lock por conversa para evitar condição de corrida com múltiplos webhooks
     typebot_response = conversation.with_lock do
-      session_id = conversation.reload.additional_attributes['typebot_session_id']
+      attrs      = conversation.reload.additional_attributes
+      session_id = attrs['typebot_session_id']
 
-      # Não inicia nova sessão se um agente humano já respondeu na conversa
+      # Idempotência: ignorar se essa mensagem já foi processada
+      next if attrs['last_processed_message_id'] == @payload[:id].to_s
+
+      # Não inicia nova sessão se um agente humano já respondeu
       next if session_id.blank? && human_replied?(conversation)
 
-      if session_id.present?
+      response = if session_id.present?
         continue_or_restart(conversation, session_id)
       else
         start_session(conversation)
       end
+
+      # Marcar como processada dentro do lock (atômico)
+      if @payload[:id].present?
+        conversation.update_columns(
+          additional_attributes: conversation.additional_attributes.merge(
+            'last_processed_message_id' => @payload[:id].to_s
+          )
+        )
+      end
+
+      response
     end
 
     return unless typebot_response
@@ -107,8 +123,8 @@ class Typebot::BridgeService
 
     # Quando há botões, a última mensagem de texto vira o label do input_select
     # evitando que o WhatsApp entregue os dois fora de ordem
-    text_messages  = messages
-    button_label   = nil
+    text_messages = messages
+    button_label  = nil
 
     if is_choice && messages.any?
       *text_messages, last_msg = messages
@@ -145,7 +161,11 @@ class Typebot::BridgeService
   end
 
   def send_buttons(conversation, input, agent_bot, label = nil)
-    items = input['items']&.map { |item| { title: item['content'], value: item['content'] } }
+    items = input['items']&.map do |item|
+      full  = item['content'].to_s
+      title = whatsapp_truncate(full)
+      { title: title, value: full }
+    end
     return if items.blank?
 
     label ||= 'Como posso ajudar?'
@@ -159,6 +179,19 @@ class Typebot::BridgeService
       inbox_id:           conversation.inbox_id,
       sender:             agent_bot
     )
+  end
+
+  # WhatsApp botões: limite de 20 chars em UTF-16 (emoji = 2 code units)
+  def whatsapp_truncate(text)
+    count = 0
+    result = +''
+    text.each_char do |ch|
+      units = ch.encode('UTF-16LE').bytesize / 2
+      break if count + units > BUTTON_MAX_CHARS
+      result << ch
+      count  += units
+    end
+    result
   end
 
   def human_replied?(conversation)
