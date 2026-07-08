@@ -88,7 +88,8 @@ class Crm::ClientProfileService
   end
 
   def bitrix_post(endpoint, body)
-    response = bitrix_client.post("/#{endpoint}") do |req|
+    response = Faraday.post("#{BITRIX_BASE}/#{endpoint}") do |req|
+      req.headers['Content-Type'] = 'application/json'
       req.body = body.to_json
     end
     JSON.parse(response.body)
