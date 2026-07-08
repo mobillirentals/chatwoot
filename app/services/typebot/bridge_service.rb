@@ -109,7 +109,7 @@ class Typebot::BridgeService
 
     # Quando o usuário digita texto livre enquanto o Typebot aguarda um botão,
     # ele retorna "Invalid message". Reiniciamos a sessão para evitar loop.
-    first_text = extract_text(parsed['messages']&.first || {})
+    first_text = extract_text(parsed['messages']&.first || {}, formatted: false)
     if first_text.include?('Invalid message')
       cleanup_session(conversation)
       return start_session(conversation)
@@ -166,16 +166,36 @@ class Typebot::BridgeService
     send_buttons(conversation, input, agent_bot, button_label) if is_choice
   end
 
-  def extract_text(message)
+  def extract_text(message, formatted: true)
     content = message['content']
     return content.to_s if content.is_a?(String)
 
     rich_text = content.is_a?(Hash) ? content['richText'] : nil
     return '' unless rich_text.is_a?(Array)
 
-    rich_text.filter_map do |block|
-      (block['children'] || []).filter_map { |c| c['text'].presence }.join
-    end.reject(&:empty?).join("\n")
+    rich_text.map { |block| render_rich_block(block, formatted: formatted) }.join("\n")
+  end
+
+  def render_rich_block(block, formatted: true)
+    case block['type']
+    when 'a'
+      # Nó de link — usa URL como texto (WhatsApp torna clicável automaticamente)
+      (block['url'] || block['children']&.map { |c| c['text'].to_s }&.join).to_s
+    else
+      (block['children'] || []).map { |child| render_rich_child(child, formatted: formatted) }.join
+    end
+  end
+
+  def render_rich_child(child, formatted: true)
+    text = child['text'].to_s
+    return '' if text.empty?
+    return text unless formatted
+
+    # WhatsApp markdown: *bold*, _italic_, ~strikethrough~
+    text = "*#{text}*" if child['bold']
+    text = "_#{text}_" if child['italic']
+    text = "~#{text}~" if child['strikethrough']
+    text
   end
 
   def send_buttons(conversation, input, agent_bot, label = nil)
@@ -185,7 +205,7 @@ class Typebot::BridgeService
     end
     return if items.blank?
 
-    label ||= 'Como posso ajudar?'
+    label = label&.gsub(/[*_~]/, '')&.strip.presence || 'Como posso ajudar?'
 
     conversation.messages.create!(
       content:            label,
