@@ -191,10 +191,11 @@ class Typebot::BridgeService
     return '' if text.empty?
     return text unless formatted
 
-    # WhatsApp markdown: *bold*, _italic_, ~strikethrough~
-    text = "*#{text}*" if child['bold']
-    text = "_#{text}_" if child['italic']
+    # WhatsApp markdown — ordem: strikethrough → italic (inner) → bold (outer)
+    # Ex: bold+italic → *_texto_*  |  só bold → *texto*  |  só italic → _texto_
     text = "~#{text}~" if child['strikethrough']
+    text = "_#{text}_" if child['italic']
+    text = "*#{text}*" if child['bold']
     text
   end
 
