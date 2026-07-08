@@ -86,7 +86,8 @@ class Typebot::BridgeService
         clientName:     conversation.contact&.name,
         conversationId: conversation.display_id,
         accountId:      conversation.account_id,
-        chatwootToken:  ENV.fetch('CHATWOOT_BOT_API_TOKEN', '')
+        chatwootToken:  ENV.fetch('CHATWOOT_BOT_API_TOKEN', ''),
+        phoneNumber:    conversation.contact&.phone_number
       }
     }.to_json
 
