@@ -15,24 +15,26 @@ class Typebot::BridgeService
     conversation = find_conversation
     return unless conversation
 
-    # Lock por conversa para evitar condição de corrida com múltiplos webhooks
-    typebot_response = conversation.with_lock do
+    # Lock curto: apenas ler estado e marcar idempotência — NÃO inclui a chamada HTTP ao Typebot
+    # (incluir o HTTP no lock causaria deadlock: Typebot dispara webhook → Chatwoot tenta
+    #  UPDATE conversation → aguarda a própria trava → statement timeout)
+    session_id = nil
+    skip       = false
+
+    conversation.with_lock do
       attrs      = conversation.reload.additional_attributes
       session_id = attrs['typebot_session_id']
 
-      # Idempotência: ignorar se essa mensagem já foi processada
-      next if attrs['last_processed_message_id'] == @payload[:id].to_s
-
-      # Não inicia nova sessão se um agente humano já respondeu
-      next if session_id.blank? && human_replied?(conversation)
-
-      response = if session_id.present?
-        continue_or_restart(conversation, session_id)
-      else
-        start_session(conversation)
+      if attrs['last_processed_message_id'] == @payload[:id].to_s
+        skip = true
+        next
       end
 
-      # Marcar como processada dentro do lock (atômico)
+      if session_id.blank? && human_replied?(conversation)
+        skip = true
+        next
+      end
+
       if @payload[:id].present?
         conversation.update_columns(
           additional_attributes: conversation.additional_attributes.merge(
@@ -40,8 +42,15 @@ class Typebot::BridgeService
           )
         )
       end
+    end
 
-      response
+    return if skip
+
+    # Chamada HTTP ao Typebot FORA do lock
+    typebot_response = if session_id.present?
+      continue_or_restart(conversation, session_id)
+    else
+      start_session(conversation)
     end
 
     return unless typebot_response
@@ -75,7 +84,9 @@ class Typebot::BridgeService
     body = {
       prefilledVariables: {
         clientName:     conversation.contact&.name,
-        conversationId: conversation.display_id
+        conversationId: conversation.display_id,
+        accountId:      conversation.account_id,
+        chatwootToken:  ENV.fetch('CHATWOOT_BOT_API_TOKEN', '')
       }
     }.to_json
 
