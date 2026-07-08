@@ -192,10 +192,11 @@ class Typebot::BridgeService
     return text unless formatted
 
     # WhatsApp markdown — ordem: strikethrough → italic (inner) → bold (outer)
-    # Ex: bold+italic → *_texto_*  |  só bold → *texto*  |  só italic → _texto_
+    # underline não existe no WhatsApp; passa o texto sem wrapping
     text = "~#{text}~" if child['strikethrough']
     text = "_#{text}_" if child['italic']
     text = "*#{text}*" if child['bold']
+    # underline: child['underline'] — sem suporte nativo no WhatsApp, ignorado intencionalmente
     text
   end
 
