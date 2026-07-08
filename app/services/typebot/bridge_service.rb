@@ -191,13 +191,14 @@ class Typebot::BridgeService
     return '' if text.empty?
     return text unless formatted
 
-    # WhatsApp markdown: *bold*, _italic_, ~strikethrough~
-    # Aninhamento *_text_* não funciona no WhatsApp (o _ fica literal dentro de *).
-    # Regra: bold tem prioridade; italic só se aplica quando não há bold.
+    # O Chatwoot processa o conteúdo via WhatsAppRenderer (CommonMarker) antes de enviar ao WhatsApp:
+    #   **text** → strong → *text* no WhatsApp (negrito)
+    #   _text_  → emph  → _text_ no WhatsApp (itálico)
+    #   ~text~  → texto puro (extensão não habilitada) → ~text~ no WhatsApp (riscado)
     # underline: sem suporte no WhatsApp, ignorado intencionalmente.
     text = "~#{text}~" if child['strikethrough']
     if child['bold']
-      text = "*#{text}*"
+      text = "**#{text}**"
     elsif child['italic']
       text = "_#{text}_"
     end
