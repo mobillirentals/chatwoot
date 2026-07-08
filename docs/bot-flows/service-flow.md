@@ -187,10 +187,67 @@ graph TD
 
 ---
 
+---
+
+## Integração CRM — Autoatendimento
+
+O Typebot tem acesso a dados reais do cliente via um endpoint proxy no Chatwoot:
+
+```
+GET https://chat.mobillirentals.com.br/webhooks/crm/client_profile
+    ?phone={{phoneNumber}}
+    &token={{CRM_PROXY_TOKEN}}
+```
+
+### Resposta (JSON)
+
+```json
+{
+  "found": true,
+  "name": "WINSTON LUIZ LIMA DE ARAUJO",
+  "first_name": "WINSTON",
+  "cpf": "19077917799",
+  "asaas_id": "cus_000173810998",
+  "active_contract": true,
+  "deal_id": "37536",
+  "deal_start": "20/04/2026",
+  "motorcycle_plate": "TOR8F68",
+  "motorcycle_model": "GW12",
+  "overdue_count": 2,
+  "overdue_total": 552.00,
+  "overdue_payments": [
+    { "value": 276.0, "due_date": "10/05/2026", "invoice_url": "https://www.asaas.com/i/..." }
+  ],
+  "next_payment": { "value": 276.0, "due_date": "17/05/2026", "invoice_url": "https://..." }
+}
+```
+
+### Casos de autoatendimento possíveis (sem humano)
+
+| Pergunta do cliente | Variável usada | Resposta |
+|---|---|---|
+| "Quero pagar minha parcela" | `next_payment.invoice_url` | Link direto Asaas |
+| "Tenho parcelas em atraso?" | `overdue_count`, `overdue_total` | "Sim, X parcela(s) — R$ Y" |
+| "Qual minha moto?" | `motorcycle_plate`, `motorcycle_model` | "Placa TOR8F68 — GW12" |
+| "Quando começou minha locação?" | `deal_start` | "20/04/2026" |
+| "Estou em dia?" | `overdue_count == 0` | "Sim, você está em dia ✅" |
+
+### Variáveis do Typebot
+
+| Variável | Origem | Descrição |
+|---|---|---|
+| `phoneNumber` | `prefilledVariables` (Chatwoot) | Telefone do contato em formato E.164 |
+| `conversationId` | `prefilledVariables` (Chatwoot) | ID da conversa no Chatwoot |
+| `accountId` | `prefilledVariables` (Chatwoot) | ID da conta no Chatwoot |
+| `chatwootToken` | `prefilledVariables` (Chatwoot) | Token do agent bot para webhooks |
+| `clientName` | `prefilledVariables` (Chatwoot) | Nome do contato no Chatwoot |
+| `crmData` | HTTP block (CRM proxy) | Objeto JSON com todos os dados do cliente |
+
+---
+
 ## Pendências
 
-- [ ] Confirmar se todos os Times acima existem no Chatwoot
-- [ ] Definir mensagem de fila de espera padrão (usada em todos os transfers)
-- [ ] Definir coleta de nome: antes do menu ou por setor?
-- [ ] Confirmar que Furto/Roubo não coleta dados antes de transferir
-- [ ] Integrar Typebot ↔ Chatwoot via Agent Bot webhook
+- [x] Integrar Typebot ↔ Chatwoot via Agent Bot webhook
+- [x] Confirmar que Furto/Roubo não coleta dados antes de transferir
+- [ ] Implementar fluxo de autoatendimento financeiro no Typebot usando `crmData`
+- [ ] Confirmar IDs dos times no Chatwoot (para os webhooks de assignment)
