@@ -30,6 +30,14 @@ class BotFlow::Engine
   def process
     state = attrs['bot_state'] || 'start'
 
+    # Comando global: "Voltar" (ou "Menu"/"Início") retorna ao menu principal em
+    # qualquer estado, exceto no início e durante o atendimento humano ('atendente').
+    if back_command?(@user_input) && !%w[start atendente].include?(state)
+      result = back_to_menu('Voltando ao menu principal 👇')
+      save_state(result[:next_state])
+      return result
+    end
+
     result = case state
     when 'start'                   then handle_start
     when 'menu'                    then handle_menu
@@ -62,9 +70,10 @@ class BotFlow::Engine
     crm = fetch_crm_data
     save_crm_cache(crm)
 
-    welcome = crm[:found] ? "Olá, **#{crm[:first_name]}**! 👋 Bem-vindo à **Mobílli Rentals**." : 'Olá! 👋 Bem-vindo à **Mobílli Rentals**.'
+    name     = crm[:found] ? crm[:first_name].presence : contact_first_name
+    greeting = name.present? ? "Olá, **#{name}**! 👋" : 'Olá! 👋'
     messages = [
-      welcome,
+      "#{greeting} Bem-vindo à **Mobílli Rentals**.",
       'Sou o assistente virtual. Como posso te ajudar?'
     ]
 
@@ -86,7 +95,7 @@ class BotFlow::Engine
   def enter_financeiro
     crm   = crm_cache
     intro = crm[:intro_message].presence || 'Vamos ao seu financeiro. Como posso te ajudar?'
-    { messages: [intro], buttons: financeiro_buttons(crm), next_state: 'financeiro' }
+    { messages: [intro + voltar_hint], buttons: financeiro_buttons(crm), next_state: 'financeiro' }
   end
 
   def handle_financeiro
@@ -117,7 +126,7 @@ class BotFlow::Engine
   # ── Atendimento (sub-setores) ────────────────────────────────────────────────
 
   def enter_atendimento
-    { messages: ['Certo! Com qual setor você precisa falar?'],
+    { messages: ['Certo! Com qual setor você precisa falar?' + voltar_hint],
       buttons: atendimento_buttons, next_state: 'atendimento' }
   end
 
@@ -134,7 +143,7 @@ class BotFlow::Engine
 
   # Veículo / Oficina
   def enter_atendimento_veiculo
-    { messages: ['🔧 **Veículo / Oficina** — o que você precisa?'],
+    { messages: ['🔧 **Veículo / Oficina** — o que você precisa?' + voltar_hint],
       buttons: veiculo_buttons, next_state: 'atendimento_veiculo' }
   end
 
@@ -158,7 +167,7 @@ class BotFlow::Engine
 
   # Documentos
   def enter_atendimento_documentos
-    { messages: ['📋 **Documentos** — sobre qual assunto?'],
+    { messages: ['📋 **Documentos** — sobre qual assunto?' + voltar_hint],
       buttons: documentos_buttons, next_state: 'atendimento_documentos' }
   end
 
@@ -198,7 +207,7 @@ class BotFlow::Engine
 
   # Ouvidoria (texto livre)
   def enter_atendimento_ouvidoria
-    { messages: ['📣 **Ouvidoria** — descreva sua mensagem (elogio, reclamação ou sugestão) e vamos encaminhar para o time responsável.'],
+    { messages: ['📣 **Ouvidoria** — descreva sua mensagem (elogio, reclamação ou sugestão) e vamos encaminhar para o time responsável.' + voltar_hint],
       buttons: nil, next_state: 'atendimento_ouvidoria' }
   end
 
@@ -216,7 +225,7 @@ class BotFlow::Engine
 
   def enter_emergencia_menu
     {
-      messages: ['🚨 **Emergência** — Escolha uma das opções abaixo para que eu possa direcionar para a equipe correta:'],
+      messages: ['🚨 **Emergência** — Escolha uma das opções abaixo para que eu possa direcionar para a equipe correta:' + voltar_hint],
       buttons: [
         { title: '🚨 Roubo/Furto', value: 'roubo furto' },
         { title: '🆘 Socorro',     value: 'socorro' }
@@ -319,7 +328,6 @@ class BotFlow::Engine
       buttons << { title: '💳 Link da próxima', value: 'quero o link' }
     end
     buttons << { title: '🎧 Atendente', value: 'atendente' }
-    buttons << { title: '🔙 Menu', value: 'menu' }
     buttons
   end
 
@@ -368,6 +376,16 @@ class BotFlow::Engine
   end
 
   # ── CRM ──────────────────────────────────────────────────────────────────────
+
+  # Fallback do nome quando o cliente não está no Bitrix: usa o nome do contato
+  # no WhatsApp/Chatwoot (ignora quando o "nome" é apenas o número de telefone).
+  def contact_first_name
+    raw = @conversation.contact&.name.to_s.strip
+    return nil if raw.blank?
+    return nil if raw.match?(/\A\+?[\d\s()-]+\z/) # parece um número de telefone
+
+    raw.split(/\s+/).first
+  end
 
   def fetch_crm_data
     phone = @conversation.contact&.phone_number
@@ -449,5 +467,15 @@ class BotFlow::Engine
         opt.length == 1 && opt.match?(/\d/) ? input == opt : input.include?(opt)
       end
     end
+  end
+
+  # Comando global de navegação: qualquer um destes retorna ao menu principal.
+  def back_command?(input)
+    ['voltar', 'menu', 'inicio', 'voltar ao menu', 'menu principal', 'voltar ao inicio'].include?(normalize(input))
+  end
+
+  # Dica textual de navegação (substitui o antigo botão "Voltar" — libera slot de botão).
+  def voltar_hint
+    "\n\n_↩️ Digite Voltar a qualquer momento para retornar ao menu._"
   end
 end
