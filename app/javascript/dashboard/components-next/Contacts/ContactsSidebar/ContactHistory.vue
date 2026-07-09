@@ -196,28 +196,19 @@ const handleExport = async () => {
       class="flex flex-col gap-2 px-6 py-2.5 border-b border-n-weak"
     >
       <div class="relative">
-        <span
-          class="absolute -translate-y-1/2 pointer-events-none i-lucide-search left-2 top-1/2 size-3.5 text-n-slate-10"
-        />
+        <span class="absolute i-lucide-search size-3.5 top-2 left-3" />
         <input
           v-model="searchQuery"
-          type="text"
+          type="search"
           :placeholder="
             t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.SEARCH_PLACEHOLDER')
           "
-          class="w-full py-1.5 pl-7 pr-7 text-xs border rounded-lg bg-n-alpha-1 border-n-weak text-n-slate-12 placeholder:text-n-slate-10 focus:outline-none focus:border-woot-500"
+          class="w-full h-8 py-2 pl-10 pr-8 text-sm border-none rounded-lg outline-none reset-base bg-n-alpha-black2 dark:bg-n-solid-1 text-n-slate-12"
         />
         <span
           v-if="isSearching"
-          class="absolute -translate-y-1/2 i-lucide-loader-circle animate-spin right-2 top-1/2 size-3.5 text-n-slate-10"
+          class="absolute i-lucide-loader-circle animate-spin size-3.5 top-2 right-3 text-n-slate-10"
         />
-        <button
-          v-else-if="searchQuery"
-          class="absolute -translate-y-1/2 right-2 top-1/2 text-n-slate-10 hover:text-n-slate-12"
-          @click="searchQuery = ''"
-        >
-          <span class="i-lucide-x size-3.5" />
-        </button>
       </div>
       <div class="flex items-center gap-1">
         <button
