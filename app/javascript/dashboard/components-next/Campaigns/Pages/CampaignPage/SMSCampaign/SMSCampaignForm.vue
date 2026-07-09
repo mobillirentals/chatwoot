@@ -3,7 +3,7 @@ import { reactive, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useStore, useMapGetter } from 'dashboard/composables/store';
 
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
@@ -30,6 +30,11 @@ const initialState = {
 };
 
 const state = reactive({ ...initialState });
+const store = useStore();
+
+const scheduledCampaignInterval = computed(() => {
+  return store.getters['globalConfig/get'].scheduledCampaignInterval || 5;
+});
 
 const rules = {
   title: { required, minLength: minLength(1) },
@@ -158,15 +163,30 @@ const handleSubmit = async () => {
       />
     </div>
 
-    <Input
-      v-model="state.scheduledAt"
-      :label="t('CAMPAIGN.SMS.CREATE.FORM.SCHEDULED_AT.LABEL')"
-      type="datetime-local"
-      :min="currentDateTime"
-      :placeholder="t('CAMPAIGN.SMS.CREATE.FORM.SCHEDULED_AT.PLACEHOLDER')"
-      :message="formErrors.scheduledAt"
-      :message-type="formErrors.scheduledAt ? 'error' : 'info'"
-    />
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center gap-1 mb-0.5">
+        <label for="sms-scheduled-at" class="text-heading-3 text-n-slate-12">
+          {{ t('CAMPAIGN.SMS.CREATE.FORM.SCHEDULED_AT.LABEL') }}
+        </label>
+        <span
+          v-tooltip.top="
+            t('CAMPAIGN.SMS.CREATE.FORM.SCHEDULED_AT.HELP_TEXT', {
+              interval: scheduledCampaignInterval,
+            })
+          "
+          class="i-lucide-help-circle size-3.5 text-n-slate-11 cursor-help"
+        />
+      </div>
+      <Input
+        id="sms-scheduled-at"
+        v-model="state.scheduledAt"
+        type="datetime-local"
+        :min="currentDateTime"
+        :placeholder="t('CAMPAIGN.SMS.CREATE.FORM.SCHEDULED_AT.PLACEHOLDER')"
+        :message="formErrors.scheduledAt"
+        :message-type="formErrors.scheduledAt ? 'error' : 'info'"
+      />
+    </div>
 
     <div class="flex items-center justify-between w-full gap-3">
       <Button

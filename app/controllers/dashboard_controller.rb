@@ -84,8 +84,22 @@ class DashboardController < ActionController::Base
       AZURE_SSO_CLIENT_ID: InstallationConfig.find_by(name: 'AZURE_CLIENT_ID')&.value.to_s,
       AZURE_SSO_TENANT_ID: InstallationConfig.find_by(name: 'AZURE_TENANT_ID')&.value.presence || 'common',
       ALLOWED_LOGIN_METHODS: allowed_login_methods,
-      ACTIVE_PLATFORM_BANNERS: active_platform_banners
+      ACTIVE_PLATFORM_BANNERS: active_platform_banners,
+      SCHEDULED_CAMPAIGN_INTERVAL: campaign_interval_from_schedule
     }
+  end
+
+  def campaign_interval_from_schedule
+    schedule_file = Rails.root.join('config/schedule.yml')
+    if File.exist?(schedule_file)
+      schedule = YAML.safe_load(File.read(schedule_file))
+      cron = schedule.dig('trigger_scheduled_items_job', 'cron') || '*/5 * * * *'
+      minutes = cron.split(' ').first
+      return minutes.split('*/').last.to_i if minutes.start_with?('*/')
+    end
+    5
+  rescue
+    5
   end
 
   def active_platform_banners
