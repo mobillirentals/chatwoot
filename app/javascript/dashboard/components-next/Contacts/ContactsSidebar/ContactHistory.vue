@@ -17,7 +17,7 @@ const conversations = useMapGetter(
 const contactsById = useMapGetter('contacts/getContactById');
 const stateInbox = useMapGetter('inboxes/getInboxById');
 const accountLabels = useMapGetter('labels/getLabels');
-const currentUser = useMapGetter('auth/getCurrentUser');
+const currentUser = useMapGetter('getCurrentUser');
 
 const accountLabelsValue = computed(() => accountLabels.value);
 
