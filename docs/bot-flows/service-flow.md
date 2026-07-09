@@ -29,8 +29,7 @@ graph TD
     %% ── FINANCEIRO (autoatendimento CRM) ────────────────────
     Fin -- 💳 Quero o link --> LinkPag[Envia link de pagamento Asaas]
     LinkPag --> MaisAlgo{Posso ajudar em mais algo?}
-    Fin -- 🎧 Falar com financeiro --> T_Fin[[Transfere: financeiro]]
-    Fin -- 🔙 Menu --> Menu
+    Fin -- 🎧 Atendente --> T_Fin[[Transfere: financeiro]]
     MaisAlgo -- ✅ Sim --> Menu
     MaisAlgo -- ❌ Não --> Despedida[Despedida]
     Despedida --> Fim([Resolve + encerra a conversa])
@@ -39,7 +38,6 @@ graph TD
     Atend -- 🔧 Veículo / Oficina --> Veic{O que precisa?}
     Atend -- 📋 Documentos --> Doc{Qual o assunto?}
     Atend -- 📣 Ouvidoria --> Ouv[/Coleta: descreva sua mensagem/]
-    Atend -- 🔙 Menu --> Menu
 
     Veic -- 📅 Agendar revisão --> LinkAgenda[Envia link de agendamento]
     LinkAgenda --> MaisAlgo
@@ -91,7 +89,7 @@ O cache do CRM da sessão fica em `['bot_crm']`.
 
 | Estado | O que faz | Próximos estados |
 |---|---|---|
-| `start` | Busca o CRM pelo telefone, salva cache, saúda com o nome | `menu` |
+| `start` | Busca o CRM pelo telefone, salva cache, saúda com o nome (fallback: nome do contato no WhatsApp) | `menu` |
 | `menu` | Menu principal (3 botões) | `financeiro` · `atendimento` · `emergencia_menu` |
 | `financeiro` | Mostra resumo financeiro do CRM + ações | `financeiro_link_enviado` · `atendente` · `menu` |
 | `financeiro_link_enviado` | Após enviar o link: "mais alguma coisa?" | `menu` · `despedida` |
@@ -125,14 +123,21 @@ o bot nunca resolve uma conversa que foi transferida.
 
 ---
 
+## Navegação global — "Voltar"
+
+Não há botão "Voltar". Em **qualquer estado** (exceto `start` e `atendente`), o cliente
+**digita** `Voltar` (ou `Menu` / `Início`) e retorna ao menu principal — tratado no topo de
+`BotFlow::Engine#process` via `back_command?`. Os submenus trazem essa dica **por escrito**
+(`voltar_hint`), o que libera slots de botão.
+
 ## Regra de botões WhatsApp (máx. 3 por menu)
 
 | Nível | Menu | Botões |
 |---|---|---|
 | 1 | Menu principal | 💰 Financeiro · 🎧 Atendimento · 🚨 Emergência |
-| 2 | Financeiro (com atraso) | 💳 Quero o link · 🎧 Atendente · 🔙 Menu |
-| 2 | Financeiro (em dia) | 💳 Quero o link · 🎧 Atendente · 🔙 Menu |
-| 2 | Financeiro (sem cobrança) | 🎧 Atendente · 🔙 Menu |
+| 2 | Financeiro (com atraso) | 💳 Quero o link · 🎧 Atendente |
+| 2 | Financeiro (em dia) | 💳 Link da próxima · 🎧 Atendente |
+| 2 | Financeiro (sem cobrança) | 🎧 Atendente |
 | 2 | Atendimento | 🔧 Veículo · 📋 Documentos · 📣 Ouvidoria |
 | 3 | Veículo | 📅 Agendar revisão · 🎧 Atendente |
 | 3 | Documentos | 📄 Docs para locar · 🚦 Multas · 📝 Contrato |
@@ -181,7 +186,7 @@ O resultado é cacheado em `additional_attributes['bot_crm']` durante a sessão.
 | Campo | Descrição |
 |---|---|
 | `found` | `true` se o telefone bateu com um contato no Bitrix |
-| `first_name` / `name` | Nome do cliente (usado na saudação) |
+| `first_name` / `name` | Nome do cliente (usado na saudação; sem Bitrix, cai para o nome do contato no WhatsApp) |
 | `intro_message` | Resumo financeiro pronto (atraso / em dia / sem cobrança) |
 | `payment_message` | Mensagem com o link Asaas da parcela (vencida ou próxima) |
 | `overdue_count` / `overdue_total` | Nº e soma das parcelas vencidas |
@@ -192,9 +197,9 @@ O resultado é cacheado em `additional_attributes['bot_crm']` durante a sessão.
 
 | Situação | Condição | Botões oferecidos |
 |---|---|---|
-| Com atraso | `overdue_count > 0` | 💳 Quero o link · 🎧 Falar com financeiro · 🔙 Menu |
-| Em dia | `next_payment` presente | 💳 Link da próxima · 🎧 Falar com financeiro · 🔙 Menu |
-| Sem cobrança | nada em aberto | 🎧 Falar com financeiro · 🔙 Menu |
+| Com atraso | `overdue_count > 0` | 💳 Quero o link · 🎧 Atendente |
+| Em dia | `next_payment` presente | 💳 Link da próxima · 🎧 Atendente |
+| Sem cobrança | nada em aberto | 🎧 Atendente |
 
 ---
 
