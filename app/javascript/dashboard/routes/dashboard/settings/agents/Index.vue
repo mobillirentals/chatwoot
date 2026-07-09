@@ -149,6 +149,9 @@ const getLastActiveText = agent => {
   if (agent.availability_status === 'online') {
     return t('AGENT_MGMT.LIST.STATUS_ONLINE');
   }
+  if (agent.availability_status === 'busy') {
+    return t('AGENT_MGMT.LIST.STATUS_BUSY') || 'Ocupado';
+  }
   if (!agent.active_at) {
     return t('AGENT_MGMT.LIST.NEVER_ACTIVE');
   }
@@ -211,12 +214,14 @@ const getLastActiveText = agent => {
                 <!-- Online: green dot -->
                 <div
                   v-if="agent.availability_status === 'online'"
-                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-teal-10 w-3.5 h-3.5 top-[27px] left-[27px]"
+                  v-tooltip.top="getLastActiveText(agent)"
+                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-teal-10 w-3.5 h-3.5 top-[27px] left-[27px] cursor-pointer"
                 />
                 <!-- Busy: amber dot -->
                 <div
                   v-else-if="agent.availability_status === 'busy'"
-                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-amber-10 w-3.5 h-3.5 top-[27px] left-[27px]"
+                  v-tooltip.top="getLastActiveText(agent)"
+                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-amber-10 w-3.5 h-3.5 top-[27px] left-[27px] cursor-pointer"
                 />
                 <!-- Offline: clock icon with tooltip -->
                 <div
@@ -229,10 +234,7 @@ const getLastActiveText = agent => {
               </template>
             </Avatar>
             <div class="flex flex-col gap-1.5 items-start">
-              <span
-                v-tooltip.top="getLastActiveText(agent)"
-                class="block text-heading-3 text-n-slate-12 capitalize cursor-pointer hover:underline"
-              >
+              <span class="block text-heading-3 text-n-slate-12 capitalize">
                 {{ agent.name }}
               </span>
               <div class="flex items-center gap-2">

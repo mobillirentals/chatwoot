@@ -23,7 +23,8 @@
       "AVAILABLE_CUSTOM_ROLE": "Available custom role permissions",
       "LAST_ACTIVE_AT": "Last active",
       "NEVER_ACTIVE": "Never active",
-      "STATUS_ONLINE": "Online"
+      "STATUS_ONLINE": "Online",
+      "STATUS_BUSY": "Busy"
     },
     "ADD": {
       "TITLE": "Add agent to your team",

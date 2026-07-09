@@ -23,7 +23,8 @@
       "AVAILABLE_CUSTOM_ROLE": "Available custom role permissions",
       "LAST_ACTIVE_AT": "Último acesso",
       "NEVER_ACTIVE": "Nenhum acesso registado",
-      "STATUS_ONLINE": "Online"
+      "STATUS_ONLINE": "Online",
+      "STATUS_BUSY": "Ocupado"
     },
     "ADD": {
       "TITLE": "Adicionar agente à sua equipa",

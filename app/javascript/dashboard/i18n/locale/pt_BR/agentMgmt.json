@@ -23,7 +23,8 @@
       "AVAILABLE_CUSTOM_ROLE": "Permissões de função personalizada disponíveis",
       "LAST_ACTIVE_AT": "Último acesso",
       "NEVER_ACTIVE": "Nenhum acesso registrado",
-      "STATUS_ONLINE": "Online"
+      "STATUS_ONLINE": "Online",
+      "STATUS_BUSY": "Ocupado"
     },
     "ADD": {
       "TITLE": "Adicionar agente a seu time",
