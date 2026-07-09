@@ -2,6 +2,27 @@
 
 ## [Não lançado]
 
+## [2026-07-08] — CRM Proxy + formatação WhatsApp corrigida
+
+### Adicionado
+- **`GET /webhooks/crm/client_profile`** (`app/controllers/webhooks/crm_controller.rb`): endpoint proxy que agrega dados de 3 sistemas em uma chamada só:
+  1. **Bitrix24** `crm.contact.list` — busca contato pelo telefone (prioriza registro com CPF)
+  2. **Bitrix24** `crm.deal.list` — busca deal ativo (STAGE_ID=WON + data início + sem data de devolução)
+  3. **Bitrix24** `crm.item.list` (entityTypeId=1072) — busca moto vinculada ao deal
+  4. **Asaas** `/payments` — cobranças vencidas e próximo vencimento
+- **`app/services/crm/client_profile_service.rb`**: service que encapsula toda a lógica de agregação CRM
+- **`phoneNumber`** adicionado aos `prefilledVariables` do Typebot (via `BridgeService#start_session`)
+- Vars de ambiente: `BITRIX24_WEBHOOK_URL`, `ASAAS_ACCESS_TOKEN`, `CRM_PROXY_TOKEN` (documentadas no `.env.example`)
+
+### Corrigido
+- **Formatação bold no WhatsApp**: `BridgeService#render_rich_child` agora usa `**texto**` (Markdown strong) em vez de `*texto*` (Markdown emph). O pipeline do Chatwoot (`WhatsAppRenderer`) converte `strong` → `*texto*` (bold no WhatsApp) e `emph` → `_texto_` (itálico). Usar `*` direto chegava como itálico.
+
+### Segurança
+- Endpoint CRM protegido por `X-CRM-Token` header (ou query param `token`) validado contra `CRM_PROXY_TOKEN` env var
+- Tokens Bitrix24 e Asaas ficam exclusivamente em variáveis de ambiente — nunca no builder do Typebot
+
+---
+
 ## [2026-07-07] — Typebot: bot de triagem WhatsApp funcional
 
 ### Corrigido

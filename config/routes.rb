@@ -626,7 +626,9 @@ Rails.application.routes.draw do
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
   post 'webhooks/tiktok', to: 'webhooks/tiktok#events'
   post 'webhooks/shopify', to: 'webhooks/shopify#events'
-  post 'webhooks/typebot', to: 'webhooks/typebot#process_payload'
+  post 'webhooks/typebot', to: 'webhooks/bot_flow#process_payload'
+  post 'webhooks/bot_flow', to: 'webhooks/bot_flow#process_payload'
+  get  'webhooks/crm/client_profile', to: 'webhooks/crm#client_profile'
 
   namespace :twitter do
     resource :callback, only: [:show]
