@@ -19,6 +19,10 @@ class ContactPolicy < ApplicationPolicy
     @account_user.administrator? || @account_user.supervisor?
   end
 
+  def search_conversations?
+    @account_user.administrator? || @account_user.supervisor?
+  end
+
   def search?
     true
   end
