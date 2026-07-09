@@ -1,10 +1,10 @@
-<p>Hi {{user.available_name}},</p>
+<p>Olá, {{user.available_name}} 👋</p>
 
 <p>
-  Conversation #{{conversation.display_id}} in {{ inbox.name }} 
-  has missed the SLA for first response  under policy {{ sla_policy.name }}.
+  ⚠️ A conversa <strong>#{{conversation.display_id}}</strong> na caixa <strong>{{ inbox.name }}</strong>
+  ultrapassou o prazo de <strong>primeiro atendimento</strong> definido pela política de SLA <em>{{ sla_policy.name }}</em>.
 </p>
 
 <p>
-<a href="{{action_url}}">Please address immediately.</a>
+  <a href="{{action_url}}" style="display: inline-block; background-color: #DB7F2B; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">Atender agora →</a>
 </p>
