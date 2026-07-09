@@ -105,7 +105,8 @@ const formErrors = computed(() => ({
 }));
 
 const hasRequiredTemplateParams = computed(() => {
-  return templateParserRef.value?.v$?.$invalid === false || true;
+  if (!state.templateId) return true;
+  return templateParserRef.value?.isFormInvalid === false;
 });
 
 const isSubmitDisabled = computed(
