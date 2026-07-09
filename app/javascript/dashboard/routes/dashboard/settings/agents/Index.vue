@@ -15,6 +15,8 @@ import EditAgent from './EditAgent.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { dynamicTime } from 'shared/helpers/timeHelper';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -142,6 +144,17 @@ const confirmDeletion = () => {
   closeDeletePopup();
   deleteAgent(currentAgent.value.id);
 };
+
+const getLastActiveText = agent => {
+  if (agent.availability_status === 'online') {
+    return t('AGENT_MGMT.LIST.STATUS_ONLINE');
+  }
+  if (!agent.active_at) {
+    return t('AGENT_MGMT.LIST.NEVER_ACTIVE');
+  }
+  const time = dynamicTime(agent.active_at);
+  return `${t('AGENT_MGMT.LIST.LAST_ACTIVE_AT')}: ${time}`;
+};
 </script>
 
 <template>
@@ -193,10 +206,33 @@ const confirmDeletion = () => {
               :name="agent.name"
               :status="agent.availability_status"
               :size="40"
-              hide-offline-status
-            />
+            >
+              <template #badge>
+                <!-- Online: green dot -->
+                <div
+                  v-if="agent.availability_status === 'online'"
+                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-teal-10 w-3.5 h-3.5 top-[27px] left-[27px]"
+                />
+                <!-- Busy: amber dot -->
+                <div
+                  v-else-if="agent.availability_status === 'busy'"
+                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-amber-10 w-3.5 h-3.5 top-[27px] left-[27px]"
+                />
+                <!-- Offline: clock icon with tooltip -->
+                <div
+                  v-else
+                  v-tooltip.top="getLastActiveText(agent)"
+                  class="absolute z-20 border rounded-full border-n-slate-3 bg-n-solid-3 dark:bg-n-slate-4 w-4.5 h-4.5 top-[26px] left-[26px] flex items-center justify-center cursor-pointer text-n-slate-11 shadow-sm"
+                >
+                  <Icon icon="i-lucide-clock" class="size-2.5" />
+                </div>
+              </template>
+            </Avatar>
             <div class="flex flex-col gap-1.5 items-start">
-              <span class="block text-heading-3 text-n-slate-12 capitalize">
+              <span
+                v-tooltip.top="getLastActiveText(agent)"
+                class="block text-heading-3 text-n-slate-12 capitalize cursor-pointer hover:underline"
+              >
                 {{ agent.name }}
               </span>
               <div class="flex items-center gap-2">
