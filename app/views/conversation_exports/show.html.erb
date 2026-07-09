@@ -416,7 +416,7 @@
         <div>
           <div class="meta-grid__label">Encerramento</div>
           <div class="meta-grid__value">
-            <%= conv.resolved_at ? conv.resolved_at.in_time_zone('Brasilia').strftime('%d/%m/%Y %H:%M') : '—' %>
+            <%= conv.resolved? ? conv.updated_at.in_time_zone('Brasilia').strftime('%d/%m/%Y %H:%M') : '—' %>
           </div>
         </div>
         <% if item[:first_response].present? %>
