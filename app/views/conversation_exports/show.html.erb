@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatMobilli — Exportação de Conversas</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 11pt;
+      color: #1a1a1a;
+      background: #fff;
+      line-height: 1.5;
+    }
+
+    /* ── Print optimisations ──────────────────────────────────── */
+    @media print {
+      @page {
+        margin: 15mm 15mm 20mm 15mm;
+        size: A4 portrait;
+      }
+
+      .no-print { display: none !important; }
+
+      .conversation-block { page-break-inside: avoid; }
+      .message-row        { page-break-inside: avoid; }
+
+      /* Ensure URLs are visible in print */
+      a[href]::after {
+        content: " [" attr(href) "]";
+        font-size: 8pt;
+        color: #555;
+        word-break: break-all;
+      }
+    }
+
+    /* ── Layout ───────────────────────────────────────────────── */
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* ── Report header ────────────────────────────────────────── */
+    .report-header {
+      border-bottom: 3px solid #1a56db;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    .report-header__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .report-header__brand-name {
+      font-size: 18pt;
+      font-weight: 700;
+      color: #1a56db;
+      letter-spacing: -0.3px;
+    }
+
+    .report-header__subtitle {
+      font-size: 10pt;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 24px;
+      font-size: 9.5pt;
+    }
+
+    .meta-grid__label {
+      color: #666;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.4px;
+    }
+
+    .meta-grid__value {
+      color: #1a1a1a;
+    }
+
+    /* ── Contact section ──────────────────────────────────────── */
+    .contact-section {
+      background: #f8faff;
+      border: 1px solid #dce8ff;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-bottom: 28px;
+    }
+
+    .contact-section__title {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #1a56db;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    /* ── Conversation block ───────────────────────────────────── */
+    .conversation-block {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+
+    .conversation-header {
+      background: #1a56db;
+      color: #fff;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .conversation-header__id {
+      font-weight: 700;
+      font-size: 11pt;
+    }
+
+    .conversation-header__status {
+      font-size: 8.5pt;
+      background: rgba(255,255,255,0.25);
+      border-radius: 12px;
+      padding: 2px 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .conversation-meta {
+      background: #f4f7ff;
+      padding: 10px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 20px;
+      font-size: 9pt;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .conversation-meta__label {
+      color: #666;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 7.5pt;
+      letter-spacing: 0.4px;
+    }
+
+    /* ── Timeline ─────────────────────────────────────────────── */
+    .timeline {
+      padding: 8px 0;
+    }
+
+    .message-row {
+      padding: 8px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      gap: 12px;
+    }
+
+    .message-row:last-child { border-bottom: none; }
+
+    .message-row--private {
+      background: #fffbec;
+      border-left: 3px solid #f0a500;
+    }
+
+    .message-row--activity {
+      background: #f6f6f6;
+      text-align: center;
+      color: #888;
+      font-size: 8.5pt;
+      font-style: italic;
+      justify-content: center;
+    }
+
+    .message-row__time {
+      flex-shrink: 0;
+      font-size: 8pt;
+      color: #888;
+      width: 82px;
+      padding-top: 2px;
+      line-height: 1.3;
+    }
+
+    .message-row__body {
+      flex: 1;
+    }
+
+    .message-row__sender {
+      font-weight: 600;
+      font-size: 9pt;
+      color: #333;
+      margin-bottom: 3px;
+    }
+
+    .message-row__sender--agent { color: #1a56db; }
+    .message-row__sender--client { color: #2e7d32; }
+
+    .message-row__private-badge {
+      display: inline-block;
+      font-size: 7pt;
+      background: #f0a500;
+      color: #fff;
+      border-radius: 3px;
+      padding: 1px 5px;
+      margin-left: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+
+    .message-row__text {
+      font-size: 10pt;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ── Attachment blocks ────────────────────────────────────── */
+    .attachment {
+      margin-top: 6px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .attachment--image img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .attachment--media {
+      padding: 8px 12px;
+      background: #f8f8f8;
+      font-size: 9pt;
+    }
+
+    .attachment--media__icon {
+      font-size: 14pt;
+      margin-right: 4px;
+    }
+
+    .attachment--media__name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .attachment--media__size {
+      color: #888;
+      font-size: 8pt;
+      margin-left: 4px;
+    }
+
+    .attachment--media__url {
+      font-size: 7.5pt;
+      color: #1a56db;
+      word-break: break-all;
+      display: block;
+      margin-top: 3px;
+    }
+
+    .attachment--location {
+      padding: 8px 12px;
+      background: #f8f8f8;
+      font-size: 9pt;
+    }
+
+    /* ── Integrity footer ─────────────────────────────────────── */
+    .integrity-section {
+      margin-top: 32px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 14px 18px;
+      background: #fafafa;
+    }
+
+    .integrity-section__title {
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #444;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .integrity-section__hash {
+      font-family: 'Courier New', monospace;
+      font-size: 8pt;
+      color: #333;
+      word-break: break-all;
+      background: #eee;
+      padding: 4px 8px;
+      border-radius: 3px;
+    }
+
+    .integrity-section__note {
+      font-size: 8pt;
+      color: #777;
+      margin-top: 8px;
+    }
+
+    /* ── Print button (hidden on print) ──────────────────────── */
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1a56db;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 12pt;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(26,86,219,0.35);
+      z-index: 9999;
+    }
+
+    .print-btn:hover { background: #1648c0; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Report header ─────────────────────────────────────── -->
+  <div class="report-header">
+    <div class="report-header__brand">
+      <span class="report-header__brand-name">ChatMobilli</span>
+    </div>
+    <div class="report-header__subtitle">Exportação de Conversas — Documento gerado para fins de registro e auditoria</div>
+
+    <div class="meta-grid">
+      <div>
+        <div class="meta-grid__label">Gerado em</div>
+        <div class="meta-grid__value"><%= @generated_at %></div>
+      </div>
+      <div>
+        <div class="meta-grid__label">Gerado por</div>
+        <div class="meta-grid__value"><%= @exported_by.name %> (<%= @exported_by.email %>)</div>
+      </div>
+      <div>
+        <div class="meta-grid__label">Conta</div>
+        <div class="meta-grid__value"><%= @account.name %></div>
+      </div>
+      <div>
+        <div class="meta-grid__label">Total de conversas</div>
+        <div class="meta-grid__value"><%= @conversations.size %></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Contact section ───────────────────────────────────── -->
+  <div class="contact-section">
+    <div class="contact-section__title">Dados do Contato</div>
+    <div class="meta-grid">
+      <div>
+        <div class="meta-grid__label">Nome</div>
+        <div class="meta-grid__value"><%= @contact.name %></div>
+      </div>
+      <% if @contact.phone_number.present? %>
+      <div>
+        <div class="meta-grid__label">Telefone</div>
+        <div class="meta-grid__value"><%= @contact.phone_number %></div>
+      </div>
+      <% end %>
+      <% if @contact.email.present? %>
+      <div>
+        <div class="meta-grid__label">E-mail</div>
+        <div class="meta-grid__value"><%= @contact.email %></div>
+      </div>
+      <% end %>
+      <% if @contact.identifier.present? %>
+      <div>
+        <div class="meta-grid__label">Identificador</div>
+        <div class="meta-grid__value"><%= @contact.identifier %></div>
+      </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- ── Conversations ─────────────────────────────────────── -->
+  <% @conversations.each do |item| %>
+    <% conv = item[:conversation] %>
+    <div class="conversation-block">
+
+      <div class="conversation-header">
+        <span class="conversation-header__id">Conversa #<%= conv.display_id %></span>
+        <span class="conversation-header__status"><%= conv.status.upcase %></span>
+      </div>
+
+      <div class="conversation-meta">
+        <div>
+          <div class="meta-grid__label">Canal</div>
+          <div class="meta-grid__value"><%= item[:channel] %></div>
+        </div>
+        <div>
+          <div class="meta-grid__label">Agente Responsável</div>
+          <div class="meta-grid__value"><%= item[:assignee] %></div>
+        </div>
+        <div>
+          <div class="meta-grid__label">Início</div>
+          <div class="meta-grid__value"><%= conv.created_at.in_time_zone('Brasilia').strftime('%d/%m/%Y %H:%M') %></div>
+        </div>
+        <div>
+          <div class="meta-grid__label">Encerramento</div>
+          <div class="meta-grid__value">
+            <%= conv.resolved_at ? conv.resolved_at.in_time_zone('Brasilia').strftime('%d/%m/%Y %H:%M') : '—' %>
+          </div>
+        </div>
+        <% if item[:first_response].present? %>
+        <div>
+          <div class="meta-grid__label">1ª Resposta</div>
+          <div class="meta-grid__value"><%= item[:first_response] %></div>
+        </div>
+        <% end %>
+        <% if item[:labels].present? %>
+        <div>
+          <div class="meta-grid__label">Etiquetas</div>
+          <div class="meta-grid__value"><%= item[:labels] %></div>
+        </div>
+        <% end %>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline">
+        <% if item[:messages].empty? %>
+          <div class="message-row message-row--activity">Nenhuma mensagem registrada nesta conversa.</div>
+        <% end %>
+
+        <% item[:messages].each do |m| %>
+          <% msg = m[:message] %>
+
+          <% if msg.message_type.to_s == 'activity' %>
+            <div class="message-row message-row--activity">
+              <span><%= m[:timestamp] %> — <%= msg.content.presence || 'Atividade do sistema' %></span>
+            </div>
+
+          <% else %>
+            <div class="message-row<%= ' message-row--private' if m[:private] %>">
+              <div class="message-row__time"><%= m[:timestamp] %></div>
+              <div class="message-row__body">
+                <div class="message-row__sender <%= msg.incoming? ? 'message-row__sender--client' : 'message-row__sender--agent' %>">
+                  <%= m[:sender] %>
+                  <% if m[:private] %>
+                    <span class="message-row__private-badge">⚠ Nota Interna</span>
+                  <% end %>
+                </div>
+
+                <% if m[:content].present? %>
+                  <div class="message-row__text"><%= m[:content] %></div>
+                <% end %>
+
+                <% m[:attachments].each do |att| %>
+                  <div class="attachment">
+                    <% case att[:type] %>
+                    <% when :image %>
+                      <div class="attachment--image">
+                        <% if att[:data_uri].present? %>
+                          <img src="<%= att[:data_uri] %>" alt="<%= att[:filename] %>">
+                        <% else %>
+                          <div class="attachment--media">
+                            🖼 <span class="attachment--media__name"><%= att[:filename] %></span>
+                            <span class="attachment--media__note">(imagem não pôde ser carregada)</span>
+                          </div>
+                        <% end %>
+                      </div>
+                    <% when :audio %>
+                      <div class="attachment--media">
+                        <span class="attachment--media__icon">🎙️</span>
+                        <span class="attachment--media__name"><%= att[:filename].presence || 'Áudio' %></span>
+                        <span class="attachment--media__size"><%= att[:size] %></span>
+                        <a class="attachment--media__url" href="<%= att[:url] %>"><%= att[:url] %></a>
+                      </div>
+                    <% when :video %>
+                      <div class="attachment--media">
+                        <span class="attachment--media__icon">🎬</span>
+                        <span class="attachment--media__name"><%= att[:filename].presence || 'Vídeo' %></span>
+                        <span class="attachment--media__size"><%= att[:size] %></span>
+                        <a class="attachment--media__url" href="<%= att[:url] %>"><%= att[:url] %></a>
+                      </div>
+                    <% when :file %>
+                      <div class="attachment--media">
+                        <span class="attachment--media__icon">📎</span>
+                        <span class="attachment--media__name"><%= att[:filename].presence || 'Arquivo' %></span>
+                        <span class="attachment--media__size"><%= att[:size] %></span>
+                        <a class="attachment--media__url" href="<%= att[:url] %>"><%= att[:url] %></a>
+                      </div>
+                    <% when :location %>
+                      <div class="attachment--location">
+                        📍 <strong><%= att[:title].presence || 'Localização' %></strong>
+                        — Lat: <%= att[:lat] %>, Long: <%= att[:lng] %>
+                      </div>
+                    <% else %>
+                      <div class="attachment--media">
+                        📁 <span class="attachment--media__name"><%= att[:filename].presence || 'Arquivo' %></span>
+                        <% if att[:url].present? %>
+                          <a class="attachment--media__url" href="<%= att[:url] %>"><%= att[:url] %></a>
+                        <% end %>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- ── Integrity footer ──────────────────────────────────── -->
+  <div class="integrity-section">
+    <div class="integrity-section__title">Assinatura de Integridade</div>
+    <div class="integrity-section__hash">SHA-256: <%= @sha256 %></div>
+    <div class="integrity-section__note">
+      Este documento foi gerado automaticamente pelo sistema ChatMobilli em <%= @generated_at %>.
+      O hash SHA-256 acima é calculado com base no conteúdo de todas as mensagens exportadas e pode ser
+      utilizado para verificar que o conteúdo não foi alterado após a geração.
+    </div>
+  </div>
+
+</div>
+
+<!-- Print button (hidden on print) -->
+<button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
+
+<script>
+  // Auto-trigger print dialog when opened in a new window via the export flow
+  if (window.opener) {
+    window.addEventListener('load', function () {
+      setTimeout(function () { window.print(); }, 600);
+    });
+  }
+</script>
+</body>
+</html>
