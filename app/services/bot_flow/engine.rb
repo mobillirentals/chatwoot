@@ -1,0 +1,481 @@
+class BotFlow::Engine
+  STATES = %w[
+    start
+    menu
+    financeiro
+    financeiro_link_enviado
+    atendimento
+    atendimento_veiculo
+    atendimento_documentos
+    documentos_duvida
+    atendimento_ouvidoria
+    pos_atendimento
+    emergencia_menu
+    emergencia
+    atendente
+    despedida
+  ].freeze
+
+  AGENDAMENTO_URL = ENV.fetch('AGENDAMENTO_URL', 'https://mobillirentals.com.br/agendamento').freeze
+
+  def initialize(conversation, user_input)
+    @conversation = conversation
+    @user_input   = user_input.to_s.strip
+  end
+
+  def self.step(conversation, user_input)
+    new(conversation, user_input).process
+  end
+
+  def process
+    state = attrs['bot_state'] || 'start'
+
+    # Comando global: "Voltar" (ou "Menu"/"Início") retorna ao menu principal em
+    # qualquer estado, exceto no início e durante o atendimento humano ('atendente').
+    if back_command?(@user_input) && !%w[start atendente].include?(state)
+      result = back_to_menu('Voltando ao menu principal 👇')
+      save_state(result[:next_state])
+      return result
+    end
+
+    result = case state
+    when 'start'                   then handle_start
+    when 'menu'                    then handle_menu
+    when 'financeiro'              then handle_financeiro
+    when 'financeiro_link_enviado' then handle_more_help('financeiro_link_enviado')
+    when 'atendimento'             then handle_atendimento
+    when 'atendimento_veiculo'     then handle_atendimento_veiculo
+    when 'atendimento_documentos'  then handle_atendimento_documentos
+    when 'documentos_duvida'       then handle_documentos_duvida
+    when 'atendimento_ouvidoria'   then handle_atendimento_ouvidoria
+    when 'pos_atendimento'         then handle_more_help('pos_atendimento')
+    when 'emergencia_menu'         then handle_emergencia_menu
+    when 'emergencia'              then handle_emergencia
+    when 'atendente'               then handle_atendente
+    when 'despedida'               then farewell
+    else handle_start
+    end
+
+    return nil unless result
+
+    save_state(result[:next_state]) if result[:next_state]
+    result
+  end
+
+  private
+
+  # ── start / menu ────────────────────────────────────────────────────────────
+
+  def handle_start
+    crm = fetch_crm_data
+    save_crm_cache(crm)
+
+    name     = crm[:found] ? crm[:first_name].presence : contact_first_name
+    greeting = name.present? ? "Olá, **#{name}**! 👋" : 'Olá! 👋'
+    messages = [
+      "#{greeting} Bem-vindo à **Mobílli Rentals**.",
+      'Sou o assistente virtual. Como posso te ajudar?'
+    ]
+
+    { messages: messages, buttons: menu_buttons, next_state: 'menu' }
+  end
+
+  def handle_menu
+    case normalize(@user_input)
+    when match_any('financeiro', '1')   then enter_financeiro
+    when match_any('atendimento', '2')  then enter_atendimento
+    when match_any('emergencia', '3')   then enter_emergencia_menu
+    else
+      { messages: ['Por favor, escolha uma das opções:'], buttons: menu_buttons, next_state: 'menu' }
+    end
+  end
+
+  # ── Financeiro (autoatendimento CRM) ─────────────────────────────────────────
+
+  def enter_financeiro
+    crm   = crm_cache
+    intro = crm[:intro_message].presence || 'Vamos ao seu financeiro. Como posso te ajudar?'
+    { messages: [intro + voltar_hint], buttons: financeiro_buttons(crm), next_state: 'financeiro' }
+  end
+
+  def handle_financeiro
+    case normalize(@user_input)
+    when match_any('quero o link', 'link', 'proxima', 'pagar', '1')
+      enviar_link_pagamento
+    when match_any('atendente', 'falar com financeiro', 'financeiro')
+      transfer_to('financeiro',
+                  'Vou te encaminhar para a nossa equipe **financeira**. Um instante! 💬')
+    when match_any('menu', 'voltar')
+      back_to_menu
+    else
+      enter_financeiro
+    end
+  end
+
+  def enviar_link_pagamento
+    crm = crm_cache
+    payment_msg = crm[:payment_message].presence ||
+                  'Não encontrei uma cobrança em aberto no momento. Nossa equipe financeira pode te ajudar!'
+    {
+      messages: [payment_msg, 'Posso te ajudar em mais alguma coisa?'],
+      buttons: sim_nao_buttons,
+      next_state: 'financeiro_link_enviado'
+    }
+  end
+
+  # ── Atendimento (sub-setores) ────────────────────────────────────────────────
+
+  def enter_atendimento
+    { messages: ['Certo! Com qual setor você precisa falar?' + voltar_hint],
+      buttons: atendimento_buttons, next_state: 'atendimento' }
+  end
+
+  def handle_atendimento
+    case normalize(@user_input)
+    when match_any('veiculo', 'oficina', 'moto', '1')   then enter_atendimento_veiculo
+    when match_any('documentos', 'documento', '2')      then enter_atendimento_documentos
+    when match_any('ouvidoria', '3')                    then enter_atendimento_ouvidoria
+    when match_any('menu', 'voltar')                    then back_to_menu
+    else
+      { messages: ['Escolha um dos setores:'], buttons: atendimento_buttons, next_state: 'atendimento' }
+    end
+  end
+
+  # Veículo / Oficina
+  def enter_atendimento_veiculo
+    { messages: ['🔧 **Veículo / Oficina** — o que você precisa?' + voltar_hint],
+      buttons: veiculo_buttons, next_state: 'atendimento_veiculo' }
+  end
+
+  def handle_atendimento_veiculo
+    case normalize(@user_input)
+    when match_any('agendar', 'revisao', 'agendamento', '1')
+      {
+        messages: [agendamento_message, 'Posso te ajudar em mais alguma coisa?'],
+        buttons: sim_nao_buttons,
+        next_state: 'pos_atendimento'
+      }
+    when match_any('atendente', 'falar com atendente', 'falar', '2')
+      transfer_to('manutenção',
+                  'Vou te encaminhar para a nossa equipe de **manutenção**. Um instante! 🔧')
+    when match_any('menu', 'voltar')
+      back_to_menu
+    else
+      enter_atendimento_veiculo
+    end
+  end
+
+  # Documentos
+  def enter_atendimento_documentos
+    { messages: ['📋 **Documentos** — sobre qual assunto?' + voltar_hint],
+      buttons: documentos_buttons, next_state: 'atendimento_documentos' }
+  end
+
+  def handle_atendimento_documentos
+    case normalize(@user_input)
+    when match_any('docs para locar', 'locar', 'locacao', '1')
+      {
+        messages: [documentos_locacao_message, 'Ficou alguma dúvida sobre a documentação?'],
+        buttons: sim_nao_buttons,
+        next_state: 'documentos_duvida'
+      }
+    when match_any('multas', 'multa', 'transito', '2')
+      transfer_to('documentação e multas',
+                  'Vou te encaminhar para **Documentação e Multas**. Um instante! 🚦')
+    when match_any('contrato', 'contratual', '3')
+      transfer_to('pós-venda',
+                  'Vou te encaminhar para o nosso **Pós-Venda** para dúvidas contratuais. Um instante! 📝')
+    when match_any('menu', 'voltar')
+      back_to_menu
+    else
+      enter_atendimento_documentos
+    end
+  end
+
+  def handle_documentos_duvida
+    case normalize(@user_input)
+    when match_any('sim', '1')
+      transfer_to('documentação e multas',
+                  'Sem problema! Vou te encaminhar para **Documentação e Multas** para tirar sua dúvida. 📄')
+    when match_any('nao', '2')
+      farewell
+    else
+      { messages: ['Ficou alguma dúvida sobre a documentação?'],
+        buttons: sim_nao_buttons, next_state: 'documentos_duvida' }
+    end
+  end
+
+  # Ouvidoria (texto livre)
+  def enter_atendimento_ouvidoria
+    { messages: ['📣 **Ouvidoria** — descreva sua mensagem (elogio, reclamação ou sugestão) e vamos encaminhar para o time responsável.' + voltar_hint],
+      buttons: nil, next_state: 'atendimento_ouvidoria' }
+  end
+
+  def handle_atendimento_ouvidoria
+    if @user_input.blank?
+      return { messages: ['Pode escrever sua mensagem que eu encaminho para a Ouvidoria.'],
+               buttons: nil, next_state: 'atendimento_ouvidoria' }
+    end
+
+    transfer_to('ouvidoria',
+                'Recebido! Sua mensagem foi registrada e encaminhada para a nossa **Ouvidoria**. Em breve retornaremos. 📣')
+  end
+
+  # ── Emergência (submenu e triagem) ──────────────────────────────────────────
+
+  def enter_emergencia_menu
+    {
+      messages: ['🚨 **Emergência** — Escolha uma das opções abaixo para que eu possa direcionar para a equipe correta:' + voltar_hint],
+      buttons: [
+        { title: '🚨 Roubo/Furto', value: 'roubo furto' },
+        { title: '🆘 Socorro',     value: 'socorro' }
+      ],
+      next_state: 'emergencia_menu'
+    }
+  end
+
+  def handle_emergencia_menu
+    case normalize(@user_input)
+    when match_any('roubo', 'furto', '1')
+      transfer_to('monitoramento e sinistros',
+                  "🚨 Sinto muito por isso! Vou te encaminhar para a equipe de **Monitoramento e Sinistros** agora mesmo.\n\n⚠️ Importante: se puder, já vá elaborando o **Boletim de Ocorrência (B.O.)**, pois precisaremos dele para dar andamento ao caso. Um instante!")
+    when match_any('socorro', '2')
+      enter_emergencia
+    when match_any('menu', 'voltar')
+      back_to_menu
+    else
+      enter_emergencia_menu
+    end
+  end
+
+  def enter_emergencia
+    { messages: ["🆘 **Socorro**\n\nPara acionarmos o socorro o mais rápido possível, **me informe a sua localização** — endereço com um ponto de referência, ou compartilhe o pin de localização aqui pelo WhatsApp."],
+      buttons: nil, next_state: 'emergencia' }
+  end
+
+  def handle_emergencia
+    if @user_input.blank?
+      return { messages: ['Preciso da sua **localização** para acionar o socorro. Pode enviar o endereço ou o pin de localização.'],
+               buttons: nil, next_state: 'emergencia' }
+    end
+
+    transfer_to('socorro',
+                "🚨 Localização recebida! Nossa equipe de **socorro** já foi acionada e vai entrar em contato com você agora mesmo.\n\nSe estiver em local de risco, procure um ponto seguro e mantenha o telefone por perto.")
+  end
+
+  # ── "Posso ajudar em mais algo?" (pós self-service) ──────────────────────────
+
+  def handle_more_help(current_state)
+    case normalize(@user_input)
+    when match_any('sim', '1')
+      back_to_menu('Claro! Como posso te ajudar?')
+    when match_any('nao', '2')
+      farewell
+    else
+      { messages: ['Posso te ajudar em mais alguma coisa?'], buttons: sim_nao_buttons, next_state: current_state }
+    end
+  end
+
+  # ── Handoff / encerramento ───────────────────────────────────────────────────
+
+  def handle_atendente
+    # Conversa em atendimento humano — o bot permanece em silêncio.
+    nil
+  end
+
+  def transfer_to(team_name, message)
+    hand_off_to_human(team_name)
+    { messages: [message], buttons: nil, next_state: 'atendente' }
+  end
+
+  def hand_off_to_human(team_name)
+    team = @conversation.account.teams.find_by('LOWER(name) = ?', team_name.to_s.downcase)
+    Rails.logger.warn("[BotFlow] time '#{team_name}' não encontrado — conversa aberta sem atribuição") if team.nil?
+
+    updates = { status: :open }
+    updates[:team_id] = team.id if team
+    # update! (não update_columns) para disparar os callbacks de atribuição do Chatwoot:
+    # round-robin de agente, atividade de mudança de time e broadcast pro dashboard.
+    @conversation.update!(updates)
+  rescue StandardError => e
+    Rails.logger.error("[BotFlow] handoff(#{team_name}) falhou: #{e.message}")
+  end
+
+  def back_to_menu(message = 'Voltando ao menu principal:')
+    { messages: [message], buttons: menu_buttons, next_state: 'menu' }
+  end
+
+  def farewell
+    { messages: ['Perfeito! Se precisar de algo é só chamar. Até logo! 👋'],
+      buttons: nil, next_state: nil, end_session: true }
+  end
+
+  # ── Botões (títulos ≤ 20 caracteres — limite do WhatsApp) ─────────────────────
+
+  def menu_buttons
+    [
+      { title: '💰 Financeiro',  value: 'financeiro' },
+      { title: '🎧 Atendimento', value: 'atendimento' },
+      { title: '🚨 Emergência',  value: 'emergencia' }
+    ]
+  end
+
+  def financeiro_buttons(crm)
+    buttons = []
+    if crm[:overdue_count].to_i.positive?
+      buttons << { title: '💳 Quero o link', value: 'quero o link' }
+    elsif crm[:has_next_payment]
+      buttons << { title: '💳 Link da próxima', value: 'quero o link' }
+    end
+    buttons << { title: '🎧 Atendente', value: 'atendente' }
+    buttons
+  end
+
+  def atendimento_buttons
+    [
+      { title: '🔧 Veículo',   value: 'veiculo' },
+      { title: '📋 Documentos', value: 'documentos' },
+      { title: '📣 Ouvidoria',  value: 'ouvidoria' }
+    ]
+  end
+
+  def veiculo_buttons
+    [
+      { title: '📅 Agendar revisão', value: 'agendar revisao' },
+      { title: '🎧 Atendente',       value: 'atendente' }
+    ]
+  end
+
+  def documentos_buttons
+    [
+      { title: '📄 Docs para locar', value: 'docs para locar' },
+      { title: '🚦 Multas',          value: 'multas' },
+      { title: '📝 Contrato',        value: 'contrato' }
+    ]
+  end
+
+  def sim_nao_buttons
+    [
+      { title: '✅ Sim', value: 'sim' },
+      { title: '❌ Não', value: 'nao' }
+    ]
+  end
+
+  # ── Mensagens self-service ───────────────────────────────────────────────────
+
+  def agendamento_message
+    "📅 Para agendar a revisão da sua moto, é só escolher o melhor horário por aqui:\n#{AGENDAMENTO_URL}\n\nLeva menos de 1 minuto!"
+  end
+
+  def documentos_locacao_message
+    "📄 Para locar uma moto na Mobílli você precisa de:\n\n" \
+    "• **CNH** válida (categoria A)\n" \
+    "• **CPF**\n" \
+    "• **Comprovante de residência** (dos últimos 90 dias)\n\n" \
+    'Com esses documentos em mãos a locação é rápida!'
+  end
+
+  # ── CRM ──────────────────────────────────────────────────────────────────────
+
+  # Fallback do nome quando o cliente não está no Bitrix: usa o nome do contato
+  # no WhatsApp/Chatwoot (ignora quando o "nome" é apenas o número de telefone).
+  def contact_first_name
+    raw = @conversation.contact&.name.to_s.strip
+    return nil if raw.blank?
+    return nil if raw.match?(/\A\+?[\d\s()-]+\z/) # parece um número de telefone
+
+    raw.split(/\s+/).first
+  end
+
+  def fetch_crm_data
+    phone = @conversation.contact&.phone_number
+    return empty_crm unless phone.present?
+
+    result = Crm::ClientProfileService.new(phone).perform
+    normalize_crm(result)
+  rescue StandardError => e
+    Rails.logger.error("[BotFlow] CRM fetch falhou: #{e.message}")
+    empty_crm
+  end
+
+  def normalize_crm(result)
+    return empty_crm unless result[:found]
+
+    {
+      found:            true,
+      first_name:       result[:first_name],
+      name:             result[:name],
+      intro_message:    result[:intro_message],
+      payment_message:  result[:payment_message],
+      overdue_count:    result[:overdue_count].to_i,
+      overdue_total:    result[:overdue_total].to_f,
+      has_next_payment: result[:next_payment].present?
+    }
+  end
+
+  def empty_crm
+    { found: false, first_name: nil, intro_message: nil, payment_message: nil,
+      overdue_count: 0, overdue_total: 0.0, has_next_payment: false }
+  end
+
+  def save_crm_cache(crm)
+    update_attrs('bot_crm' => crm.transform_keys(&:to_s))
+  end
+
+  def crm_cache
+    cached = attrs['bot_crm']
+    return empty_crm if cached.blank?
+
+    cached.transform_keys(&:to_sym)
+  end
+
+  # ── Estado ────────────────────────────────────────────────────────────────────
+
+  def attrs
+    @conversation.additional_attributes || {}
+  end
+
+  def save_state(state)
+    update_attrs('bot_state' => state)
+  end
+
+  def update_attrs(hash)
+    @conversation.update_columns(additional_attributes: attrs.merge(hash))
+  end
+
+  # ── Helpers de matching ──────────────────────────────────────────────────────
+
+  # Remove acentos E emojis/símbolos de forma uniforme, evitando o bug em que
+  # "🚨 Emergência" não casava com "emergencia".
+  def normalize(text)
+    text.to_s
+        .downcase
+        .unicode_normalize(:nfkd)
+        .chars.reject { |c| c.match?(/\p{Mn}/) } # remove acentos (marcas combinantes)
+        .join
+        .gsub(/[^\p{Alnum}\s]/, ' ')             # remove emojis/pontuação
+        .gsub(/\s+/, ' ')
+        .strip
+  end
+
+  # Dígitos isolados exigem match exato (evita "10" casar com "1");
+  # texto usa substring. Termos vazios são descartados.
+  def match_any(*options)
+    normalized = options.map { |o| normalize(o.to_s) }.reject(&:blank?)
+    lambda do |input|
+      normalized.any? do |opt|
+        opt.length == 1 && opt.match?(/\d/) ? input == opt : input.include?(opt)
+      end
+    end
+  end
+
+  # Comando global de navegação: qualquer um destes retorna ao menu principal.
+  def back_command?(input)
+    ['voltar', 'menu', 'inicio', 'voltar ao menu', 'menu principal', 'voltar ao inicio'].include?(normalize(input))
+  end
+
+  # Dica textual de navegação (substitui o antigo botão "Voltar" — libera slot de botão).
+  def voltar_hint
+    "\n\n_↩️ Digite Voltar a qualquer momento para retornar ao menu._"
+  end
+end

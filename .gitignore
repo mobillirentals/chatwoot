@@ -108,6 +108,9 @@ yarn-debug.log*
 .claude/
 CLAUDE.local.md
 
+# AI memory / context (local only, not committed)
+.ai/
+
 # Histoire deployment
 .netlify
 .histoire
