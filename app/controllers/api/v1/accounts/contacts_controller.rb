@@ -13,7 +13,9 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   before_action :check_authorization
   before_action :set_current_page, only: [:index, :active, :search, :filter]
-  before_action :fetch_contact, only: [:show, :update, :destroy, :avatar, :contactable_inboxes, :destroy_custom_attributes, :export_conversations]
+  before_action :fetch_contact,
+                only: [:show, :update, :destroy, :avatar, :contactable_inboxes, :destroy_custom_attributes, :export_conversations,
+                       :search_conversations]
   before_action :set_include_contact_inboxes, only: [:index, :active, :search, :filter, :show, :update]
 
   def index
@@ -67,6 +69,24 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     log_conversations_export_audit(conversations)
 
     render html: html.html_safe, layout: false
+  end
+
+  # Busca full-text no conteúdo das mensagens das conversas do contato.
+  # Retorna os IDs de conversa que casam, para o front filtrar a lista.
+  def search_conversations
+    query = params[:q].to_s.strip
+
+    ids = if query.blank?
+            []
+          else
+            @contact.conversations
+                    .joins(:messages)
+                    .where('messages.content ILIKE ?', "%#{ActiveRecord::Base.sanitize_sql_like(query)}%")
+                    .distinct
+                    .pluck(:id)
+          end
+
+    render json: { conversation_ids: ids }
   end
 
   # returns online contacts

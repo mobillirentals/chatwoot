@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -27,13 +27,84 @@ const isFetching = computed(() => uiFlags.value.isFetching);
 
 const contactId = computed(() => route.params.contactId);
 
-const contactConversations = computed(() =>
-  conversations.value(contactId.value)
+const contactConversations = computed(
+  () => conversations.value(contactId.value) || []
 );
 
 const canExport = computed(() => {
   const role = currentUser.value?.role;
   return role === 'administrator' || role === 'supervisor';
+});
+
+// ── Filtros: período (client-side) + busca nas mensagens (backend) ────
+const periodDays = ref(null);
+const searchQuery = ref('');
+const matchedIds = ref(null); // null = sem busca; Set = ids que casaram
+const isSearching = ref(false);
+
+const periods = computed(() => [
+  {
+    value: null,
+    label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_ALL'),
+  },
+  { value: 7, label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_7D') },
+  { value: 30, label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_30D') },
+  { value: 90, label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_90D') },
+]);
+
+const displayedConversations = computed(() => {
+  let list = contactConversations.value;
+
+  if (periodDays.value) {
+    const cutoff = Date.now() / 1000 - periodDays.value * 86400;
+    list = list.filter(
+      c => (c.last_activity_at || c.created_at || 0) >= cutoff
+    );
+  }
+
+  if (matchedIds.value) {
+    list = list.filter(c => matchedIds.value.has(c.id));
+  }
+
+  return list;
+});
+
+let searchTimer = null;
+let searchController = null;
+
+const runSearch = async query => {
+  if (searchController) searchController.abort();
+  searchController = new AbortController();
+  isSearching.value = true;
+  try {
+    const { data } = await contactAPI.searchConversations(
+      contactId.value,
+      query,
+      { signal: searchController.signal }
+    );
+    matchedIds.value = new Set(data.conversation_ids || []);
+  } catch (error) {
+    if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') {
+      return;
+    }
+    matchedIds.value = new Set();
+    useAlert(t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.SEARCH_ERROR'));
+  } finally {
+    isSearching.value = false;
+  }
+};
+
+watch(searchQuery, value => {
+  const query = value.trim();
+  clearTimeout(searchTimer);
+  if (!query) {
+    if (searchController) searchController.abort();
+    matchedIds.value = null;
+    isSearching.value = false;
+    return;
+  }
+  isSearching.value = true;
+  searchTimer = setTimeout(() => runSearch(query), 350);
 });
 
 // ── Seleção inline para exportação em PDF ─────────────────────────
@@ -43,13 +114,23 @@ const isExporting = ref(false);
 
 const allSelected = computed(
   () =>
-    contactConversations.value.length > 0 &&
-    contactConversations.value.every(c => selectedIds.value.has(c.id))
+    displayedConversations.value.length > 0 &&
+    displayedConversations.value.every(c => selectedIds.value.has(c.id))
 );
 const hasSelection = computed(() => selectedIds.value.size > 0);
 const selectionLabel = computed(
-  () => `(${selectedIds.value.size}/${contactConversations.value.length})`
+  () => `(${selectedIds.value.size}/${displayedConversations.value.length})`
 );
+
+// Mantém a seleção coerente com o que está visível após filtrar.
+watch(displayedConversations, list => {
+  if (selectedIds.value.size === 0) return;
+  const visible = new Set(list.map(c => c.id));
+  const next = new Set([...selectedIds.value].filter(id => visible.has(id)));
+  if (next.size !== selectedIds.value.size) {
+    selectedIds.value = next;
+  }
+});
 
 const startSelection = () => {
   isSelecting.value = true;
@@ -74,7 +155,7 @@ const toggleConversation = id => {
 const toggleAll = () => {
   selectedIds.value = allSelected.value
     ? new Set()
-    : new Set(contactConversations.value.map(c => c.id));
+    : new Set(displayedConversations.value.map(c => c.id));
 };
 
 const handleExport = async () => {
@@ -109,7 +190,53 @@ const handleExport = async () => {
     <Spinner />
   </div>
   <template v-else>
-    <!-- Barra de ação (admin/supervisor): exportar ou seleção inline -->
+    <!-- Filtros (admin/supervisor): busca nas mensagens + período -->
+    <div
+      v-if="canExport && contactConversations.length > 0"
+      class="flex flex-col gap-2 px-6 py-2.5 border-b border-n-weak"
+    >
+      <div class="relative">
+        <span
+          class="absolute -translate-y-1/2 pointer-events-none i-lucide-search left-2 top-1/2 size-3.5 text-n-slate-10"
+        />
+        <input
+          v-model="searchQuery"
+          type="text"
+          :placeholder="
+            t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.SEARCH_PLACEHOLDER')
+          "
+          class="w-full py-1.5 pl-7 pr-7 text-xs border rounded-lg bg-n-alpha-1 border-n-weak text-n-slate-12 placeholder:text-n-slate-10 focus:outline-none focus:border-woot-500"
+        />
+        <span
+          v-if="isSearching"
+          class="absolute -translate-y-1/2 i-lucide-loader-circle animate-spin right-2 top-1/2 size-3.5 text-n-slate-10"
+        />
+        <button
+          v-else-if="searchQuery"
+          class="absolute -translate-y-1/2 right-2 top-1/2 text-n-slate-10 hover:text-n-slate-12"
+          @click="searchQuery = ''"
+        >
+          <span class="i-lucide-x size-3.5" />
+        </button>
+      </div>
+      <div class="flex items-center gap-1">
+        <button
+          v-for="p in periods"
+          :key="p.label"
+          class="px-2 py-0.5 text-xs transition-colors rounded-full"
+          :class="
+            periodDays === p.value
+              ? 'bg-woot-500 text-white'
+              : 'bg-n-alpha-1 text-n-slate-11 hover:bg-n-alpha-2'
+          "
+          @click="periodDays = p.value"
+        >
+          {{ p.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de ação: exportar ou seleção inline -->
     <div
       v-if="canExport && contactConversations.length > 0"
       class="flex items-center justify-between gap-3 px-6 py-2 border-b border-n-weak min-h-10"
@@ -177,11 +304,11 @@ const handleExport = async () => {
     </div>
 
     <div
-      v-if="contactConversations.length > 0"
+      v-if="displayedConversations.length > 0"
       class="px-6 divide-y divide-n-strong"
     >
       <div
-        v-for="conversation in contactConversations"
+        v-for="conversation in displayedConversations"
         :key="conversation.id"
         class="flex items-center gap-2"
       >
@@ -215,6 +342,12 @@ const handleExport = async () => {
         </div>
       </div>
     </div>
+    <p
+      v-else-if="contactConversations.length > 0"
+      class="px-6 py-10 text-sm leading-6 text-center text-n-slate-11"
+    >
+      {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.NO_RESULTS') }}
+    </p>
     <p v-else class="px-6 py-10 text-sm leading-6 text-center text-n-slate-11">
       {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EMPTY_STATE') }}
     </p>

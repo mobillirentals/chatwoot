@@ -529,6 +529,16 @@
           "GENERATING": "Generating PDF…",
           "POPUP_BLOCKED": "Allow pop-ups to download the PDF. Please check your browser settings.",
           "ERROR": "An error occurred while generating the export. Please try again."
+        },
+        "FILTER": {
+          "SEARCH_PLACEHOLDER": "Search in messages…",
+          "PERIOD_ALL": "All",
+          "PERIOD_7D": "7 days",
+          "PERIOD_30D": "30 days",
+          "PERIOD_90D": "90 days",
+          "SEARCHING": "Searching…",
+          "NO_RESULTS": "No conversations match the filter",
+          "SEARCH_ERROR": "Could not search messages. Please try again."
         }
       },
       "ATTRIBUTES": {

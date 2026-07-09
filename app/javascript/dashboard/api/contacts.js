@@ -115,6 +115,13 @@ class ContactAPI extends ApiClient {
       { responseType: 'text' }
     );
   }
+
+  searchConversations(contactId, query, options = {}) {
+    return axios.get(`${this.url}/${contactId}/search_conversations`, {
+      params: { q: query },
+      signal: options.signal,
+    });
+  }
 }
 
 export default new ContactAPI();
