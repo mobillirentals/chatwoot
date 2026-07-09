@@ -530,13 +530,18 @@
         },
         "FILTER": {
           "SEARCH_PLACEHOLDER": "Buscar nas mensagens…",
-          "PERIOD_ALL": "Tudo",
-          "PERIOD_7D": "7 dias",
-          "PERIOD_30D": "30 dias",
-          "PERIOD_90D": "90 dias",
+          "PERIOD_FROM": "De",
+          "PERIOD_TO": "Até",
+          "PERIOD_CLEAR": "Limpar período",
           "SEARCHING": "Buscando…",
           "NO_RESULTS": "Nenhuma conversa corresponde ao filtro",
           "SEARCH_ERROR": "Não foi possível buscar nas mensagens. Tente novamente."
+        },
+        "PREVIEW": {
+          "TITLE": "Prévia da conversa",
+          "OPEN": "Ler conversa",
+          "ERROR": "Não foi possível carregar a prévia da conversa. Tente novamente.",
+          "CLOSE": "Fechar"
         }
       },
       "ATTRIBUTES": {
