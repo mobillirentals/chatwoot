@@ -532,13 +532,18 @@
         },
         "FILTER": {
           "SEARCH_PLACEHOLDER": "Search in messages…",
-          "PERIOD_ALL": "All",
-          "PERIOD_7D": "7 days",
-          "PERIOD_30D": "30 days",
-          "PERIOD_90D": "90 days",
+          "PERIOD_FROM": "From",
+          "PERIOD_TO": "To",
+          "PERIOD_CLEAR": "Clear period",
           "SEARCHING": "Searching…",
           "NO_RESULTS": "No conversations match the filter",
           "SEARCH_ERROR": "Could not search messages. Please try again."
+        },
+        "PREVIEW": {
+          "TITLE": "Conversation preview",
+          "OPEN": "Read conversation",
+          "ERROR": "Could not load the conversation preview. Please try again.",
+          "CLOSE": "Close"
         }
       },
       "ATTRIBUTES": {

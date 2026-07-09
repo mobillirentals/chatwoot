@@ -8,6 +8,8 @@ import contactAPI from 'dashboard/api/contacts';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ConversationCard from 'dashboard/components-next/Conversation/ConversationCard/ConversationCard.vue';
+import ConversationPreviewModal from 'dashboard/components-next/Contacts/ContactsSidebar/ConversationPreviewModal.vue';
+import Input from 'dashboard/components-next/input/Input.vue';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -36,30 +38,35 @@ const canExport = computed(() => {
   return role === 'administrator' || role === 'supervisor';
 });
 
-// ── Filtros: período (client-side) + busca nas mensagens (backend) ────
-const periodDays = ref(null);
+// ── Filtros: período manual (client-side) + busca nas mensagens (backend) ────
+const dateFrom = ref(''); // 'YYYY-MM-DD'
+const dateTo = ref('');
 const searchQuery = ref('');
 const matchedIds = ref(null); // null = sem busca; Set = ids que casaram
 const isSearching = ref(false);
 
-const periods = computed(() => [
-  {
-    value: null,
-    label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_ALL'),
-  },
-  { value: 7, label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_7D') },
-  { value: 30, label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_30D') },
-  { value: 90, label: t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_90D') },
-]);
+const clearPeriod = () => {
+  dateFrom.value = '';
+  dateTo.value = '';
+};
 
 const displayedConversations = computed(() => {
   let list = contactConversations.value;
 
-  if (periodDays.value) {
-    const cutoff = Date.now() / 1000 - periodDays.value * 86400;
-    list = list.filter(
-      c => (c.last_activity_at || c.created_at || 0) >= cutoff
-    );
+  const fromTs = dateFrom.value
+    ? new Date(`${dateFrom.value}T00:00:00`).getTime() / 1000
+    : null;
+  const toTs = dateTo.value
+    ? new Date(`${dateTo.value}T23:59:59`).getTime() / 1000
+    : null;
+
+  if (fromTs || toTs) {
+    list = list.filter(c => {
+      const ts = c.last_activity_at || c.created_at || 0;
+      if (fromTs && ts < fromTs) return false;
+      if (toTs && ts > toTs) return false;
+      return true;
+    });
   }
 
   if (matchedIds.value) {
@@ -111,6 +118,15 @@ watch(searchQuery, value => {
 const isSelecting = ref(false);
 const selectedIds = ref(new Set());
 const isExporting = ref(false);
+
+// ── Prévia da conversa (popup — lê sem sair da tela nem perder a seleção) ──
+const previewConvId = ref(null);
+const openPreview = conversation => {
+  previewConvId.value = conversation.id;
+};
+const closePreview = () => {
+  previewConvId.value = null;
+};
 
 const allSelected = computed(
   () =>
@@ -210,19 +226,31 @@ const handleExport = async () => {
           class="absolute i-lucide-loader-circle animate-spin size-3.5 top-2 right-3 text-n-slate-10"
         />
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex items-end gap-2">
+        <Input
+          v-model="dateFrom"
+          type="date"
+          size="sm"
+          :label="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_FROM')"
+          :max="dateTo"
+          class="flex-1 min-w-0"
+        />
+        <Input
+          v-model="dateTo"
+          type="date"
+          size="sm"
+          :label="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_TO')"
+          :min="dateFrom"
+          class="flex-1 min-w-0"
+        />
         <button
-          v-for="p in periods"
-          :key="p.label"
-          class="px-2 py-0.5 text-xs transition-colors rounded-full"
-          :class="
-            periodDays === p.value
-              ? 'bg-woot-500 text-white'
-              : 'bg-n-alpha-1 text-n-slate-11 hover:bg-n-alpha-2'
-          "
-          @click="periodDays = p.value"
+          v-if="dateFrom || dateTo"
+          type="button"
+          class="flex items-center justify-center h-8 transition-colors shrink-0 text-n-slate-10 hover:text-n-slate-12"
+          :aria-label="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.FILTER.PERIOD_CLEAR')"
+          @click="clearPeriod"
         >
-          {{ p.label }}
+          <span class="i-lucide-x size-4" />
         </button>
       </div>
     </div>
@@ -310,7 +338,13 @@ const handleExport = async () => {
           :checked="selectedIds.has(conversation.id)"
           @change="toggleConversation(conversation.id)"
         />
-        <div class="relative flex-1 min-w-0">
+        <div
+          class="relative flex-1 min-w-0 rounded-xl"
+          :class="{
+            'ring-2 ring-inset ring-woot-500':
+              isSelecting && selectedIds.has(conversation.id),
+          }"
+        >
           <ConversationCard
             :conversation="conversation"
             :contact="contactsById(conversation.meta.sender.id)"
@@ -319,16 +353,13 @@ const handleExport = async () => {
             class="rounded-none hover:rounded-xl hover:bg-n-alpha-1 dark:hover:bg-n-alpha-3"
             :class="{ 'pointer-events-none': isSelecting }"
           />
-          <!-- Overlay clicável no modo seleção (não navega, só marca) -->
-          <div
+          <!-- No modo seleção: clicar no card abre a prévia (não navega); só o checkbox seleciona -->
+          <button
             v-if="isSelecting"
-            class="absolute inset-0 transition-colors cursor-pointer rounded-xl"
-            :class="
-              selectedIds.has(conversation.id)
-                ? 'ring-2 ring-woot-500 bg-woot-500/5'
-                : 'hover:bg-n-alpha-1'
-            "
-            @click="toggleConversation(conversation.id)"
+            type="button"
+            class="absolute inset-0 transition-colors cursor-pointer rounded-xl hover:bg-n-alpha-1"
+            :aria-label="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.PREVIEW.OPEN')"
+            @click="openPreview(conversation)"
           />
         </div>
       </div>
@@ -342,5 +373,12 @@ const handleExport = async () => {
     <p v-else class="px-6 py-10 text-sm leading-6 text-center text-n-slate-11">
       {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EMPTY_STATE') }}
     </p>
+
+    <ConversationPreviewModal
+      v-if="previewConvId"
+      :contact-id="contactId"
+      :conversation-id="previewConvId"
+      @close="closePreview"
+    />
   </template>
 </template>

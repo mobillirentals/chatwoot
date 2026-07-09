@@ -209,6 +209,7 @@ Rails.application.routes.draw do
               post :destroy_custom_attributes
               post :export_conversations
               get :search_conversations
+              get :preview_conversation
               delete :avatar
             end
             scope module: :contacts do
