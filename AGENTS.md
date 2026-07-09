@@ -1,5 +1,17 @@
 # Chatwoot Development Guidelines
 
+## AI Context — Ler antes de começar
+
+Este projeto tem documentação de contexto em `.ai/` (não commitado). **Ler nesta ordem antes de abrir código-fonte:**
+
+1. `.ai/project_summary.md` — stack, features customizadas, regras gerais
+2. `.ai/context.md` — arquitetura detalhada das features Mobílli
+3. `.ai/workflow.md` — SSH VM, deploy, git
+4. `.ai/current_tasks.md` — estado atual e tarefas em andamento
+5. `docs/bot-flows/service-flow.md` — fluxo do bot de triagem (quando relevante)
+
+**Por que:** Evitar varrer dezenas de arquivos desnecessariamente. Os docs `.ai/` são a fonte primária de contexto.
+
 ## Build / Test / Lint
 
 - **Setup**: `bundle install && pnpm install`
