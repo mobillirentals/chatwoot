@@ -1,31 +1,31 @@
-<p>Hi {{user.available_name}},</p>
+<p>Olá, {{user.available_name}} 👋</p>
 
-<p>Time to save the world. A new conversation has been assigned to you</p>
+<p>Uma nova conversa foi atribuída a você. Veja as mensagens mais recentes abaixo:</p>
 
 {% for chat_message in conversation.recent_messages %}
   <div>
-    <h4 style="margin: 0;">
+    <h4 style="margin: 0; font-size: 13px; color: #64748B;">
       {% if chat_message.sender == user.available_name %}
-        You
+        Você
       {% else %}
         {{chat_message.sender}}
       {% endif %}
     </h4>
   </div>
 
-  <div style="padding: 10px 20px; margin: 5px 0 20px 0; background: #F2F3F7; border-radius: 10px; display: inline-block; font-family: 'Helvetica Neue',Tahoma,Arial,sans-serif; text-align: start; unicode-bidi: plaintext;">
+  <div style="padding: 10px 20px; margin: 5px 0 20px 0; background: #FFF4E8; border-left: 3px solid #DB7F2B; border-radius: 6px; display: inline-block; font-family: 'Helvetica Neue',Tahoma,Arial,sans-serif; text-align: start; unicode-bidi: plaintext;">
     {% if chat_message.content %}
       {{chat_message.content}}
     {% endif %}
 
     {% if chat_message.attachments %}
       {% for attachment in chat_message.attachments %}
-        Attachment [<a href="{{ attachment }}" _target="blank">Click here to view</a>]
+        Anexo [<a href="{{ attachment }}" _target="blank" style="color: #DB7F2B;">Clique aqui para visualizar</a>]
       {% endfor %}
     {% endif %}
   </div>
 {% endfor %}
 
 <p>
-Click <a href="{{action_url}}">here</a> to get cracking.
+  <a href="{{action_url}}" style="display: inline-block; background-color: #DB7F2B; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">Abrir conversa →</a>
 </p>

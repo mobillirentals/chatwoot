@@ -1,34 +1,35 @@
-<p>Hi {{user.available_name}}, </p>
+<p>Olá, {{user.available_name}} 👋</p>
 
-<p>You've been mentioned in a conversation. <b>{{message.sender_display_name}}</b> wrote:</p>
-<blockquote style="box-sizing:border-box; padding:8px 16px; margin:0 0 20px; font-size:14px; border-left:5px solid #eeeeee">
+<p>Você foi mencionado em uma conversa. <b>{{message.sender_display_name}}</b> escreveu:</p>
+<blockquote style="box-sizing:border-box; padding:8px 16px; margin:0 0 20px; font-size:14px; border-left:4px solid #DB7F2B; background: #FFF4E8; border-radius: 0 6px 6px 0;">
   {{message.text_content}}
 </blockquote>
 
-<p><b>Previous messages:</b></p>
+<p><b>Mensagens anteriores:</b></p>
 {% for chat_message in conversation.recent_messages %}
   <div>
-    <h4 style="margin: 0;">
+    <h4 style="margin: 0; font-size: 13px; color: #64748B;">
       {% if chat_message.sender == user.available_name %}
-        You
+        Você
       {% else %}
         {{chat_message.sender}}
       {% endif %}
     </h4>
   </div>
 
-  <div style="padding: 10px 20px; margin: 5px 0 20px 0; background: #F2F3F7; border-radius: 10px; display: inline-block; font-family: 'Helvetica Neue',Tahoma,Arial,sans-serif; text-align: start; unicode-bidi: plaintext;">
+  <div style="padding: 10px 20px; margin: 5px 0 20px 0; background: #F8FAFC; border-left: 3px solid #E2E8F0; border-radius: 6px; display: inline-block; font-family: 'Helvetica Neue',Tahoma,Arial,sans-serif; text-align: start; unicode-bidi: plaintext;">
     {% if chat_message.content %}
       {{chat_message.content}}
     {% endif %}
 
     {% if chat_message.attachments %}
       {% for attachment in chat_message.attachments %}
-        Attachment [<a href="{{ attachment }}" _target="blank">Click here to view</a>]
+        Anexo [<a href="{{ attachment }}" _target="blank" style="color: #DB7F2B;">Clique aqui para visualizar</a>]
       {% endfor %}
     {% endif %}
   </div>
 {% endfor %}
+
 <p>
-  <a href="{{ action_url }}">View Message</a>
+  <a href="{{ action_url }}" style="display: inline-block; background-color: #DB7F2B; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">Ver mensagem →</a>
 </p>
