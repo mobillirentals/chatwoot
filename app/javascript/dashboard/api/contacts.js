@@ -107,6 +107,14 @@ class ContactAPI extends ApiClient {
   exportContacts(queryPayload) {
     return axios.post(`${this.url}/export`, queryPayload);
   }
+
+  exportConversations(contactId, conversationIds) {
+    return axios.post(
+      `${this.url}/${contactId}/export_conversations`,
+      { conversation_ids: conversationIds },
+      { responseType: 'text' }
+    );
+  }
 }
 
 export default new ContactAPI();

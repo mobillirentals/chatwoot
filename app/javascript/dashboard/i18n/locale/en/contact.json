@@ -515,7 +515,21 @@
         "MERGE": "Merge"
       },
       "HISTORY": {
-        "EMPTY_STATE": "There are no previous conversations associated to this contact"
+        "EMPTY_STATE": "There are no previous conversations associated to this contact",
+        "EXPORT": {
+          "TRIGGER_BUTTON": "Export as PDF",
+          "TITLE": "Export Conversations",
+          "SUBTITLE": "Select conversations to include in the PDF document",
+          "SELECT_ALL": "Select all",
+          "DESELECT_ALL": "Deselect all",
+          "AGENT": "Agent: {name}",
+          "NO_AGENT": "Unassigned",
+          "CANCEL": "Cancel",
+          "BUTTON": "Export {count} conversation | Export {count} conversations",
+          "GENERATING": "Generating PDF…",
+          "POPUP_BLOCKED": "Allow pop-ups to download the PDF. Please check your browser settings.",
+          "ERROR": "An error occurred while generating the export. Please try again."
+        }
       },
       "ATTRIBUTES": {
         "SEARCH_PLACEHOLDER": "Search for attributes",

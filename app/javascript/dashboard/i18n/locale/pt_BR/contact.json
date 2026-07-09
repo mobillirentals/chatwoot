@@ -513,7 +513,21 @@
         "MERGE": "Mesclar"
       },
       "HISTORY": {
-        "EMPTY_STATE": "Não há conversas anteriores associadas a este contato"
+        "EMPTY_STATE": "Não há conversas anteriores associadas a este contato",
+        "EXPORT": {
+          "TRIGGER_BUTTON": "Exportar como PDF",
+          "TITLE": "Exportar Conversas",
+          "SUBTITLE": "Selecione as conversas para incluir no documento PDF",
+          "SELECT_ALL": "Selecionar todas",
+          "DESELECT_ALL": "Desmarcar todas",
+          "AGENT": "Agente: {name}",
+          "NO_AGENT": "Não atribuído",
+          "CANCEL": "Cancelar",
+          "BUTTON": "Exportar {count} conversa | Exportar {count} conversas",
+          "GENERATING": "Gerando PDF…",
+          "POPUP_BLOCKED": "Permita pop-ups para baixar o PDF. Verifique as configurações do seu navegador.",
+          "ERROR": "Ocorreu um erro ao gerar a exportação. Tente novamente."
+        }
       },
       "ATTRIBUTES": {
         "SEARCH_PLACEHOLDER": "Pesquisar atributos",

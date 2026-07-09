@@ -13,7 +13,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   before_action :check_authorization
   before_action :set_current_page, only: [:index, :active, :search, :filter]
-  before_action :fetch_contact, only: [:show, :update, :destroy, :avatar, :contactable_inboxes, :destroy_custom_attributes]
+  before_action :fetch_contact, only: [:show, :update, :destroy, :avatar, :contactable_inboxes, :destroy_custom_attributes, :export_conversations]
   before_action :set_include_contact_inboxes, only: [:index, :active, :search, :filter, :show, :update]
 
   def index
@@ -47,6 +47,26 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     filter_params = { :payload => params.permit!['payload'], :label => params.permit!['label'] }
     Account::ContactsExportJob.perform_later(Current.account.id, Current.user.id, column_names, filter_params)
     head :ok, message: I18n.t('errors.contacts.export.success')
+  end
+
+  def export_conversations
+    conversation_ids = Array(params[:conversation_ids]).map(&:to_i).select(&:positive?)
+
+    conversations = @contact.conversations
+                            .where(id: conversation_ids)
+                            .includes(messages: [:attachments, :sender], assignee: [])
+                            .order(:created_at)
+
+    html = Conversations::Exporter::HtmlExporter.new(
+      contact: @contact,
+      conversations: conversations,
+      exported_by: Current.user,
+      account: Current.account
+    ).perform
+
+    log_conversations_export_audit(conversations)
+
+    render html: html.html_safe, layout: false
   end
 
   # returns online contacts
@@ -212,6 +232,25 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def render_error(error, error_status)
     render json: error, status: error_status
+  end
+
+  def log_conversations_export_audit(conversations)
+    return unless defined?(Enterprise::AuditLog)
+
+    Enterprise::AuditLog.create(
+      auditable_id: @contact.id,
+      auditable_type: 'Contact',
+      action: 'export_conversations',
+      associated_id: Current.account.id,
+      associated_type: 'Account',
+      audited_changes: {
+        contact_id: @contact.id,
+        contact_name: @contact.name,
+        conversation_ids: conversations.pluck(:id),
+        conversation_count: conversations.count,
+        format: 'pdf'
+      }
+    )
   end
 end
 
