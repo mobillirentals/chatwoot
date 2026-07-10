@@ -540,7 +540,7 @@
           "SEARCH_ERROR": "Could not search messages. Please try again."
         },
         "PREVIEW": {
-          "TITLE": "Conversation preview",
+          "TITLE": "Conversation ID {id}",
           "OPEN": "Read conversation",
           "ERROR": "Could not load the conversation preview. Please try again.",
           "CLOSE": "Close"
