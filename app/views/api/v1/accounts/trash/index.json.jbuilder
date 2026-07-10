@@ -3,13 +3,21 @@ json.conversations do
     json.id conversation.id
     json.display_id conversation.display_id
     json.deleted_at conversation.deleted_at
-    json.inbox do
-      json.id conversation.inbox.id
-      json.name conversation.inbox.name
+    if conversation.inbox
+      json.inbox do
+        json.id conversation.inbox.id
+        json.name conversation.inbox.name
+      end
+    else
+      json.inbox nil
     end
-    json.contact do
-      json.id conversation.contact.id
-      json.name conversation.contact.name
+    if conversation.contact
+      json.contact do
+        json.id conversation.contact.id
+        json.name conversation.contact.name
+      end
+    else
+      json.contact nil
     end
   end
 end
