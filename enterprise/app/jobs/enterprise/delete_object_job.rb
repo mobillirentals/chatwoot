@@ -12,7 +12,9 @@ module Enterprise::DeleteObjectJob
   end
 
   def create_audit_entry(object, user, ip)
-    return unless %w[Inbox Conversation SlaPolicy].include?(object.class.to_s) && user.present?
+    # Conversation deletion is audited by the trash lifecycle (purge event),
+    # so it is deliberately excluded here to avoid duplicate audit rows.
+    return unless %w[Inbox SlaPolicy].include?(object.class.to_s) && user.present?
 
     Enterprise::AuditLog.create(
       auditable: object,

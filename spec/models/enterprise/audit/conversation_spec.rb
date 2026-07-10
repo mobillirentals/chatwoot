@@ -5,22 +5,20 @@ RSpec.describe 'Conversation Audit', type: :model do
   let(:conversation) { create(:conversation, account: account) }
 
   before do
-    # Enable auditing for conversations
     conversation.class.send(:include, Enterprise::Audit::Conversation) if defined?(Enterprise::Audit::Conversation)
   end
 
   describe 'audit logging on destroy' do
-    it 'creates an audit log when conversation is destroyed' do
+    # Conversation deletion is now audited through the trash lifecycle services
+    # (Trash::PurgeService emits a `purge` event). The raw :destroy must NOT
+    # create its own audit row, otherwise a permanent deletion would be logged
+    # twice (purge + destroy).
+    it 'does not create a raw destroy audit' do
       skip 'Enterprise audit module not available' unless defined?(Enterprise::Audit::Conversation)
 
       expect do
         conversation.destroy!
-      end.to change(Audited::Audit, :count).by(1)
-
-      audit = Audited::Audit.last
-      expect(audit.auditable_type).to eq('Conversation')
-      expect(audit.action).to eq('destroy')
-      expect(audit.auditable_id).to eq(conversation.id)
+      end.not_to(change(Audited::Audit, :count))
     end
 
     it 'does not create audit log for other actions by default' do

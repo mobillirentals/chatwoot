@@ -37,7 +37,13 @@ const fetchTrashItems = async page => {
   try {
     const response = await trashAPI.get({ page });
     records.value = response.data.conversations;
-    meta.value = response.data.meta;
+    // A API devolve o meta em snake_case; o PaginationFooter espera camelCase.
+    const responseMeta = response.data.meta ?? {};
+    meta.value = {
+      currentPage: responseMeta.current_page,
+      totalEntries: responseMeta.total_entries,
+      perPage: responseMeta.per_page,
+    };
   } catch (error) {
     const errorMessage =
       error?.response?.data?.message || t('TRASH.API.ERROR_MESSAGE');
