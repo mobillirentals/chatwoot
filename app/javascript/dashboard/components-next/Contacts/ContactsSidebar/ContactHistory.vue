@@ -147,21 +147,41 @@ const isExporting = ref(false);
 
 // ── Prévia da conversa (popup — lê sem sair da tela nem perder a seleção) ──
 const previewConvId = ref(null);
+const previewMessageId = ref(null);
 const openPreview = conversation => {
   previewConvId.value = conversation.id;
+  previewMessageId.value = null;
+};
+// A partir de um resultado da busca: abre a prévia já rolada até a mensagem.
+const openPreviewAtMessage = result => {
+  previewConvId.value = result.conversation_id;
+  previewMessageId.value = result.message_id;
 };
 const closePreview = () => {
   previewConvId.value = null;
+  previewMessageId.value = null;
 };
 
+// Itens selecionáveis do que está visível: resultados da busca (por conversa)
+// durante a busca; senão, as conversas filtradas por período.
+const selectableIds = computed(() => {
+  if (hasActiveSearch.value) {
+    return [...new Set(searchResults.value.map(r => r.conversation_id))];
+  }
+  return displayedConversations.value.map(c => c.id);
+});
+
+const selectedInViewCount = computed(
+  () => selectableIds.value.filter(id => selectedIds.value.has(id)).length
+);
 const allSelected = computed(
   () =>
-    displayedConversations.value.length > 0 &&
-    displayedConversations.value.every(c => selectedIds.value.has(c.id))
+    selectableIds.value.length > 0 &&
+    selectedInViewCount.value === selectableIds.value.length
 );
 const hasSelection = computed(() => selectedIds.value.size > 0);
 const selectionLabel = computed(
-  () => `${selectedIds.value.size}/${displayedConversations.value.length}`
+  () => `${selectedInViewCount.value}/${selectableIds.value.length}`
 );
 
 // Tooltips dos botões-ícone da barra de seleção (texto só no hover/aria).
@@ -178,9 +198,10 @@ const exportTitle = computed(() =>
       })
 );
 
-// Mantém a seleção coerente com o que está visível após filtrar.
+// Mantém a seleção coerente com o que está visível após filtrar por período.
+// Não roda durante a busca (a lista visível são os resultados, não a lista).
 watch(displayedConversations, list => {
-  if (selectedIds.value.size === 0) return;
+  if (hasActiveSearch.value || selectedIds.value.size === 0) return;
   const visible = new Set(list.map(c => c.id));
   const next = new Set([...selectedIds.value].filter(id => visible.has(id)));
   if (next.size !== selectedIds.value.size) {
@@ -209,9 +230,13 @@ const toggleConversation = id => {
 };
 
 const toggleAll = () => {
-  selectedIds.value = allSelected.value
-    ? new Set()
-    : new Set(displayedConversations.value.map(c => c.id));
+  const next = new Set(selectedIds.value);
+  if (allSelected.value) {
+    selectableIds.value.forEach(id => next.delete(id));
+  } else {
+    selectableIds.value.forEach(id => next.add(id));
+  }
+  selectedIds.value = next;
 };
 
 const handleExport = async () => {
@@ -295,58 +320,9 @@ const handleExport = async () => {
       </div>
     </div>
 
-    <!-- Resultados da busca (estilo WhatsApp): clicar pula pra mensagem -->
-    <template v-if="hasActiveSearch">
-      <div
-        v-if="isSearching && searchResults.length === 0"
-        class="flex items-center justify-center py-10 text-n-slate-11"
-      >
-        <Spinner />
-      </div>
-      <div v-else-if="searchResults.length > 0" class="flex flex-col px-3 py-2">
-        <button
-          v-for="result in searchResults"
-          :key="result.message_id"
-          type="button"
-          class="flex flex-col gap-1 px-3 py-2.5 text-left transition-colors rounded-lg cursor-pointer hover:bg-n-alpha-1 dark:hover:bg-n-alpha-3"
-          @click="jumpToMessage(result)"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center min-w-0 gap-1.5 text-n-slate-11">
-              <span class="i-lucide-hash size-3.5 shrink-0" />
-              <span class="text-xs font-medium truncate">
-                {{
-                  result.sender_name
-                    ? `${result.conversation_id} · ${result.sender_name}`
-                    : `${result.conversation_id}`
-                }}
-              </span>
-            </div>
-            <span class="text-xs shrink-0 text-n-slate-10">
-              {{ searchTime(result.created_at) }}
-            </span>
-          </div>
-          <p
-            class="text-sm leading-5 text-n-slate-12 line-clamp-2 [&_.searchkey--highlight]:font-semibold [&_.searchkey--highlight]:text-woot-500"
-          >
-            <span v-if="result.private" class="font-medium text-n-amber-11">
-              {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.SEARCH_RESULTS.PRIVATE') }}
-            </span>
-            <span v-dompurify-html="highlightedSnippet(result.content)" />
-          </p>
-        </button>
-      </div>
-      <p
-        v-else
-        class="px-6 py-10 text-sm leading-6 text-center text-n-slate-11"
-      >
-        {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.SEARCH_RESULTS.EMPTY') }}
-      </p>
-    </template>
-
-    <!-- Barra de ação: exportar ou seleção inline -->
+    <!-- Barra de ação: exportar/seleção inline (acima do conteúdo nos dois modos) -->
     <div
-      v-if="!hasActiveSearch && canExport && contactConversations.length > 0"
+      v-if="canExport && contactConversations.length > 0"
       class="flex items-center justify-between gap-3 px-6 py-2 border-b border-n-weak min-h-10"
     >
       <template v-if="isSelecting">
@@ -405,6 +381,78 @@ const handleExport = async () => {
         </button>
       </template>
     </div>
+
+    <!-- Resultados da busca (estilo WhatsApp): clicar pula/abre a prévia -->
+    <template v-if="hasActiveSearch">
+      <div
+        v-if="isSearching && searchResults.length === 0"
+        class="flex items-center justify-center py-10 text-n-slate-11"
+      >
+        <Spinner />
+      </div>
+      <div
+        v-else-if="searchResults.length > 0"
+        class="flex flex-col gap-1 px-3 py-2"
+      >
+        <div
+          v-for="result in searchResults"
+          :key="result.message_id"
+          class="flex items-center gap-2"
+        >
+          <input
+            v-if="isSelecting"
+            type="checkbox"
+            class="cursor-pointer accent-woot-500 size-4 shrink-0"
+            :checked="selectedIds.has(result.conversation_id)"
+            @change="toggleConversation(result.conversation_id)"
+          />
+          <!-- Em seleção: clicar abre a prévia na mensagem; senão, pula pra conversa -->
+          <button
+            type="button"
+            class="flex flex-col flex-1 min-w-0 gap-1 px-3 py-2.5 text-left transition-colors cursor-pointer rounded-lg hover:bg-n-alpha-1 dark:hover:bg-n-alpha-3"
+            :class="{
+              'ring-2 ring-inset ring-woot-500':
+                isSelecting && selectedIds.has(result.conversation_id),
+            }"
+            @click="
+              isSelecting ? openPreviewAtMessage(result) : jumpToMessage(result)
+            "
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center min-w-0 gap-1.5 text-n-slate-11">
+                <span class="i-lucide-hash size-3.5 shrink-0" />
+                <span class="text-xs font-medium truncate">
+                  {{
+                    result.sender_name
+                      ? `${result.conversation_id} · ${result.sender_name}`
+                      : `${result.conversation_id}`
+                  }}
+                </span>
+              </div>
+              <span class="text-xs shrink-0 text-n-slate-10">
+                {{ searchTime(result.created_at) }}
+              </span>
+            </div>
+            <p
+              class="text-sm leading-5 text-n-slate-12 line-clamp-2 [&_.searchkey--highlight]:font-semibold [&_.searchkey--highlight]:text-woot-500"
+            >
+              <span v-if="result.private" class="font-medium text-n-amber-11">
+                {{
+                  t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.SEARCH_RESULTS.PRIVATE')
+                }}
+              </span>
+              <span v-dompurify-html="highlightedSnippet(result.content)" />
+            </p>
+          </button>
+        </div>
+      </div>
+      <p
+        v-else
+        class="px-6 py-10 text-sm leading-6 text-center text-n-slate-11"
+      >
+        {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.SEARCH_RESULTS.EMPTY') }}
+      </p>
+    </template>
 
     <template v-if="!hasActiveSearch">
       <div
@@ -466,6 +514,7 @@ const handleExport = async () => {
     <ConversationPreviewModal
       v-if="previewConvId"
       :conversation-id="previewConvId"
+      :message-id="previewMessageId"
       @close="closePreview"
     />
   </template>
