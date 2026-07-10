@@ -7,6 +7,7 @@
     "RESTORE_SUCCESS_MESSAGE": "Conversa restaurada com sucesso.",
     "RESTORE_ERROR_MESSAGE": "Falha ao restaurar a conversa. Tente novamente.",
     "ACTION_TOOLTIP": {
+      "VIEW": "Ver conversa",
       "RESTORE": "Restaurar conversa"
     },
     "LIST": {

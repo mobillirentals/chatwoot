@@ -15,6 +15,10 @@ class Trash extends ApiClient {
   restore(id) {
     return axios.post(`${this.url}/${id}/restore`);
   }
+
+  messages(id, params = {}) {
+    return axios.get(`${this.url}/${id}/messages`, { params });
+  }
 }
 
 export default new Trash();
