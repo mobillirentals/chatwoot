@@ -10,6 +10,19 @@ import { useMessageContext } from './provider.js';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from './constants';
 
 const {
+  status,
+  isPrivate,
+  createdAt,
+  sourceId,
+  messageType,
+  contentAttributes,
+  inboxId,
+} = useMessageContext();
+
+// Resolve o canal pelo inbox da própria mensagem (com fallback para o chat
+// selecionado), para que o status funcione mesmo fora da conversa aberta
+// (ex.: prévia da conversa no histórico do contato).
+const {
   isAFacebookInbox,
   isALineChannel,
   isAPIInbox,
@@ -21,16 +34,7 @@ const {
   isAnEmailChannel,
   isAnInstagramChannel,
   isATiktokChannel,
-} = useInbox();
-
-const {
-  status,
-  isPrivate,
-  createdAt,
-  sourceId,
-  messageType,
-  contentAttributes,
-} = useMessageContext();
+} = useInbox(inboxId.value);
 
 const readableTime = computed(() =>
   messageTimestamp(createdAt.value, 'LLL d, h:mm a')
