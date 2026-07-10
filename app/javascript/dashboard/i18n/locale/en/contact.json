@@ -301,6 +301,8 @@
       "SEND_MESSAGE": "Send message",
       "BLOCK_CONTACT": "Block contact",
       "UNBLOCK_CONTACT": "Unblock contact",
+      "HIDE_PANEL": "Hide panel",
+      "SHOW_PANEL": "Show panel",
       "BREADCRUMB": {
         "CONTACTS": "Contacts"
       },

@@ -300,6 +300,8 @@
       "SEND_MESSAGE": "Enviar mensagem",
       "BLOCK_CONTACT": "Bloquear contato",
       "UNBLOCK_CONTACT": "Desbloquear contato",
+      "HIDE_PANEL": "Ocultar painel",
+      "SHOW_PANEL": "Mostrar painel",
       "BREADCRUMB": {
         "CONTACTS": "Contatos"
       },
