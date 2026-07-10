@@ -72,6 +72,14 @@
     },
     "CONVERSATION": {
       "DELETE": "{agentName} excluiu a conversa #{id}"
+    },
+    "CONTACT": {
+      "EXPORT_CONVERSATIONS": "{agentName} exportou {count} conversa(s) do contato {contactName} (#{id})"
+    },
+    "AGENT_BOT": {
+      "ADD": "{agentName} criou um novo robô (#{id})",
+      "EDIT": "{agentName} atualizou um robô (#{id})",
+      "DELETE": "{agentName} excluiu um robô (#{id})"
     }
   }
 }
