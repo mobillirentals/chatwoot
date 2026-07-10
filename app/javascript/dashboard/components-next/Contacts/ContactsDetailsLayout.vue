@@ -78,7 +78,8 @@ const closeMobileSidebar = () => {
     class="flex w-full h-full overflow-hidden justify-evenly bg-n-surface-1"
   >
     <div
-      class="flex flex-col w-full h-full transition-all duration-300 ltr:2xl:ml-56 rtl:2xl:mr-56"
+      class="flex flex-col w-full h-full transition-all duration-300"
+      :class="isDesktopSidebarOpen ? 'ltr:2xl:ml-56 rtl:2xl:mr-56' : ''"
     >
       <header class="sticky top-0 z-10 px-6 3xl:px-0">
         <div class="w-full mx-auto max-w-[40.625rem]">
