@@ -126,16 +126,17 @@ const { highlightContent } = useMessageFormatter();
 const highlightedSnippet = content =>
   highlightContent(content, searchQuery.value.trim(), 'searchkey--highlight');
 
-// "Pular pra mensagem": abre a conversa real já rolando até a mensagem.
+// "Pular pra mensagem": abre a conversa real já rolando até a mensagem
+// (quando não há message_id — ex.: busca por #id — apenas abre a conversa).
 const jumpToMessage = result => {
-  if (!result.conversation_id || !result.message_id) return;
+  if (!result.conversation_id) return;
   router.push({
     name: 'inbox_conversation',
     params: {
       accountId: route.params.accountId,
       conversation_id: result.conversation_id,
     },
-    query: { messageId: result.message_id },
+    query: result.message_id ? { messageId: result.message_id } : {},
   });
 };
 

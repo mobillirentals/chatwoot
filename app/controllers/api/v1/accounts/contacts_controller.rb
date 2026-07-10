@@ -74,22 +74,20 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     render html: html.html_safe, layout: false
   end
 
-  # Busca full-text no conteúdo das mensagens das conversas do contato.
-  # Retorna as mensagens que casam (estilo WhatsApp): snippet do trecho + destino
-  # do "pular pra mensagem" (display_id da conversa + id da mensagem).
+  # Busca nas conversas do contato (estilo WhatsApp):
+  # - `#123` → vai direto para a conversa de display_id 123 (representada pela msg mais recente)
+  # - texto  → busca full-text no conteúdo das mensagens
+  # Cada resultado carrega o destino do "pular pra mensagem" (display_id + id da mensagem).
   def search_conversations
     query = params[:q].to_s.strip
+    id_match = query.match(/\A#(\d+)\z/)
 
     messages = if query.blank?
                  Message.none
+               elsif id_match
+                 conversation_id_search(id_match[1].to_i)
                else
-                 like = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-                 Message.where(conversation_id: @contact.conversations.select(:id))
-                        .where.not(message_type: :activity)
-                        .where('messages.content ILIKE ?', like)
-                        .includes(:conversation, :sender)
-                        .order(created_at: :desc)
-                        .limit(SEARCH_RESULTS_LIMIT)
+                 message_content_search(query)
                end
 
     render json: { messages: messages.map { |message| serialize_search_message(message, query) } }
@@ -258,6 +256,30 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def render_error(error, error_status)
     render json: error, status: error_status
+  end
+
+  # Busca full-text no conteúdo das mensagens das conversas do contato.
+  def message_content_search(query)
+    like = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+    Message.where(conversation_id: @contact.conversations.select(:id))
+           .where.not(message_type: :activity)
+           .where('messages.content ILIKE ?', like)
+           .includes(:conversation, :sender)
+           .order(created_at: :desc)
+           .limit(SEARCH_RESULTS_LIMIT)
+  end
+
+  # `#123`: retorna a conversa de display_id informado (via mensagem mais recente,
+  # para o clique abrir a conversa já posicionada nela).
+  def conversation_id_search(display_id)
+    conversation = @contact.conversations.find_by(display_id: display_id)
+    return Message.none unless conversation
+
+    Message.where(conversation_id: conversation.id)
+           .where.not(message_type: :activity)
+           .includes(:conversation, :sender)
+           .order(created_at: :desc)
+           .limit(1)
   end
 
   def serialize_search_message(message, query)
