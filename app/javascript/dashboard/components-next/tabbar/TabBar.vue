@@ -24,11 +24,29 @@ const emit = defineEmits(['tabChanged']);
 
 const activeTab = computed(() => props.initialActiveTab);
 
+const rootRef = ref(null);
 const tabRefs = ref([]);
 const indicatorStyle = ref({});
 const enableTransition = ref(false);
+// Índices das abas cujo texto está cortado (recebem tooltip com o nome completo).
+const truncatedTabs = ref([]);
 
 const activeElement = computed(() => tabRefs.value[activeTab.value]);
+
+const measureTruncation = () => {
+  nextTick(() => {
+    truncatedTabs.value = props.tabs.map((_, index) => {
+      const el = tabRefs.value[index];
+      return el ? el.scrollWidth > el.clientWidth + 1 : false;
+    });
+  });
+};
+
+// Só mostra o tooltip quando a aba de fato está cortada.
+const tabTitle = (tab, index) => {
+  if (!truncatedTabs.value[index]) return null;
+  return tab.count ? `${tab.label} (${tab.count})` : tab.label;
+};
 
 const updateIndicator = () => {
   nextTick(() => {
@@ -42,16 +60,19 @@ const updateIndicator = () => {
 };
 
 useResizeObserver(activeElement, updateIndicator);
+useResizeObserver(rootRef, measureTruncation);
 
 // Watch for prop/tabs changes to update indicator position
 watch([() => props.initialActiveTab, () => props.tabs], updateIndicator, {
   immediate: true,
 });
+watch(() => props.tabs, measureTruncation, { immediate: true });
 
 onMounted(() => {
   nextTick(() => {
     enableTransition.value = true;
   });
+  measureTruncation();
 });
 
 const selectTab = index => {
@@ -70,6 +91,7 @@ const showDivider = index => {
 
 <template>
   <div
+    ref="rootRef"
     class="relative flex items-center h-8 rounded-lg bg-n-alpha-1 dark:bg-n-solid-1 w-fit transition-all duration-200 ease-out has-[button:active]:scale-[1.01]"
   >
     <div
@@ -82,6 +104,7 @@ const showDivider = index => {
       <button
         :ref="el => (tabRefs[index] = el)"
         type="button"
+        :title="tabTitle(tab, index)"
         class="relative z-10 px-4 truncate py-1.5 text-sm border-0 outline-1 outline-transparent rounded-lg transition-all duration-200 ease-out hover:text-n-brand active:scale-[1.02]"
         :class="[
           activeTab === index

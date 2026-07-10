@@ -301,6 +301,8 @@
       "SEND_MESSAGE": "Send message",
       "BLOCK_CONTACT": "Block contact",
       "UNBLOCK_CONTACT": "Unblock contact",
+      "HIDE_PANEL": "Hide panel",
+      "SHOW_PANEL": "Show panel",
       "BREADCRUMB": {
         "CONTACTS": "Contacts"
       },
@@ -531,7 +533,7 @@
           "ERROR": "An error occurred while generating the export. Please try again."
         },
         "FILTER": {
-          "SEARCH_PLACEHOLDER": "Search in messages…",
+          "SEARCH_PLACEHOLDER": "Search messages or #id…",
           "PERIOD_FROM": "From",
           "PERIOD_TO": "To",
           "PERIOD_CLEAR": "Clear period",

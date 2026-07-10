@@ -300,6 +300,8 @@
       "SEND_MESSAGE": "Enviar mensagem",
       "BLOCK_CONTACT": "Bloquear contato",
       "UNBLOCK_CONTACT": "Desbloquear contato",
+      "HIDE_PANEL": "Ocultar painel",
+      "SHOW_PANEL": "Mostrar painel",
       "BREADCRUMB": {
         "CONTACTS": "Contatos"
       },
@@ -529,7 +531,7 @@
           "ERROR": "Ocorreu um erro ao gerar a exportação. Tente novamente."
         },
         "FILTER": {
-          "SEARCH_PLACEHOLDER": "Buscar nas mensagens…",
+          "SEARCH_PLACEHOLDER": "Buscar nas mensagens ou #id…",
           "PERIOD_FROM": "De",
           "PERIOD_TO": "Até",
           "PERIOD_CLEAR": "Limpar período",

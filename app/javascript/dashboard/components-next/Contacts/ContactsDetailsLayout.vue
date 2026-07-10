@@ -27,6 +27,8 @@ const slots = useSlots();
 const route = useRoute();
 
 const isContactSidebarOpen = ref(false);
+// Desktop: painel lateral começa visível, mas pode ser ocultado em qualquer tamanho.
+const isDesktopSidebarOpen = ref(true);
 
 const contactId = computed(() => route.params.contactId);
 
@@ -125,16 +127,39 @@ const closeMobileSidebar = () => {
       </main>
     </div>
 
-    <!-- Desktop sidebar -->
+    <!-- Desktop sidebar (colapsável em qualquer tamanho ≥ lg) -->
     <div
       v-if="slots.sidebar"
-      class="hidden lg:flex flex-col min-w-52 w-full max-w-md border-l border-n-weak bg-n-solid-2"
+      class="relative hidden lg:flex flex-col border-l border-n-weak bg-n-solid-2 transition-all duration-300 ease-in-out shrink-0"
+      :class="isDesktopSidebarOpen ? 'min-w-52 w-full max-w-md' : 'w-0 min-w-0'"
     >
-      <div class="shrink-0">
-        <slot name="sidebarHeader" />
-      </div>
-      <div class="flex-1 min-h-0 overflow-y-auto pb-6 pt-3">
-        <slot name="sidebar" />
+      <!-- Botão flutuante de ocultar/mostrar, fixo na borda esquerda do painel -->
+      <button
+        type="button"
+        class="absolute top-24 z-20 flex items-center justify-center transition-colors border rounded-full size-7 bg-n-solid-2 border-n-weak text-n-slate-11 hover:text-n-slate-12 ltr:-left-3.5 rtl:-right-3.5"
+        :title="
+          isDesktopSidebarOpen
+            ? t('CONTACTS_LAYOUT.HEADER.HIDE_PANEL')
+            : t('CONTACTS_LAYOUT.HEADER.SHOW_PANEL')
+        "
+        @click="isDesktopSidebarOpen = !isDesktopSidebarOpen"
+      >
+        <span
+          class="size-4"
+          :class="
+            isDesktopSidebarOpen
+              ? 'i-lucide-panel-right-close'
+              : 'i-lucide-panel-right-open'
+          "
+        />
+      </button>
+      <div v-show="isDesktopSidebarOpen" class="flex flex-col h-full min-h-0">
+        <div class="shrink-0">
+          <slot name="sidebarHeader" />
+        </div>
+        <div class="flex-1 min-h-0 overflow-y-auto pb-6 pt-3">
+          <slot name="sidebar" />
+        </div>
       </div>
     </div>
 
