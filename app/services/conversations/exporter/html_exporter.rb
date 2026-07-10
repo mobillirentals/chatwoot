@@ -28,9 +28,19 @@ module Conversations
             exported_by: @exported_by,
             account: @account,
             generated_at: format_datetime(Time.current),
-            sha256: sha
+            sha256: sha,
+            logo_svg: brand_logo_svg
           }
         )
+      end
+
+      # Lê o SVG da logo para embutir inline no cabeçalho (auto-contido no PDF).
+      def brand_logo_svg
+        path = Rails.root.join('public/brand-assets/logo.svg')
+        File.exist?(path) ? File.read(path) : nil
+      rescue StandardError => e
+        Rails.logger.warn "[HtmlExporter] Could not read brand logo: #{e.message}"
+        nil
       end
 
       def decorated_conversations
@@ -38,8 +48,9 @@ module Conversations
           {
             conversation: conv,
             channel: channel_name(conv),
-            assignee: conv.assignee&.name || 'Não atribuído',
-            first_response: first_response_time(conv),
+            assignees: responsible_agents(conv),
+            bot_first_response: bot_first_response_time(conv),
+            agent_first_response: agent_first_response_time(conv),
             labels: conv.labels.join(', '),
             messages: decorated_messages(conv)
           }
@@ -63,6 +74,8 @@ module Conversations
       def decorate_message(msg)
         {
           message: msg,
+          id: msg.id,
+          in_reply_to: msg.in_reply_to,
           sender: sender_name(msg),
           timestamp: format_date(msg.created_at),
           private: msg.private?,

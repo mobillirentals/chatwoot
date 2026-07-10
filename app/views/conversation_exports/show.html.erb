@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ChatMobilli — Exportação de Conversas</title>
+  <title>Chatmobílli — Exportação de Conversas</title>
   <style>
     /* ── Reset & base ─────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,7 +46,7 @@
 
     /* ── Report header ────────────────────────────────────────── */
     .report-header {
-      border-bottom: 3px solid #1a56db;
+      border-bottom: 3px solid #DB7F2B;
       padding-bottom: 16px;
       margin-bottom: 24px;
     }
@@ -61,8 +61,16 @@
     .report-header__brand-name {
       font-size: 18pt;
       font-weight: 700;
-      color: #1a56db;
+      color: #DB7F2B;
       letter-spacing: -0.3px;
+    }
+
+    .report-header__logo { display: inline-block; }
+
+    .report-header__logo svg {
+      height: 46px;
+      width: auto;
+      display: block;
     }
 
     .report-header__subtitle {
@@ -92,8 +100,8 @@
 
     /* ── Contact section ──────────────────────────────────────── */
     .contact-section {
-      background: #f8faff;
-      border: 1px solid #dce8ff;
+      background: #FDF6EF;
+      border: 1px solid #F0D9BF;
       border-radius: 6px;
       padding: 14px 18px;
       margin-bottom: 28px;
@@ -102,7 +110,7 @@
     .contact-section__title {
       font-size: 10pt;
       font-weight: 700;
-      color: #1a56db;
+      color: #DB7F2B;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 10px;
@@ -117,7 +125,7 @@
     }
 
     .conversation-header {
-      background: #1a56db;
+      background: #DB7F2B;
       color: #fff;
       padding: 10px 16px;
       display: flex;
@@ -140,7 +148,7 @@
     }
 
     .conversation-meta {
-      background: #f4f7ff;
+      background: #FDF4EA;
       padding: 10px 16px;
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -194,6 +202,24 @@
       line-height: 1.3;
     }
 
+    .message-row__id {
+      font-family: 'Courier New', monospace;
+      font-size: 7pt;
+      color: #aaa;
+      margin-top: 3px;
+    }
+
+    .message-row__reply-ref {
+      display: inline-block;
+      font-size: 8pt;
+      color: #DB7F2B;
+      background: #FBEEDE;
+      border-left: 2px solid #DB7F2B;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+
     .message-row__body {
       flex: 1;
     }
@@ -205,7 +231,7 @@
       margin-bottom: 3px;
     }
 
-    .message-row__sender--agent { color: #1a56db; }
+    .message-row__sender--agent { color: #DB7F2B; }
     .message-row__sender--client { color: #2e7d32; }
 
     .message-row__private-badge {
@@ -265,7 +291,7 @@
 
     .attachment--media__url {
       font-size: 7.5pt;
-      color: #1a56db;
+      color: #DB7F2B;
       word-break: break-all;
       display: block;
       margin-top: 3px;
@@ -316,7 +342,7 @@
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #1a56db;
+      background: #DB7F2B;
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -324,11 +350,11 @@
       font-size: 12pt;
       font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(26,86,219,0.35);
+      box-shadow: 0 4px 16px rgba(219,127,43,0.35);
       z-index: 9999;
     }
 
-    .print-btn:hover { background: #1648c0; }
+    .print-btn:hover { background: #B8691F; }
   </style>
 </head>
 <body>
@@ -337,7 +363,11 @@
   <!-- ── Report header ─────────────────────────────────────── -->
   <div class="report-header">
     <div class="report-header__brand">
-      <span class="report-header__brand-name">ChatMobilli</span>
+      <% if @logo_svg.present? %>
+        <span class="report-header__logo"><%= raw @logo_svg %></span>
+      <% else %>
+        <span class="report-header__brand-name">Chatmobílli</span>
+      <% end %>
     </div>
     <div class="report-header__subtitle">Exportação de Conversas — Documento gerado para fins de registro e auditoria</div>
 
@@ -406,8 +436,8 @@
           <div class="meta-grid__value"><%= item[:channel] %></div>
         </div>
         <div>
-          <div class="meta-grid__label">Agente Responsável</div>
-          <div class="meta-grid__value"><%= item[:assignee] %></div>
+          <div class="meta-grid__label">Agentes Responsáveis</div>
+          <div class="meta-grid__value"><%= item[:assignees] %></div>
         </div>
         <div>
           <div class="meta-grid__label">Início</div>
@@ -419,10 +449,16 @@
             <%= conv.resolved? ? conv.updated_at.in_time_zone('Brasilia').strftime('%d/%m/%Y %H:%M') : '—' %>
           </div>
         </div>
-        <% if item[:first_response].present? %>
+        <% if item[:bot_first_response].present? %>
         <div>
-          <div class="meta-grid__label">1ª Resposta</div>
-          <div class="meta-grid__value"><%= item[:first_response] %></div>
+          <div class="meta-grid__label">1ª Resposta do Robô</div>
+          <div class="meta-grid__value"><%= item[:bot_first_response] %></div>
+        </div>
+        <% end %>
+        <% if item[:agent_first_response].present? %>
+        <div>
+          <div class="meta-grid__label">1ª Resposta do Agente</div>
+          <div class="meta-grid__value"><%= item[:agent_first_response] %></div>
         </div>
         <% end %>
         <% if item[:labels].present? %>
@@ -449,7 +485,10 @@
 
           <% else %>
             <div class="message-row<%= ' message-row--private' if m[:private] %>">
-              <div class="message-row__time"><%= m[:timestamp] %></div>
+              <div class="message-row__time">
+                <div><%= m[:timestamp] %></div>
+                <div class="message-row__id">#<%= m[:id] %></div>
+              </div>
               <div class="message-row__body">
                 <div class="message-row__sender <%= msg.incoming? ? 'message-row__sender--client' : 'message-row__sender--agent' %>">
                   <%= m[:sender] %>
@@ -457,6 +496,10 @@
                     <span class="message-row__private-badge">⚠ Nota Interna</span>
                   <% end %>
                 </div>
+
+                <% if m[:in_reply_to].present? %>
+                  <div class="message-row__reply-ref">⇌ Respondendo a mensagem #<%= m[:in_reply_to] %></div>
+                <% end %>
 
                 <% if m[:content].present? %>
                   <div class="message-row__text"><%= m[:content] %></div>
@@ -525,7 +568,7 @@
     <div class="integrity-section__title">Assinatura de Integridade</div>
     <div class="integrity-section__hash">SHA-256: <%= @sha256 %></div>
     <div class="integrity-section__note">
-      Este documento foi gerado automaticamente pelo sistema ChatMobilli em <%= @generated_at %>.
+      Este documento foi gerado automaticamente pelo sistema Chatmobílli em <%= @generated_at %>.
       O hash SHA-256 acima é calculado com base no conteúdo de todas as mensagens exportadas e pode ser
       utilizado para verificar que o conteúdo não foi alterado após a geração.
     </div>
@@ -534,7 +577,7 @@
 </div>
 
 <!-- Print button (hidden on print) -->
-<button class="print-btn no-print" onclick="window.print()">⬇ Salvar como PDF</button>
+<button class="print-btn no-print" onclick="window.print()">🖨 Imprimir</button>
 
 <script>
   // Auto-trigger print dialog when opened in a new window via the export flow
