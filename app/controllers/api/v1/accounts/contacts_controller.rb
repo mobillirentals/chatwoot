@@ -316,6 +316,9 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
       auditable_id: @contact.id,
       auditable_type: 'Contact',
       action: 'export_conversations',
+      user_id: Current.user&.id,
+      user_type: 'User',
+      remote_address: request.remote_ip,
       associated_id: Current.account.id,
       associated_type: 'Account',
       audited_changes: {
