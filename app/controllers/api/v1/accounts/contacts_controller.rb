@@ -15,7 +15,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   before_action :set_current_page, only: [:index, :active, :search, :filter]
   before_action :fetch_contact,
                 only: [:show, :update, :destroy, :avatar, :contactable_inboxes, :destroy_custom_attributes, :export_conversations,
-                       :search_conversations, :preview_conversation]
+                       :search_conversations]
   before_action :set_include_contact_inboxes, only: [:index, :active, :search, :filter, :show, :update]
 
   def index
@@ -87,24 +87,6 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
           end
 
     render json: { conversation_ids: ids }
-  end
-
-  # Prévia (leitura) de uma única conversa — mesma renderização do export,
-  # porém SEM registrar audit log (não é uma exportação, só visualização).
-  def preview_conversation
-    conversations = @contact.conversations
-                            .where(id: params[:conversation_id])
-                            .includes(messages: [:attachments, :sender], assignee: [])
-                            .order(:created_at)
-
-    html = Conversations::Exporter::HtmlExporter.new(
-      contact: @contact,
-      conversations: conversations,
-      exported_by: Current.user,
-      account: Current.account
-    ).perform
-
-    render html: html.html_safe, layout: false
   end
 
   # returns online contacts
