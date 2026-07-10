@@ -10,6 +10,7 @@ import PaginationFooter from 'dashboard/components-next/pagination/PaginationFoo
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import trashAPI from 'dashboard/api/trash';
+import ConversationPreviewModal from 'dashboard/components-next/Contacts/ContactsSidebar/ConversationPreviewModal.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -19,6 +20,7 @@ const route = useRoute();
 const { t } = useI18n();
 
 const records = ref([]);
+const previewItem = ref(null);
 const meta = ref({
   currentPage: 1,
   totalEntries: 0,
@@ -129,8 +131,15 @@ const tableHeaders = computed(() => {
                   </span>
                 </BaseTableCell>
 
-                <BaseTableCell class="w-20">
+                <BaseTableCell class="w-24">
                   <div class="flex items-center gap-2">
+                    <button
+                      class="flex items-center justify-center p-1.5 rounded-lg hover:bg-n-alpha-1 text-n-slate-11 hover:text-n-brand transition-colors"
+                      :title="$t('TRASH.ACTION_TOOLTIP.VIEW')"
+                      @click="previewItem = item"
+                    >
+                      <span class="i-lucide-eye size-4" />
+                    </button>
                     <button
                       class="flex items-center justify-center p-1.5 rounded-lg hover:bg-n-alpha-1 text-n-slate-11 hover:text-n-brand transition-colors"
                       :title="$t('TRASH.ACTION_TOOLTIP.RESTORE')"
@@ -152,6 +161,12 @@ const tableHeaders = computed(() => {
           @update:current-page="onPageChange"
         />
       </div>
+      <ConversationPreviewModal
+        v-if="previewItem"
+        :conversation-id="previewItem.display_id"
+        :fetch-messages="() => trashAPI.messages(previewItem.id)"
+        @close="previewItem = null"
+      />
     </template>
   </SettingsLayout>
 </template>

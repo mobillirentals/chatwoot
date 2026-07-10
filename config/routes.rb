@@ -108,6 +108,7 @@ Rails.application.routes.draw do
           resources :trash, only: [:index] do
             member do
               post :restore
+              get :messages
             end
           end
           resources :callbacks, only: [] do

@@ -17,6 +17,15 @@ class Api::V1::Accounts::TrashController < Api::V1::Accounts::BaseController
     head :ok
   end
 
+  # Read-only preview of a trashed conversation. The regular messages endpoint
+  # looks the conversation up through the default scope (which hides trashed
+  # records), so it 404s; here we fetch it via .trashed and reuse the standard
+  # messages serialization so the preview modal can render it as-is.
+  def messages
+    @conversation = current_account.conversations.trashed.find(params[:id])
+    @messages = MessageFinder.new(@conversation, params).perform
+    render 'api/v1/accounts/conversations/messages/index'
+  end
 
   private
 

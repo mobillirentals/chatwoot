@@ -2,7 +2,7 @@ json.conversations do
   json.array! @conversations do |conversation|
     json.id conversation.id
     json.display_id conversation.display_id
-    json.deleted_at conversation.deleted_at
+    json.deleted_at conversation.deleted_at&.to_i
     if conversation.inbox
       json.inbox do
         json.id conversation.inbox.id

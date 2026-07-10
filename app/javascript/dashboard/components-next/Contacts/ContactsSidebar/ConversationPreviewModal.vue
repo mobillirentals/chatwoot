@@ -17,6 +17,12 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  // Opcional: função que busca as mensagens (deve resolver { data: { payload } }).
+  // Usada quando a conversa não está acessível pelo endpoint padrão (ex.: lixeira).
+  fetchMessages: {
+    type: Function,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close']);
@@ -62,7 +68,9 @@ onMounted(async () => {
       params.before = Number(props.messageId) + 100;
       params.after = Number(props.messageId) - 100;
     }
-    const { data } = await MessageApi.getPreviousMessages(params);
+    const { data } = props.fetchMessages
+      ? await props.fetchMessages()
+      : await MessageApi.getPreviousMessages(params);
     messages.value = (data?.payload || [])
       .slice()
       .sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
