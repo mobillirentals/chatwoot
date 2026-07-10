@@ -1,6 +1,9 @@
 # List of the premium features in EE edition
+# NOTE (Mobílli): audit_logs removido desta lista de propósito. Ele é gravado
+# incondicionalmente (concerns Audit::*) e queremos exibi-lo na instalação
+# self-hosted. Mantê-lo aqui faria o ReconcilePlanConfigService desligar a
+# feature toda meia-noite (plano community). Ver AuditLogsController.
 - disable_branding
-- audit_logs
 - sla
 - custom_roles
 - captain_integration
