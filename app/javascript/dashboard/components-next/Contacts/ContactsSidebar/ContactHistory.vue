@@ -376,7 +376,6 @@ const handleExport = async () => {
 
     <ConversationPreviewModal
       v-if="previewConvId"
-      :contact-id="contactId"
       :conversation-id="previewConvId"
       @close="closePreview"
     />

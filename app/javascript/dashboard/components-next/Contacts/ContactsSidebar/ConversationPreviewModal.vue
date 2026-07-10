@@ -1,15 +1,13 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick, provide } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import contactAPI from 'dashboard/api/contacts';
+import { useMapGetter } from 'dashboard/composables/store';
+import MessageApi from 'dashboard/api/inbox/message';
+import MessageList from 'next/message/MessageList.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 const props = defineProps({
-  contactId: {
-    type: [String, Number],
-    required: true,
-  },
   conversationId: {
     type: [String, Number],
     required: true,
@@ -19,25 +17,28 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const { t } = useI18n();
-const iframeRef = ref(null);
+const currentUserId = useMapGetter('getCurrentUserID');
+
+const messages = ref([]);
 const isLoading = ref(true);
+const panelRef = ref(null);
+
+// Componentes de mensagem podem injetar este alvo para o menu de contexto.
+provide('contextMenuElementTarget', panelRef);
 
 onMounted(async () => {
   try {
-    const { data } = await contactAPI.previewConversation(
-      props.contactId,
-      props.conversationId
-    );
+    const { data } = await MessageApi.getPreviousMessages({
+      conversationId: props.conversationId,
+    });
+    messages.value = (data?.payload || [])
+      .slice()
+      .sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
     isLoading.value = false;
     await nextTick();
-    // Same rendering mechanism as the export (document.write), so inline
-    // styles render reliably regardless of the dashboard CSP.
-    const frame = iframeRef.value;
-    const doc = frame?.contentDocument || frame?.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(data);
-      doc.close();
+    // Abre no fim (mensagem mais recente), como na conversa real.
+    if (panelRef.value) {
+      panelRef.value.scrollTop = panelRef.value.scrollHeight;
     }
   } catch {
     useAlert(t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.PREVIEW.ERROR'));
@@ -52,7 +53,7 @@ onMounted(async () => {
     @click.self="emit('close')"
   >
     <div
-      class="flex flex-col w-full max-w-3xl overflow-hidden shadow-2xl bg-n-solid-1 rounded-xl max-h-[85vh]"
+      class="flex flex-col w-full max-w-2xl overflow-hidden shadow-2xl bg-n-solid-1 rounded-xl max-h-[85vh]"
     >
       <div
         class="flex items-center justify-between px-5 py-3 border-b border-n-weak shrink-0"
@@ -68,19 +69,26 @@ onMounted(async () => {
           <span class="i-lucide-x size-5" />
         </button>
       </div>
-      <div class="flex-1 min-h-0 bg-white">
-        <div
-          v-if="isLoading"
-          class="flex items-center justify-center h-64 bg-n-solid-1"
-        >
-          <Spinner />
-        </div>
-        <iframe
-          v-else
-          ref="iframeRef"
-          :title="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.PREVIEW.TITLE')"
-          class="w-full h-[72vh] border-0"
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center flex-1 min-h-0 h-72 bg-n-surface-1"
+      >
+        <Spinner />
+      </div>
+      <!-- Conversa real (somente leitura): reusa o MessageList da plataforma -->
+      <div
+        v-else
+        ref="panelRef"
+        class="flex-1 min-h-0 py-4 overflow-y-auto bg-n-surface-1"
+      >
+        <MessageList
+          v-if="messages.length"
+          :messages="messages"
+          :current-user-id="currentUserId"
         />
+        <p v-else class="p-6 text-sm text-center text-n-slate-11">
+          {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EMPTY_STATE') }}
+        </p>
       </div>
     </div>
   </div>

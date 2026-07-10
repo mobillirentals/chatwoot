@@ -122,13 +122,6 @@ class ContactAPI extends ApiClient {
       signal: options.signal,
     });
   }
-
-  previewConversation(contactId, conversationId) {
-    return axios.get(`${this.url}/${contactId}/preview_conversation`, {
-      params: { conversation_id: conversationId },
-      responseType: 'text',
-    });
-  }
 }
 
 export default new ContactAPI();
