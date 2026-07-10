@@ -62,7 +62,9 @@ const displayedConversations = computed(() => {
 
   if (fromTs || toTs) {
     list = list.filter(c => {
-      const ts = c.last_activity_at || c.created_at || 0;
+      // `timestamp` = última atividade da conversa (unix, segundos), mesmo campo
+      // que o ConversationCard usa para exibir o tempo relativo.
+      const ts = c.timestamp || c.last_activity_at || c.created_at || 0;
       if (fromTs && ts < fromTs) return false;
       if (toTs && ts > toTs) return false;
       return true;
