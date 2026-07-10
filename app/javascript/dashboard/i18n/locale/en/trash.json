@@ -1,0 +1,26 @@
+{
+  "TRASH": {
+    "HEADER": "Trash",
+    "DESCRIPTION": "Conversations placed in the trash will remain here for 30 days before being permanently deleted from the database.",
+    "LEARN_MORE": "Learn more about the Trash retention policy",
+    "LOADING": "Fetching trash items...",
+    "RESTORE_SUCCESS_MESSAGE": "Conversation successfully restored.",
+    "RESTORE_ERROR_MESSAGE": "Failed to restore conversation. Please try again.",
+    "ACTION_TOOLTIP": {
+      "RESTORE": "Restore conversation"
+    },
+    "LIST": {
+      "404": "No records found in the Trash.",
+      "TABLE_HEADER": {
+        "RESOURCE": "Resource ID",
+        "INBOX": "Inbox",
+        "CONTACT": "Contact",
+        "DELETED_AT": "Deleted At",
+        "ACTIONS": "Actions"
+      }
+    },
+    "API": {
+      "ERROR_MESSAGE": "Could not fetch trash records. Please try again."
+    }
+  }
+}

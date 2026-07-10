@@ -812,6 +812,12 @@ const menuItems = computed(() => {
           to: accountScopedRoute('auditlogs_list'),
         },
         {
+          name: 'Settings Trash',
+          label: t('SIDEBAR.TRASH'),
+          icon: 'i-lucide-trash-2',
+          to: accountScopedRoute('trash_list'),
+        },
+        {
           name: 'Settings Custom Roles',
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',

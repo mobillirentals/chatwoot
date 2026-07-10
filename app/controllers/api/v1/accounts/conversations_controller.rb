@@ -140,7 +140,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def destroy
     authorize @conversation, :destroy?
-    ::Conversations::DeleteService.new(conversation: @conversation, user: Current.user, ip: request.ip).perform
+    ::Trash::TrashService.new(record: @conversation, user: Current.user, ip: request.ip).perform
     head :ok
   end
 

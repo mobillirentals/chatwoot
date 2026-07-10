@@ -105,6 +105,11 @@ Rails.application.routes.draw do
           end
           resources :assignable_agents, only: [:index]
           resource :audit_logs, only: [:show]
+          resources :trash, only: [:index] do
+            member do
+              post :restore
+            end
+          end
           resources :callbacks, only: [] do
             collection do
               post :register_facebook_page

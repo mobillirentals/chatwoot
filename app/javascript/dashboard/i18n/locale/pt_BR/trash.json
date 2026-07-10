@@ -1,0 +1,26 @@
+{
+  "TRASH": {
+    "HEADER": "Lixeira",
+    "DESCRIPTION": "Conversas enviadas para a lixeira permanecerão aqui por até 30 dias antes de serem excluídas permanentemente do banco de dados.",
+    "LEARN_MORE": "Saiba mais sobre a política de retenção da lixeira",
+    "LOADING": "Buscando itens da lixeira...",
+    "RESTORE_SUCCESS_MESSAGE": "Conversa restaurada com sucesso.",
+    "RESTORE_ERROR_MESSAGE": "Falha ao restaurar a conversa. Tente novamente.",
+    "ACTION_TOOLTIP": {
+      "RESTORE": "Restaurar conversa"
+    },
+    "LIST": {
+      "404": "Nenhum registro encontrado na lixeira.",
+      "TABLE_HEADER": {
+        "RESOURCE": "ID do Recurso",
+        "INBOX": "Caixa de Entrada",
+        "CONTACT": "Contato",
+        "DELETED_AT": "Data de Exclusão",
+        "ACTIONS": "Ações"
+      }
+    },
+    "API": {
+      "ERROR_MESSAGE": "Não foi possível carregar os registros da lixeira. Tente novamente."
+    }
+  }
+}
