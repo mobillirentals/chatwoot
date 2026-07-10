@@ -69,6 +69,19 @@ module Conversations
         conversation.inbox&.name || 'Desconhecido'
       end
 
+      # Todos os agentes humanos que atuaram na conversa (na ordem em que responderam),
+      # mais o responsável atual — cobre casos de transferência entre atendentes.
+      def responsible_agents(conversation)
+        agents = conversation.messages.outgoing
+                             .where(sender_type: 'User')
+                             .order(:created_at)
+                             .includes(:sender)
+                             .filter_map(&:sender)
+        agents << conversation.assignee if conversation.assignee
+        names = agents.map(&:name).compact.uniq
+        names.presence&.join(', ') || 'Não atribuído'
+      end
+
       def content_sha256(conversations)
         raw = conversations.flat_map do |conv|
           conv.messages.order(:created_at).map do |msg|

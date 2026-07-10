@@ -48,7 +48,7 @@ module Conversations
           {
             conversation: conv,
             channel: channel_name(conv),
-            assignee: conv.assignee&.name || 'Não atribuído',
+            assignees: responsible_agents(conv),
             bot_first_response: bot_first_response_time(conv),
             agent_first_response: agent_first_response_time(conv),
             labels: conv.labels.join(', '),
