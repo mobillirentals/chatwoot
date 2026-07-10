@@ -46,7 +46,7 @@
 
     /* ── Report header ────────────────────────────────────────── */
     .report-header {
-      border-bottom: 3px solid #1a56db;
+      border-bottom: 3px solid #DB7F2B;
       padding-bottom: 16px;
       margin-bottom: 24px;
     }
@@ -61,8 +61,16 @@
     .report-header__brand-name {
       font-size: 18pt;
       font-weight: 700;
-      color: #1a56db;
+      color: #DB7F2B;
       letter-spacing: -0.3px;
+    }
+
+    .report-header__logo { display: inline-block; }
+
+    .report-header__logo svg {
+      height: 46px;
+      width: auto;
+      display: block;
     }
 
     .report-header__subtitle {
@@ -92,8 +100,8 @@
 
     /* ── Contact section ──────────────────────────────────────── */
     .contact-section {
-      background: #f8faff;
-      border: 1px solid #dce8ff;
+      background: #FDF6EF;
+      border: 1px solid #F0D9BF;
       border-radius: 6px;
       padding: 14px 18px;
       margin-bottom: 28px;
@@ -102,7 +110,7 @@
     .contact-section__title {
       font-size: 10pt;
       font-weight: 700;
-      color: #1a56db;
+      color: #DB7F2B;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 10px;
@@ -117,7 +125,7 @@
     }
 
     .conversation-header {
-      background: #1a56db;
+      background: #DB7F2B;
       color: #fff;
       padding: 10px 16px;
       display: flex;
@@ -140,7 +148,7 @@
     }
 
     .conversation-meta {
-      background: #f4f7ff;
+      background: #FDF4EA;
       padding: 10px 16px;
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -204,9 +212,9 @@
     .message-row__reply-ref {
       display: inline-block;
       font-size: 8pt;
-      color: #1a56db;
-      background: #eef3ff;
-      border-left: 2px solid #1a56db;
+      color: #DB7F2B;
+      background: #FBEEDE;
+      border-left: 2px solid #DB7F2B;
       padding: 2px 8px;
       border-radius: 3px;
       margin-bottom: 4px;
@@ -223,7 +231,7 @@
       margin-bottom: 3px;
     }
 
-    .message-row__sender--agent { color: #1a56db; }
+    .message-row__sender--agent { color: #DB7F2B; }
     .message-row__sender--client { color: #2e7d32; }
 
     .message-row__private-badge {
@@ -283,7 +291,7 @@
 
     .attachment--media__url {
       font-size: 7.5pt;
-      color: #1a56db;
+      color: #DB7F2B;
       word-break: break-all;
       display: block;
       margin-top: 3px;
@@ -334,7 +342,7 @@
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: #1a56db;
+      background: #DB7F2B;
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -342,11 +350,11 @@
       font-size: 12pt;
       font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(26,86,219,0.35);
+      box-shadow: 0 4px 16px rgba(219,127,43,0.35);
       z-index: 9999;
     }
 
-    .print-btn:hover { background: #1648c0; }
+    .print-btn:hover { background: #B8691F; }
   </style>
 </head>
 <body>
@@ -355,7 +363,11 @@
   <!-- ── Report header ─────────────────────────────────────── -->
   <div class="report-header">
     <div class="report-header__brand">
-      <span class="report-header__brand-name">Chatmobílli</span>
+      <% if @logo_svg.present? %>
+        <span class="report-header__logo"><%= raw @logo_svg %></span>
+      <% else %>
+        <span class="report-header__brand-name">Chatmobílli</span>
+      <% end %>
     </div>
     <div class="report-header__subtitle">Exportação de Conversas — Documento gerado para fins de registro e auditoria</div>
 
