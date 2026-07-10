@@ -419,10 +419,16 @@
             <%= conv.resolved? ? conv.updated_at.in_time_zone('Brasilia').strftime('%d/%m/%Y %H:%M') : '—' %>
           </div>
         </div>
-        <% if item[:first_response].present? %>
+        <% if item[:bot_first_response].present? %>
         <div>
-          <div class="meta-grid__label">1ª Resposta</div>
-          <div class="meta-grid__value"><%= item[:first_response] %></div>
+          <div class="meta-grid__label">1ª Resposta do Robô</div>
+          <div class="meta-grid__value"><%= item[:bot_first_response] %></div>
+        </div>
+        <% end %>
+        <% if item[:agent_first_response].present? %>
+        <div>
+          <div class="meta-grid__label">1ª Resposta do Agente</div>
+          <div class="meta-grid__value"><%= item[:agent_first_response] %></div>
         </div>
         <% end %>
         <% if item[:labels].present? %>

@@ -37,12 +37,30 @@ module Conversations
         "#{sender.name} (#{role})"
       end
 
-      def first_response_time(conversation)
-        incoming = conversation.messages.incoming.where(private: false).order(:created_at).first
-        outgoing = conversation.messages.outgoing.where(private: false).order(:created_at).first
-        return nil unless incoming && outgoing
+      def first_incoming_message(conversation)
+        conversation.messages.incoming.where(private: false).order(:created_at).first
+      end
 
-        diff = outgoing.created_at - incoming.created_at
+      # Primeira resposta do robô: cliente → 1ª mensagem de saída do agent_bot.
+      def bot_first_response_time(conversation)
+        bot_reply = conversation.messages.outgoing.where(private: false, sender_type: 'AgentBot')
+                                .order(:created_at).first
+        response_time_label(first_incoming_message(conversation), bot_reply)
+      end
+
+      # Primeira resposta do agente humano: cliente → 1ª mensagem de saída de um User.
+      def agent_first_response_time(conversation)
+        agent_reply = conversation.messages.outgoing.where(private: false, sender_type: 'User')
+                                  .order(:created_at).first
+        response_time_label(first_incoming_message(conversation), agent_reply)
+      end
+
+      def response_time_label(from_message, to_message)
+        return nil unless from_message && to_message
+
+        diff = to_message.created_at - from_message.created_at
+        return nil if diff.negative?
+
         minutes = (diff / 60).round
         minutes < 60 ? "#{minutes} min" : "#{(minutes / 60.0).round(1)} h"
       end
