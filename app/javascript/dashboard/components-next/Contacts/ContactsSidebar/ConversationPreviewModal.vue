@@ -59,7 +59,11 @@ onMounted(async () => {
         class="flex items-center justify-between px-5 py-3 border-b border-n-weak shrink-0"
       >
         <h3 class="text-base font-semibold text-n-slate-12">
-          {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.PREVIEW.TITLE') }}
+          {{
+            t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.PREVIEW.TITLE', {
+              id: conversationId,
+            })
+          }}
         </h3>
         <button
           class="transition-colors text-n-slate-10 hover:text-n-slate-12"
