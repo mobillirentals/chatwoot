@@ -10,6 +10,9 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   sort_on :country, internal_name: :order_on_country_name, type: :scope, scope_params: [:direction]
 
   RESULTS_PER_PAGE = 15
+  SEARCH_RESULTS_LIMIT = 50
+  SNIPPET_RADIUS = 60
+  SNIPPET_MAX_LENGTH = 160
 
   before_action :check_authorization
   before_action :set_current_page, only: [:index, :active, :search, :filter]
@@ -72,21 +75,24 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   # Busca full-text no conteúdo das mensagens das conversas do contato.
-  # Retorna os IDs de conversa que casam, para o front filtrar a lista.
+  # Retorna as mensagens que casam (estilo WhatsApp): snippet do trecho + destino
+  # do "pular pra mensagem" (display_id da conversa + id da mensagem).
   def search_conversations
     query = params[:q].to_s.strip
 
-    ids = if query.blank?
-            []
-          else
-            @contact.conversations
-                    .joins(:messages)
-                    .where('messages.content ILIKE ?', "%#{ActiveRecord::Base.sanitize_sql_like(query)}%")
-                    .distinct
-                    .pluck(:id)
-          end
+    messages = if query.blank?
+                 Message.none
+               else
+                 like = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+                 Message.where(conversation_id: @contact.conversations.select(:id))
+                        .where.not(message_type: :activity)
+                        .where('messages.content ILIKE ?', like)
+                        .includes(:conversation, :sender)
+                        .order(created_at: :desc)
+                        .limit(SEARCH_RESULTS_LIMIT)
+               end
 
-    render json: { conversation_ids: ids }
+    render json: { messages: messages.map { |message| serialize_search_message(message, query) } }
   end
 
   # returns online contacts
@@ -252,6 +258,33 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   def render_error(error, error_status)
     render json: error, status: error_status
+  end
+
+  def serialize_search_message(message, query)
+    {
+      message_id: message.id,
+      conversation_id: message.conversation.display_id,
+      content: build_message_snippet(message.content, query),
+      created_at: message.created_at.to_i,
+      private: message.private,
+      sender_name: message.sender&.name
+    }
+  end
+
+  # Recorta um trecho legível do conteúdo em volta da primeira ocorrência do termo.
+  def build_message_snippet(content, query)
+    text = content.to_s.tr("\n", ' ').squeeze(' ').strip
+    return text.truncate(SNIPPET_MAX_LENGTH) if text.blank? || query.blank?
+
+    index = text.downcase.index(query.downcase)
+    return text.truncate(SNIPPET_MAX_LENGTH) if index.nil?
+
+    start_at = [index - SNIPPET_RADIUS, 0].max
+    finish_at = [index + query.length + SNIPPET_RADIUS, text.length].min
+    snippet = text[start_at...finish_at]
+    snippet = "…#{snippet}" if start_at.positive?
+    snippet = "#{snippet}…" if finish_at < text.length
+    snippet
   end
 
   def log_conversations_export_audit(conversations)

@@ -539,6 +539,10 @@
           "NO_RESULTS": "No conversations match the filter",
           "SEARCH_ERROR": "Could not search messages. Please try again."
         },
+        "SEARCH_RESULTS": {
+          "EMPTY": "No messages match your search",
+          "PRIVATE": "Private note:"
+        },
         "PREVIEW": {
           "TITLE": "Conversation ID {id}",
           "OPEN": "Read conversation",

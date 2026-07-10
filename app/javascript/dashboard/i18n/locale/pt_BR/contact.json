@@ -537,6 +537,10 @@
           "NO_RESULTS": "Nenhuma conversa corresponde ao filtro",
           "SEARCH_ERROR": "Não foi possível buscar nas mensagens. Tente novamente."
         },
+        "SEARCH_RESULTS": {
+          "EMPTY": "Nenhuma mensagem corresponde à busca",
+          "PRIVATE": "Nota privada:"
+        },
         "PREVIEW": {
           "TITLE": "Conversa ID {id}",
           "OPEN": "Ler conversa",
