@@ -160,7 +160,21 @@ const allSelected = computed(
 );
 const hasSelection = computed(() => selectedIds.value.size > 0);
 const selectionLabel = computed(
-  () => `(${selectedIds.value.size}/${displayedConversations.value.length})`
+  () => `${selectedIds.value.size}/${displayedConversations.value.length}`
+);
+
+// Tooltips dos botões-ícone da barra de seleção (texto só no hover/aria).
+const toggleAllTitle = computed(() =>
+  allSelected.value
+    ? t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.DESELECT_ALL')
+    : t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.SELECT_ALL')
+);
+const exportTitle = computed(() =>
+  isExporting.value
+    ? t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.GENERATING')
+    : t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.BUTTON', {
+        count: selectedIds.value.size,
+      })
 );
 
 // Mantém a seleção coerente com o que está visível após filtrar.
@@ -337,50 +351,45 @@ const handleExport = async () => {
       <template v-if="isSelecting">
         <label
           class="flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-n-slate-11"
+          :title="toggleAllTitle"
         >
           <input
             type="checkbox"
-            class="cursor-pointer accent-woot-500 size-3.5"
+            class="cursor-pointer accent-woot-500 size-4"
             :checked="allSelected"
             :indeterminate="hasSelection && !allSelected"
+            :aria-label="toggleAllTitle"
             @change="toggleAll"
           />
-          {{
-            allSelected
-              ? t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.DESELECT_ALL')
-              : t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.SELECT_ALL')
-          }}
-          <span class="font-normal text-n-slate-10">{{ selectionLabel }}</span>
+          <span class="tabular-nums text-n-slate-10">{{ selectionLabel }}</span>
         </label>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1">
           <button
-            class="text-xs font-medium transition-colors text-n-slate-11 hover:text-n-slate-12"
+            class="flex items-center justify-center transition-colors rounded-md size-7 text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1"
+            :title="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.CANCEL')"
+            :aria-label="t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.CANCEL')"
             @click="cancelSelection"
           >
-            {{ t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.CANCEL') }}
+            <span class="i-lucide-x size-4" />
           </button>
           <button
-            class="flex items-center gap-1.5 text-xs font-semibold transition-colors"
+            class="flex items-center gap-1 px-2 text-xs font-semibold transition-colors rounded-md h-7 tabular-nums"
             :class="
               hasSelection && !isExporting
-                ? 'text-woot-500 hover:text-woot-600'
+                ? 'text-woot-500 hover:bg-n-alpha-1'
                 : 'text-n-slate-9 cursor-not-allowed'
             "
             :disabled="!hasSelection || isExporting"
+            :title="exportTitle"
+            :aria-label="exportTitle"
             @click="handleExport"
           >
             <span
               v-if="isExporting"
-              class="i-lucide-loader-circle animate-spin size-3.5"
+              class="i-lucide-loader-circle animate-spin size-4"
             />
-            <span v-else class="i-lucide-file-text size-3.5" />
-            {{
-              isExporting
-                ? t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.GENERATING')
-                : t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.EXPORT.BUTTON', {
-                    count: selectedIds.size,
-                  })
-            }}
+            <span v-else class="i-lucide-file-down size-4" />
+            {{ selectedIds.size }}
           </button>
         </div>
       </template>
