@@ -69,6 +69,18 @@ module Whatsapp::IncomingMessageServiceHelpers
 
   def process_in_reply_to(message)
     @in_reply_to_external_id = message['context']&.[]('id')
+    log_reply_context_debug(message) if @in_reply_to_external_id.present?
+  end
+
+  # TEMP DEBUG (remover após investigação): captura o context.id cru de replies
+  # para diagnosticar por que resposta do cliente à própria mensagem não linka.
+  def log_reply_context_debug(message)
+    match = @conversation&.messages&.find_by(source_id: @in_reply_to_external_id)
+    recent = @conversation&.messages&.order(created_at: :desc)&.limit(6)&.pluck(:id, :message_type, :source_id)
+    Rails.logger.info(
+      "[MOBILLI_DEBUG reply] context=#{message['context'].inspect} " \
+      "ext_id=#{@in_reply_to_external_id.inspect} matched=#{match&.id.inspect} recent=#{recent.inspect}"
+    )
   end
 
   def referral_attributes(message)
