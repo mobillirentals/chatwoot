@@ -1,3 +1,5 @@
+require 'base64'
+
 module Whatsapp::IncomingMessageServiceHelpers
   def download_attachment_file(attachment_payload)
     Down.download(inbox.channel.media_url(attachment_payload[:id]), headers: inbox.channel.api_headers)
@@ -69,18 +71,37 @@ module Whatsapp::IncomingMessageServiceHelpers
 
   def process_in_reply_to(message)
     @in_reply_to_external_id = message['context']&.[]('id')
-    log_reply_context_debug(message) if @in_reply_to_external_id.present?
+    @in_reply_to_external_id = resolve_reply_source_id(@in_reply_to_external_id) if @in_reply_to_external_id.present?
   end
 
-  # TEMP DEBUG (remover após investigação): captura o context.id cru de replies
-  # para diagnosticar por que resposta do cliente à própria mensagem não linka.
-  def log_reply_context_debug(message)
-    match = @conversation&.messages&.find_by(source_id: @in_reply_to_external_id)
-    recent = @conversation&.messages&.order(created_at: :desc)&.limit(6)&.pluck(:id, :message_type, :source_id)
-    Rails.logger.info(
-      "[MOBILLI_DEBUG reply] context=#{message['context'].inspect} " \
-      "ext_id=#{@in_reply_to_external_id.inspect} matched=#{match&.id.inspect} recent=#{recent.inspect}"
-    )
+  # Quando o cliente responde à PRÓPRIA mensagem, o WhatsApp manda o `context.id`
+  # referenciando a mensagem pela identidade de usuário (user_id `BR.xxx`), enquanto
+  # guardamos o wamid baseado no telefone. O match exato do `source_id` falha, mas o
+  # id-da-mensagem (bloco final do wamid) é o mesmo. Aqui, se o exato não bater,
+  # casamos por esse id-da-mensagem e devolvemos o `source_id` realmente armazenado.
+  def resolve_reply_source_id(external_id)
+    return external_id if @conversation.nil?
+    return external_id if @conversation.messages.where(source_id: external_id).exists?
+
+    target_hex = wamid_message_hex(external_id)
+    return external_id if target_hex.blank?
+
+    stored = @conversation.messages
+                          .where.not(source_id: nil)
+                          .reorder(created_at: :desc)
+                          .limit(100)
+                          .pluck(:source_id)
+                          .find { |sid| wamid_message_hex(sid) == target_hex }
+    stored || external_id
+  end
+
+  # Extrai o id-da-mensagem (último bloco hex) de um wamid, que é estável
+  # independente da identidade (telefone x user_id) embutida no id.
+  def wamid_message_hex(source_id)
+    return nil if source_id.blank? || !source_id.to_s.start_with?('wamid.')
+
+    decoded = Base64.decode64(source_id.to_s.delete_prefix('wamid.'))
+    decoded.scan(/[0-9A-Fa-f]{16,}/).last
   end
 
   def referral_attributes(message)
