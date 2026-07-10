@@ -1,12 +1,9 @@
-# List of the premium features in EE edition
-# NOTE (Mobílli): audit_logs e captain_integration removidos desta lista de
-# propósito — foram habilitados na instalação self-hosted (feature flag por
-# conta + config necessária). Mantê-los aqui faria o ReconcilePlanConfigService
-# desligar a feature toda meia-noite (plano community).
-# - audit_logs: gravado incondicionalmente pelos concerns Audit::*.
-# - captain_integration: requer CAPTAIN_OPEN_AI_API_KEY (InstallationConfig).
-- disable_branding
-- sla
-- custom_roles
-- csat_review_notes
-- conversation_required_attributes
+# List of the premium features in EE edition.
+#
+# NOTE (Mobílli): intentionally EMPTY. This self-hosted fork unlocks all premium
+# features, so the nightly Internal::ReconcilePlanConfigService must not disable
+# any feature on the community plan. Features are still gated by the normal
+# per-account feature flags (enable them in Super Admin → Accounts → Features).
+# The matching frontend paywalls are also disabled via PREMIUM_FEATURES in
+# app/javascript/dashboard/featureFlags.js.
+[]

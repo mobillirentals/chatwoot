@@ -49,14 +49,9 @@ export const FEATURE_FLAGS = {
   CONVERSATION_UNREAD_COUNTS: 'conversation_unread_counts',
 };
 
-export const PREMIUM_FEATURES = [
-  FEATURE_FLAGS.SLA,
-  FEATURE_FLAGS.CAPTAIN,
-  FEATURE_FLAGS.CAPTAIN_CUSTOM_TOOLS,
-  FEATURE_FLAGS.CUSTOM_ROLES,
-  FEATURE_FLAGS.AUDIT_LOGS,
-  FEATURE_FLAGS.HELP_CENTER,
-  FEATURE_FLAGS.SAML,
-  FEATURE_FLAGS.CONVERSATION_REQUIRED_ATTRIBUTES,
-  FEATURE_FLAGS.ADVANCED_ASSIGNMENT,
-];
+// NOTE (Mobílli): intentionally EMPTY. This self-hosted fork unlocks all premium
+// features, so no feature should render the "upgrade your plan" paywall
+// (usePolicy.shouldShowPaywall keys off this list). Features remain gated by the
+// normal per-account feature flags. The backend counterpart is the (now empty)
+// enterprise/config/premium_features.yml.
+export const PREMIUM_FEATURES = [];
