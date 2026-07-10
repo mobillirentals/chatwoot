@@ -2,6 +2,10 @@
 # No need to replicate the same values in two places
 
 # ------- Premium Features ------- #
+# NOTE (Mobílli): os cards premium abaixo ficam `enabled: true` de propósito.
+# Este fork destrava as features EE no self-hosted (ver PREMIUM_FEATURES em
+# featureFlags.js e enterprise/config/premium_features.yml), então o indicador
+# do Super Admin acompanha — mostra destravado em vez do cadeado do plano.
 saml:
   name: 'SAML SSO'
   description: 'Configuration for controlling SAML Single Sign-On availability'
@@ -12,14 +16,14 @@ saml:
 custom_branding:
   name: 'Custom Branding'
   description: 'Apply your own branding to this installation.'
-  enabled: <%= (ChatwootHub.pricing_plan != 'community') %>
+  enabled: true
   icon: 'icon-paint-brush-line'
   config_key: 'custom_branding'
   enterprise: true
 agent_capacity:
   name: 'Agent Capacity'
   description: 'Set limits to auto-assigning conversations to your agents.'
-  enabled: <%= (ChatwootHub.pricing_plan != 'community') %>
+  enabled: true
   icon: 'icon-hourglass-line'
   enterprise: true
 audit_logs:
@@ -33,13 +37,13 @@ audit_logs:
 disable_branding:
   name: 'Disable Branding'
   description: 'Disable branding on live-chat widget and external emails.'
-  enabled: <%= (ChatwootHub.pricing_plan != 'community') %>
+  enabled: true
   icon: 'icon-sailbot-fill'
   enterprise: true
 voice_calls:
   name: 'Voice Calls'
   description: 'Enable voice calling capabilities for your agents and customers.'
-  enabled: <%= (ChatwootHub.pricing_plan != 'community') %>
+  enabled: true
   icon: 'icon-voice-line'
   enterprise: true
 
