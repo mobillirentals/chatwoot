@@ -1,11 +1,12 @@
 # List of the premium features in EE edition
-# NOTE (Mobílli): audit_logs removido desta lista de propósito. Ele é gravado
-# incondicionalmente (concerns Audit::*) e queremos exibi-lo na instalação
-# self-hosted. Mantê-lo aqui faria o ReconcilePlanConfigService desligar a
-# feature toda meia-noite (plano community). Ver AuditLogsController.
+# NOTE (Mobílli): audit_logs e captain_integration removidos desta lista de
+# propósito — foram habilitados na instalação self-hosted (feature flag por
+# conta + config necessária). Mantê-los aqui faria o ReconcilePlanConfigService
+# desligar a feature toda meia-noite (plano community).
+# - audit_logs: gravado incondicionalmente pelos concerns Audit::*.
+# - captain_integration: requer CAPTAIN_OPEN_AI_API_KEY (InstallationConfig).
 - disable_branding
 - sla
 - custom_roles
-- captain_integration
 - csat_review_notes
 - conversation_required_attributes
