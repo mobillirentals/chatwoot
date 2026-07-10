@@ -64,6 +64,8 @@ module Conversations
       def decorate_message(msg)
         {
           message: msg,
+          id: msg.id,
+          in_reply_to: msg.in_reply_to,
           sender: sender_name(msg),
           timestamp: format_date(msg.created_at),
           private: msg.private?,

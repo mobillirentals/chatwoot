@@ -194,6 +194,24 @@
       line-height: 1.3;
     }
 
+    .message-row__id {
+      font-family: 'Courier New', monospace;
+      font-size: 7pt;
+      color: #aaa;
+      margin-top: 3px;
+    }
+
+    .message-row__reply-ref {
+      display: inline-block;
+      font-size: 8pt;
+      color: #1a56db;
+      background: #eef3ff;
+      border-left: 2px solid #1a56db;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+
     .message-row__body {
       flex: 1;
     }
@@ -455,7 +473,10 @@
 
           <% else %>
             <div class="message-row<%= ' message-row--private' if m[:private] %>">
-              <div class="message-row__time"><%= m[:timestamp] %></div>
+              <div class="message-row__time">
+                <div><%= m[:timestamp] %></div>
+                <div class="message-row__id">#<%= m[:id] %></div>
+              </div>
               <div class="message-row__body">
                 <div class="message-row__sender <%= msg.incoming? ? 'message-row__sender--client' : 'message-row__sender--agent' %>">
                   <%= m[:sender] %>
@@ -463,6 +484,10 @@
                     <span class="message-row__private-badge">⚠ Nota Interna</span>
                   <% end %>
                 </div>
+
+                <% if m[:in_reply_to].present? %>
+                  <div class="message-row__reply-ref">⇌ Respondendo a mensagem #<%= m[:in_reply_to] %></div>
+                <% end %>
 
                 <% if m[:content].present? %>
                   <div class="message-row__text"><%= m[:content] %></div>
