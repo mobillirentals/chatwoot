@@ -7,6 +7,10 @@ class ConversationPolicy < ApplicationPolicy
     administrator?
   end
 
+  def manage_trash?
+    administrator? || account_user&.supervisor?
+  end
+
   def show?
     administrator? || agent_bot? || agent_can_view_conversation?
   end

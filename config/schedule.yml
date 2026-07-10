@@ -74,3 +74,10 @@ remove_orphan_conversations_job:
   cron: '0 */12 * * *'
   class: 'Internal::RemoveOrphanConversationsJob'
   queue: housekeeping
+
+# executed daily at 0200 UTC
+# to clean up trash items older than retention period (30 days)
+trash_cleanup_job:
+  cron: '0 2 * * *'
+  class: 'Trash::CleanupJob'
+  queue: scheduled_jobs
