@@ -12,6 +12,11 @@ const props = defineProps({
     type: [String, Number],
     required: true,
   },
+  // Opcional: quando informado, abre a prévia já rolada até essa mensagem.
+  messageId: {
+    type: [String, Number],
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close']);
@@ -26,19 +31,48 @@ const panelRef = ref(null);
 // Componentes de mensagem podem injetar este alvo para o menu de contexto.
 provide('contextMenuElementTarget', panelRef);
 
+const scrollToBottom = () => {
+  if (panelRef.value) {
+    panelRef.value.scrollTop = panelRef.value.scrollHeight;
+  }
+};
+
+// Rola até a mensagem-alvo e dá um flash para destacá-la.
+const scrollToTargetMessage = () => {
+  const el = panelRef.value?.querySelector(`#message${props.messageId}`);
+  if (!el) {
+    scrollToBottom();
+    return;
+  }
+  el.scrollIntoView({ block: 'center' });
+  el.animate(
+    [
+      { backgroundColor: 'rgba(59, 130, 246, 0.18)' },
+      { backgroundColor: 'transparent' },
+    ],
+    { duration: 1600, easing: 'ease-out' }
+  );
+};
+
 onMounted(async () => {
   try {
-    const { data } = await MessageApi.getPreviousMessages({
-      conversationId: props.conversationId,
-    });
+    const params = { conversationId: props.conversationId };
+    // Carrega uma janela em volta da mensagem-alvo para garantir que ela venha.
+    if (props.messageId) {
+      params.before = Number(props.messageId) + 100;
+      params.after = Number(props.messageId) - 100;
+    }
+    const { data } = await MessageApi.getPreviousMessages(params);
     messages.value = (data?.payload || [])
       .slice()
       .sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
     isLoading.value = false;
     await nextTick();
-    // Abre no fim (mensagem mais recente), como na conversa real.
-    if (panelRef.value) {
-      panelRef.value.scrollTop = panelRef.value.scrollHeight;
+    if (props.messageId) {
+      scrollToTargetMessage();
+    } else {
+      // Abre no fim (mensagem mais recente), como na conversa real.
+      scrollToBottom();
     }
   } catch {
     useAlert(t('CONTACTS_LAYOUT.SIDEBAR.HISTORY.PREVIEW.ERROR'));
