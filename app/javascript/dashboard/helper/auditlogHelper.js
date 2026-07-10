@@ -37,6 +37,9 @@ const translationKeys = {
   'teammember:destroy': `AUDIT_LOGS.TEAM_MEMBER.REMOVE`,
   'account:update': `AUDIT_LOGS.ACCOUNT.EDIT`,
   'conversation:destroy': `AUDIT_LOGS.CONVERSATION.DELETE`,
+  'conversation:trash': `AUDIT_LOGS.CONVERSATION.TRASH`,
+  'conversation:restore': `AUDIT_LOGS.CONVERSATION.RESTORE`,
+  'conversation:purge': `AUDIT_LOGS.CONVERSATION.PURGE`,
   'contact:export_conversations': `AUDIT_LOGS.CONTACT.EXPORT_CONVERSATIONS`,
   'agentbot:create': `AUDIT_LOGS.AGENT_BOT.ADD`,
   'agentbot:update': `AUDIT_LOGS.AGENT_BOT.EDIT`,
@@ -173,7 +176,9 @@ export function generateTranslationPayload(auditLogItem, agentList) {
   const auditableType = auditLogItem.auditable_type.toLowerCase();
   const action = auditLogItem.action.toLowerCase();
 
-  if (auditableType === 'conversation' && action === 'destroy') {
+  // destroy/trash/restore/purge all carry the conversation attributes
+  // (incl. display_id) in audited_changes, so prefer the human-facing display_id.
+  if (auditableType === 'conversation') {
     translationPayload.id =
       auditLogItem.audited_changes?.display_id || auditLogItem.auditable_id;
   }

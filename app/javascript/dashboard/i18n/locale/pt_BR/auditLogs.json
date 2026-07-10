@@ -71,7 +71,10 @@
       "EDIT": "O {agentName} atualizou a configuração da conta (#{id})"
     },
     "CONVERSATION": {
-      "DELETE": "{agentName} excluiu a conversa #{id}"
+      "DELETE": "{agentName} excluiu a conversa #{id}",
+      "TRASH": "{agentName} moveu a conversa #{id} para a lixeira",
+      "RESTORE": "{agentName} restaurou a conversa #{id} da lixeira",
+      "PURGE": "{agentName} excluiu permanentemente a conversa #{id}"
     },
     "CONTACT": {
       "EXPORT_CONVERSATIONS": "{agentName} exportou {count} conversa(s) do contato {contactName} (#{id})"

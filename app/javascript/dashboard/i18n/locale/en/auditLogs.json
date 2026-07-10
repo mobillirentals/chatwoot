@@ -71,7 +71,10 @@
       "EDIT": "{agentName} updated the account configuration (#{id})"
     },
     "CONVERSATION": {
-      "DELETE": "{agentName} deleted conversation #{id}"
+      "DELETE": "{agentName} deleted conversation #{id}",
+      "TRASH": "{agentName} moved conversation #{id} to the trash",
+      "RESTORE": "{agentName} restored conversation #{id} from the trash",
+      "PURGE": "{agentName} permanently deleted conversation #{id}"
     },
     "CONTACT": {
       "EXPORT_CONVERSATIONS": "{agentName} exported {count} conversation(s) of contact {contactName} (#{id})"

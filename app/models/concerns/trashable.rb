@@ -4,8 +4,8 @@ module Trashable
   included do
     default_scope { where(deleted_at: nil) }
 
-    scope :trashed, -> { unscoped.where.not(deleted_at: nil) }
-    scope :with_trashed, -> { unscoped }
+    scope :trashed, -> { unscope(where: :deleted_at).where.not(deleted_at: nil) }
+    scope :with_trashed, -> { unscope(where: :deleted_at) }
   end
 
   def trash!
