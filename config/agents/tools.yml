@@ -35,10 +35,10 @@
   description: 'Resolve a conversation when the issue has been addressed'
   icon: 'checkmark'
 
-- id: handoff
-  title: 'Handoff to Human'
-  description: 'Hand off the conversation to a human agent'
-  icon: 'user-switch'
+# - id: handoff
+#   title: 'Handoff to Human'
+#   description: 'Hand off the conversation to a human agent'
+#   icon: 'user-switch'
 
 - id: assign_team
   title: 'Transferir para Time'
