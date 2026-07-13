@@ -9,8 +9,14 @@ Rules:
    - If the customer started out frustrated but ended up satisfied, classify as positive.
    - If the customer started out fine but ended up frustrated, classify as negative.
 3. Judge the customer's emotion only. Ignore the agent's tone and the severity of the topic itself.
-4. Do not over-interpret short or purely factual messages. When there is no clear emotional
-   signal, answer 3.
+4. Do not over-interpret. Greetings, one-word replies and factual questions carry no emotion.
+5. Many messages are taps on an automated menu rather than something the customer wrote
+   (for example "Emergency", "Contract", "Documents", "Financial", "Agent", "Exit", "End").
+   A menu label is navigation, not emotion, and any emoji inside it belongs to the menu, not
+   to the customer: someone tapping "Emergency" is picking an option, not shouting for help.
+   Ignore these entirely.
+6. Only report distress or delight when the customer put it in their own words. If they never
+   wrote anything of their own, answer 3.
 
 Return ONLY valid JSON with this shape (example):
 {"sentiment": 3, "confidence": 0.8}
