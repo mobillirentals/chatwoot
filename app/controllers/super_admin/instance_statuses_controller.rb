@@ -5,6 +5,8 @@ class SuperAdmin::InstanceStatusesController < SuperAdmin::ApplicationController
     sha
     postgres_status
     redis_metrics
+    blob_storage_metrics
+    disk_metrics
     chatwoot_edition
     instance_meta
   end
@@ -55,5 +57,51 @@ class SuperAdmin::InstanceStatusesController < SuperAdmin::ApplicationController
     end
   rescue Redis::CannotConnectError
     @metrics['Redis alive'] = false
+  end
+
+  # Attachments live in the configured ActiveStorage service (Azure Blob in production).
+  # Object stores expose no capacity ceiling to read back, so only usage is reported. It is
+  # summed from what Rails tracks, which avoids paginating the whole container on every render.
+  def blob_storage_metrics
+    used = ActiveStorage::Blob.sum(:byte_size)
+
+    @metrics["Blob storage (#{storage_service_name})"] = "#{human_size(used)} in #{ActiveStorage::Blob.count} files"
+  rescue StandardError => e
+    @metrics['Blob storage'] = "unavailable (#{e.class})"
+  end
+
+  # `df` inside the container reports the filesystem backing the overlay, which is the VM
+  # disk itself — where Postgres, Redis and the Docker images live. Unlike the object store,
+  # this one can actually fill up and take the instance down.
+  def disk_metrics
+    total, used = disk_usage
+    return if total.zero?
+
+    @metrics['Disk'] = "#{human_size(used)} / #{human_size(total)} (#{percent_of(used, total)}%)"
+  end
+
+  private
+
+  def storage_service_name
+    ActiveStorage::Blob.service.class.name.demodulize.delete_suffix('Service')
+  end
+
+  def disk_usage
+    fields = `df -kP /`.lines[1].to_s.split
+    return [0, 0] if fields.size < 3
+
+    [fields[1].to_i * 1024, fields[2].to_i * 1024]
+  rescue StandardError
+    [0, 0]
+  end
+
+  def human_size(bytes)
+    ActiveSupport::NumberHelper.number_to_human_size(bytes)
+  end
+
+  def percent_of(part, whole)
+    return 0 if whole.to_i.zero?
+
+    (part * 100.0 / whole).round(1)
   end
 end
