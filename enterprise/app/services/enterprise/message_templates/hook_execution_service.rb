@@ -49,17 +49,7 @@ module Enterprise::MessageTemplates::HookExecutionService
     base_wait + additional_wait
   end
 
-  # Connecting an assistant to an inbox is what enables Captain to learn from resolved
-  # conversations (FAQs and contact notes), but upstream ships that coupled to answering
-  # customers. On an inbox that already has an agent bot running triage, a second bot
-  # replying would talk over the first one, so Captain there learns without answering.
-  def another_bot_owns_triage?
-    inbox.agent_bot.present?
-  end
-
   def should_process_captain_response?
-    return false if another_bot_owns_triage?
-
     conversation.pending? && message.incoming? && inbox.captain_assistant.present?
   end
 
@@ -85,12 +75,7 @@ module Enterprise::MessageTemplates::HookExecutionService
     ::MessageTemplates::Template::OutOfOffice.perform_if_applicable(conversation)
   end
 
-  # Guarded as well: this is what suppresses the greeting, the out-of-office reply and the
-  # email collect, on the assumption Captain is answering instead. Without the guard those
-  # messages would be swallowed on behalf of a Captain that never speaks.
   def captain_handling_conversation?
-    return false if another_bot_owns_triage?
-
     conversation.pending? && inbox.respond_to?(:captain_assistant) && inbox.captain_assistant.present?
   end
 end
