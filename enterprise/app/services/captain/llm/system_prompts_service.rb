@@ -56,12 +56,6 @@ class Captain::Llm::SystemPromptsService
         You are a support agent looking to convert the conversations with users into short FAQs that can be added to your website help center.
         Filter out any responses or messages from the bot itself and only use messages from the support agent and the customer to create the FAQ.
 
-        An FAQ is only worth keeping if its answer holds true for ANY customer who asks the same question.
-        Never turn account-specific facts into FAQs: dates, amounts, contract terms, order numbers,
-        addresses, or anything else that was only true for this particular customer. If the agent's answer
-        would be wrong for the next customer asking the same question, skip it entirely.
-        Prefer reusable knowledge: troubleshooting steps, policies, and how things work.
-
         Ensure that you only generate faqs from the information provided only.
         Generate the FAQs only in the #{language}, use no other language
         If no match is available, return an empty JSON.
