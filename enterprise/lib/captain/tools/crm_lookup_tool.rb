@@ -9,15 +9,15 @@ class Captain::Tools::CrmLookupTool < Captain::Tools::BasePublicTool
               'Call this BEFORE answering anything about their own contract, motorcycle or payments. Never guess those.'
 
   def perform(tool_context)
-    contact = find_contact(tool_context.state)
-    return 'Contact not found' if contact.blank?
+    conversation = find_conversation(tool_context.state)
+    return 'Conversation not found' if conversation.blank?
 
-    phone = contact.phone_number.presence
-    return 'This customer has no phone number on file, so the CRM cannot be searched.' if phone.blank?
+    log_tool_usage('crm_lookup', { conversation_id: conversation.id })
 
-    log_tool_usage('crm_lookup', { contact_id: contact.id })
-
-    profile = ::Crm::ClientProfileService.new(phone).perform
+    # Warmed in the background when the customer's first message landed, so this is usually a
+    # read off the conversation. A cold cache just fetches live — slower, never broken.
+    profile = ::Captain::CrmProfileCache.new(conversation: conversation).fetch
+    return 'The CRM could not be checked for this customer.' if profile.blank?
     return 'No CRM record found for this customer.' unless profile[:found]
 
     format_profile(profile)

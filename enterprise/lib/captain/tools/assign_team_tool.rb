@@ -3,6 +3,8 @@
 # without it: the whole point is that a billing question reaches Financeiro and a contract
 # question reaches Pós-Venda.
 class Captain::Tools::AssignTeamTool < Captain::Tools::BasePublicTool
+  include Captain::Tools::Concerns::BusinessHoursReadable
+
   description 'Transfer the conversation to the team that handles the subject, and hand it over to a human agent. ' \
               'Use this once you know which team the customer needs, or whenever you cannot resolve the request yourself.'
   param :team, type: 'string', desc: 'Name of the team that should take over the conversation'
@@ -19,13 +21,26 @@ class Captain::Tools::AssignTeamTool < Captain::Tools::BasePublicTool
 
     transfer(conversation, target, reason)
 
-    "Conversation ##{conversation.display_id} transferred to the #{target.name} team."
+    confirmation(conversation, target)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e).capture_exception
     'Failed to transfer the conversation'
   end
 
   private
+
+  # The transfer itself always succeeds — but outside opening hours it lands in an empty queue.
+  # Telling the model so, right here, buys the warning for free: it is already reading this tool's
+  # result, so no extra round-trip is spent, and the customer is not left waiting all night on a
+  # cheerful "one moment!".
+  def confirmation(conversation, team)
+    done = "Conversation ##{conversation.display_id} transferred to the #{team.name} team."
+    inbox = conversation.inbox
+    return done unless hours_configured?(inbox) && !open_now?(inbox)
+
+    "#{done} IMPORTANT: the team is CLOSED right now. Opening hours: #{schedule_text(inbox)}. " \
+      'Tell the customer nobody is available at the moment and when the team will be back.'
+  end
 
   def transfer(conversation, team, reason)
     note(conversation, reason) if reason.present?

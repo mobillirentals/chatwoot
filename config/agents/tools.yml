@@ -49,3 +49,10 @@
   title: 'Consultar CRM'
   description: 'Consulta o cadastro do cliente: contrato ativo, moto, faturas vencidas e a próxima a vencer'
   icon: 'person-search'
+
+# O id vira a classe via String#classify, que SINGULARIZA: "business_hours" viraria
+# BusinessHourTool e a ferramenta sumiria silenciosamente. Daí o "_check".
+- id: business_hours_check
+  title: 'Horário de Atendimento'
+  description: 'Verifica se os times estão disponíveis agora e qual o horário de atendimento configurado'
+  icon: 'clock'
