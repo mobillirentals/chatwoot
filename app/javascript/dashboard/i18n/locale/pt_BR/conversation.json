@@ -143,6 +143,15 @@
       "APPLY": "Adiar",
       "CANCEL": "Cancelar"
     },
+    "SENTIMENT": {
+      "LEVELS": {
+        "DELIGHTED": "Encantado",
+        "HAPPY": "Feliz",
+        "NEUTRAL": "Neutro",
+        "UNSATISFIED": "Insatisfeito",
+        "UPSET": "Chateado"
+      }
+    },
     "PRIORITY": {
       "TITLE": "Prioridade",
       "OPTIONS": {

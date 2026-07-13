@@ -91,6 +91,21 @@ export const CSAT_DISPLAY_TYPES = {
   STAR: 'star',
 };
 
+// Captain grades the customer's current emotion on the same 1-5 scale as CSAT, so the
+// conversation list reuses the exact emoji set agents already read in the CSAT reports.
+// The labels differ: CSAT rates the service, this rates how the customer feels.
+export const SENTIMENT_LEVELS = [
+  { value: 5, key: 'DELIGHTED' },
+  { value: 4, key: 'HAPPY' },
+  { value: 3, key: 'NEUTRAL' },
+  { value: 2, key: 'UNSATISFIED' },
+  { value: 1, key: 'UPSET' },
+].map(level => ({
+  ...level,
+  emoji: CSAT_RATINGS.find(rating => rating.value === level.value).emoji,
+  translationKey: `CONVERSATION.SENTIMENT.LEVELS.${level.key}`,
+}));
+
 export const AUDIO_FORMATS = {
   WEBM: 'audio/webm',
   OGG: 'audio/ogg',

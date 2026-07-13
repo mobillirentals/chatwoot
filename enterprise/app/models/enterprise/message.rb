@@ -1,9 +1,15 @@
 module Enterprise::Message
+  # Gives a burst of inbound messages time to land, so a customer typing five messages in a
+  # row costs one analysis instead of five.
+  SENTIMENT_ANALYSIS_DELAY = 1.minute
+
   def self.prepended(base)
     base.class_eval do
       has_one :call, class_name: 'Call', foreign_key: :message_id, dependent: :nullify, inverse_of: :message
 
       scope :with_call, -> { includes(call: [:contact, { inbox: :channel }]) }
+
+      after_create_commit :schedule_captain_sentiment_analysis
     end
   end
 
@@ -14,6 +20,16 @@ module Enterprise::Message
   end
 
   private
+
+  def schedule_captain_sentiment_analysis
+    return unless incoming?
+    return if private?
+    return unless account.feature_enabled?('captain_integration')
+
+    ::Captain::Conversation::SentimentAnalysisJob
+      .set(wait: SENTIMENT_ANALYSIS_DELAY)
+      .perform_later(conversation_id)
+  end
 
   def mark_pending_conversation_as_open_for_human_response
     return unless captain_pending_conversation?

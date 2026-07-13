@@ -5,6 +5,7 @@ import CardAvatar from './CardAvatar.vue';
 import CardContent from './CardContent.vue';
 import CardLabels from './CardLabelsV5.vue';
 import CardPriorityIcon from './CardPriorityIcon.vue';
+import CardSentimentEmoji from './CardSentimentEmoji.vue';
 import InboxName from 'dashboard/components-next/Conversation/InboxName.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import TimeAgo from 'dashboard/components/ui/TimeAgo.vue';
@@ -150,11 +151,14 @@ const selectedModel = computed({
         :hide-thumbnail="false"
       />
 
-      <h4
-        class="text-heading-3 my-0 capitalize truncate text-n-slate-12 font-medium w-32 flex-shrink-0"
-      >
-        {{ currentContact.name }}
-      </h4>
+      <div class="flex items-center gap-1 w-32 flex-shrink-0">
+        <CardSentimentEmoji :sentiment="chat.captain_sentiment" />
+        <h4
+          class="text-heading-3 my-0 capitalize truncate text-n-slate-12 font-medium min-w-0"
+        >
+          {{ currentContact.name }}
+        </h4>
+      </div>
 
       <CardContent
         :last-message="lastMessageInChat"

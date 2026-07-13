@@ -143,6 +143,15 @@
       "APPLY": "Snooze",
       "CANCEL": "Cancel"
     },
+    "SENTIMENT": {
+      "LEVELS": {
+        "DELIGHTED": "Delighted",
+        "HAPPY": "Happy",
+        "NEUTRAL": "Neutral",
+        "UNSATISFIED": "Unsatisfied",
+        "UPSET": "Upset"
+      }
+    },
     "PRIORITY": {
       "TITLE": "Priority",
       "OPTIONS": {

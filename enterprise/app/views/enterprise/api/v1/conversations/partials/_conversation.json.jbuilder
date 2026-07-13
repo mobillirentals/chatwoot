@@ -8,3 +8,5 @@ if conversation.account.feature_enabled?('sla')
     end
   end
 end
+
+json.captain_sentiment conversation.captain_sentiment if conversation.account.feature_enabled?('captain_integration')
