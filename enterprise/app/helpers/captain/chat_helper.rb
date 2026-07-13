@@ -3,6 +3,14 @@ module Captain::ChatHelper
   include Captain::ChatResponseHelper
   include Captain::ChatGenerationRecorder
 
+  # GPT-5 and the o-series are reasoning models: with no explicit effort they fall back to
+  # `medium` and spend hundreds of invisible (but billed) reasoning tokens before answering.
+  # The agentic loop pays that on every round-trip, so a Copilot reply that fans out to a few
+  # tools ends up taking tens of seconds. Non-reasoning models reject the parameter outright
+  # ("Unrecognized request argument supplied: reasoning_effort"), hence the model guard.
+  REASONING_MODEL_PREFIXES = %w[gpt-5 o1 o3 o4].freeze
+  REASONING_EFFORT = 'minimal'.freeze
+
   def request_chat_completion
     log_chat_completion_request
     chat = build_chat
@@ -24,11 +32,21 @@ module Captain::ChatHelper
 
   def build_chat
     llm_chat = chat(model: @model, temperature: temperature)
-    llm_chat = llm_chat.with_params(response_format: { type: 'json_object' })
+    llm_chat = llm_chat.with_params(**completion_params)
 
     llm_chat = setup_tools(llm_chat)
     llm_chat = setup_system_instructions(llm_chat)
     setup_event_handlers(llm_chat)
+  end
+
+  def completion_params
+    params = { response_format: { type: 'json_object' } }
+    params[:reasoning_effort] = REASONING_EFFORT if reasoning_model?
+    params
+  end
+
+  def reasoning_model?
+    REASONING_MODEL_PREFIXES.any? { |prefix| @model.to_s.start_with?(prefix) }
   end
 
   def setup_tools(llm_chat)
