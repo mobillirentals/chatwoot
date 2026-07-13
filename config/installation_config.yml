@@ -582,3 +582,8 @@
   value: 'https://us.cloud.langfuse.com'
   locked: false
 ## ---- End of LLM Observability ---- ##
+- name: STORAGE_QUOTA_GB
+  display_title: 'Storage Quota (GB)'
+  description: 'Optional budget marker for attachment storage, shown in Instance Status. Object stores (Azure Blob / S3) have no real capacity ceiling, so this is a reference to watch growth against — not a hard limit. Leave empty to show usage without a total.'
+  value: ''
+  locked: false
