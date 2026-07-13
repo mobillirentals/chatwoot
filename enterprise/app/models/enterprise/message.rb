@@ -11,6 +11,7 @@ module Enterprise::Message
 
       after_create_commit :schedule_captain_sentiment_analysis
       after_create_commit :schedule_captain_crm_warmup
+      after_create_commit :complete_captain_team_handoff
     end
   end
 
@@ -30,6 +31,26 @@ module Enterprise::Message
     ::Captain::Conversation::SentimentAnalysisJob
       .set(wait: SENTIMENT_ANALYSIS_DELAY)
       .perform_later(conversation_id)
+  end
+
+  # The second half of AssignTeamTool. The tool picks the team but leaves the conversation
+  # pending, because ResponseBuilderJob only posts the assistant's own words while it is — open
+  # it any earlier and the reply is replaced by a canned handoff line. So the tool marks the
+  # conversation, the job posts what the assistant said, and the handoff completes here, once
+  # that message exists and the customer has actually been told what is happening.
+  def complete_captain_team_handoff
+    return unless outgoing?
+    return if private?
+    return unless sender.is_a?(::Captain::Assistant)
+    return unless conversation.pending?
+
+    key = ::Captain::Tools::AssignTeamTool::HANDOFF_PENDING_KEY
+    return if conversation.additional_attributes.to_h[key].blank?
+
+    conversation.update!(
+      additional_attributes: conversation.additional_attributes.to_h.except(key)
+    )
+    conversation.bot_handoff!
   end
 
   # Fires on the first customer message only: by the time they have said what they want, the CRM
