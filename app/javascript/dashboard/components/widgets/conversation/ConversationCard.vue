@@ -7,6 +7,7 @@ import InboxName from '../InboxName.vue';
 import TimeAgo from 'dashboard/components/ui/TimeAgo.vue';
 import CardLabels from './conversationCardComponents/CardLabels.vue';
 import CardPriorityIcon from 'dashboard/components-next/Conversation/ConversationCard/CardPriorityIcon.vue';
+import CardSentimentEmoji from 'dashboard/components-next/Conversation/ConversationCard/CardSentimentEmoji.vue';
 import UnreadBadge from 'dashboard/components-next/Conversation/ConversationCard/UnreadBadge.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
@@ -168,12 +169,17 @@ watch(
           />
         </div>
       </div>
-      <h4
-        class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
-        :class="hasUnread ? 'font-semibold' : 'font-medium'"
+      <div
+        class="conversation--user flex items-center gap-1 my-0 mx-2 pt-0.5 flex-1 min-w-0 ltr:pr-16 rtl:pl-16"
       >
-        {{ currentContact.name }}
-      </h4>
+        <CardSentimentEmoji :sentiment="chat.captain_sentiment" />
+        <h4
+          class="text-sm my-0 capitalize text-ellipsis overflow-hidden whitespace-nowrap min-w-0 text-n-slate-12"
+          :class="hasUnread ? 'font-semibold' : 'font-medium'"
+        >
+          {{ currentContact.name }}
+        </h4>
+      </div>
       <VoiceCallStatus
         v-if="voiceCallData.status"
         key="voice-status-row"
