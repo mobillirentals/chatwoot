@@ -58,6 +58,9 @@ module Redis::RedisKeys
   # Check if a message create with same source-id is in progress?
   MESSAGE_SOURCE_KEY = 'MESSAGE_SOURCE_KEY::%<id>s'.freeze
   OPENAI_CONVERSATION_KEY = 'OPEN_AI_CONVERSATION_KEY::V1::%<event_name>s::%<conversation_id>d::%<updated_at>d'.freeze
+  # Captain's CRM answer for a conversation. Deliberately NOT on the conversation record: the
+  # Captain prompt renders every additional_attribute, so anything parked there is read by the model.
+  CAPTAIN_CRM_PROFILE_KEY = 'CAPTAIN_CRM_PROFILE::V1::%<conversation_id>d'.freeze
 
   ## Sempahores / Locks
   # We don't want to process messages from the same sender concurrently to prevent creating double conversations

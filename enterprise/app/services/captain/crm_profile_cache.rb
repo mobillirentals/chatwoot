@@ -4,9 +4,16 @@
 #
 # Here it is paid off the critical path: a background job warms this cache when the customer's
 # first message lands, so by the time the model decides to call crm_lookup the answer is already
-# sitting on the conversation. A cold cache is not an error — the tool just fetches live.
+# waiting. A cold cache is not an error — the tool just fetches live.
+#
+# Redis, not the conversation record. The profile used to live in conversation.additional_attributes,
+# which looked free — until it turned out Captain's own prompt renders every additional_attribute
+# verbatim (see prompts/snippets/conversation.liquid). The whole profile was being pasted into the
+# system prompt on every turn, including the legacy BotFlow copy it carries: the model read
+# "sua próxima multa vence em..." and repeated it to a customer whose charge was a contract penalty,
+# then routed them to the traffic-fines team. crm_lookup exists so the model reads this record in one
+# controlled shape; parking the raw hash in the prompt quietly took that job away from it.
 class Captain::CrmProfileCache
-  KEY = 'captain_crm'.freeze
   TTL = 30.minutes
 
   pattr_initialize [:conversation!]
@@ -27,30 +34,25 @@ class Captain::CrmProfileCache
     nil
   end
 
+  # symbolize_names, not symbolize_keys: the profile is nested (next_payment, overdue_payments), and
+  # a shallow symbolize left those inner hashes string-keyed — crm_lookup's payment[:value] then read
+  # nil and quoted the customer R$ 0,00 off a warm cache.
   def cached
-    entry = conversation.additional_attributes.to_h[KEY]
-    return nil if entry.blank?
-    return nil if stale?(entry['fetched_at'])
+    raw = ::Redis::Alfred.get(cache_key)
+    return nil if raw.blank?
 
-    entry['profile']&.symbolize_keys
+    JSON.parse(raw, symbolize_names: true)
+  rescue JSON::ParserError
+    nil
   end
 
   private
 
-  def stale?(fetched_at)
-    return true if fetched_at.blank?
-
-    Time.zone.parse(fetched_at.to_s) < TTL.ago
-  rescue ArgumentError
-    true
+  def cache_key
+    format(::Redis::Alfred::CAPTAIN_CRM_PROFILE_KEY, conversation_id: conversation.id)
   end
 
-  # update_column: this is a cache, not a business event. Going through update! would fire the
-  # conversation callbacks and broadcast to every open dashboard on every warm-up.
   def store(profile)
-    attributes = conversation.additional_attributes.to_h.merge(
-      KEY => { 'profile' => profile, 'fetched_at' => Time.current.iso8601 }
-    )
-    conversation.update_column(:additional_attributes, attributes) # rubocop:disable Rails/SkipsModelValidations
+    ::Redis::Alfred.setex(cache_key, profile.to_json, TTL)
   end
 end
