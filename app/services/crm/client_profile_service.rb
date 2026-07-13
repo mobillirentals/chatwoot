@@ -6,21 +6,30 @@ class Crm::ClientProfileService
   STAGE_ALUGADA    = 'DT1072_28:UC_S400BR'.freeze
   STAGE_MANUTENCAO = 'DT1072_28:UC_IK83H1'.freeze
 
-  def initialize(phone)
+  # include_payments: BotFlow (standby) still asks for the Asaas charges and gets exactly what it
+  # always got. Captain does not — see #payments_profile.
+  def initialize(phone, include_payments: true)
     @phone = normalize_phone(phone)
+    @include_payments = include_payments
   end
 
   def perform
     contact = find_contact
     return { found: false, welcome_text: 'Olá!', intro_message: generic_intro, payment_message: nil } unless contact
 
-    deal         = find_active_deal(contact['ID'])
-    motorcycles  = deal ? find_motorcycles(deal['ID']) : []
+    deal        = find_active_deal(contact['ID'])
+    motorcycles = deal ? find_motorcycles(deal['ID']) : []
     current_moto, contract_moto = resolve_motorcycles(motorcycles)
-    asaas_id     = contact['UF_CRM_1773336918635']
-    overdue_data = asaas_id.present? ? fetch_overdue(asaas_id) : { count: 0, total: 0.0, payments: [] }
-    next_payment = asaas_id.present? ? fetch_next_pending(asaas_id) : nil
 
+    identity_profile(contact, deal, current_moto, contract_moto).merge(payments_profile(contact))
+  rescue StandardError => e
+    Rails.logger.error("[Crm::ClientProfileService] #{e.message}")
+    { found: false, welcome_text: 'Olá!', error: 'Erro ao consultar dados do cliente', intro_message: generic_intro, payment_message: nil }
+  end
+
+  private
+
+  def identity_profile(contact, deal, current_moto, contract_moto)
     first_name = contact['NAME']
 
     {
@@ -29,27 +38,39 @@ class Crm::ClientProfileService
       name:                      "#{first_name} #{contact['LAST_NAME']}".strip,
       first_name:                first_name,
       cpf:                       contact['UF_CRM_1721609323'],
-      asaas_id:                  asaas_id,
+      asaas_id:                  contact['UF_CRM_1773336918635'],
       active_contract:           deal.present?,
       deal_id:                   deal&.dig('ID'),
       deal_start:                br_date(deal&.dig('UF_CRM_1743092456783')),
       current_motorcycle_plate:  current_moto&.dig('ufCrm_68BB19F1AD8FD'),
       current_motorcycle_model:  current_moto&.dig('ufCrm16_1758898469346'),
       contract_motorcycle_plate: contract_moto&.dig('ufCrm_68BB19F1AD8FD'),
-      contract_motorcycle_model: contract_moto&.dig('ufCrm16_1758898469346'),
-      overdue_count:             overdue_data[:count],
-      overdue_total:             overdue_data[:total],
-      overdue_payments:          overdue_data[:payments].first(3).map { |p| payment_summary(p) },
-      next_payment:              next_payment ? payment_summary(next_payment) : nil,
-      intro_message:             build_intro_message(first_name, current_moto, overdue_data, next_payment),
-      payment_message:           build_payment_message(overdue_data, next_payment)
+      contract_motorcycle_model: contract_moto&.dig('ufCrm16_1758898469346')
     }
-  rescue StandardError => e
-    Rails.logger.error("[Crm::ClientProfileService] #{e.message}")
-    { found: false, welcome_text: 'Olá!', error: 'Erro ao consultar dados do cliente', intro_message: generic_intro, payment_message: nil }
   end
 
-  private
+  # Charges are not modelled — what kind of charge one is gets guessed by string-matching the free
+  # text of an Asaas description (see #detect_charge_type), so a contract-termination penalty and a
+  # speeding ticket both come back as "multa". A human reading that in the old bot's script could
+  # tell them apart; a language model quoting it to the customer cannot, and it sent one to the
+  # traffic-fines team. So Captain is not given charges at all until they are modelled properly.
+  # It also drops two Asaas round-trips from the lookup the bot waits on.
+  def payments_profile(contact)
+    return {} unless @include_payments
+
+    asaas_id     = contact['UF_CRM_1773336918635']
+    overdue_data = asaas_id.present? ? fetch_overdue(asaas_id) : { count: 0, total: 0.0, payments: [] }
+    next_payment = asaas_id.present? ? fetch_next_pending(asaas_id) : nil
+
+    {
+      overdue_count:    overdue_data[:count],
+      overdue_total:    overdue_data[:total],
+      overdue_payments: overdue_data[:payments].first(3).map { |p| payment_summary(p) },
+      next_payment:     next_payment ? payment_summary(next_payment) : nil,
+      intro_message:    build_intro_message(contact['NAME'], overdue_data, next_payment),
+      payment_message:  build_payment_message(overdue_data, next_payment)
+    }
+  end
 
   def find_contact
     body = {
@@ -168,7 +189,7 @@ class Crm::ClientProfileService
     "Olá! 👋 Sou o assistente da Mobílli.\n\nComo posso te ajudar hoje?"
   end
 
-  def build_intro_message(first_name, current_moto, overdue_data, next_payment)
+  def build_intro_message(first_name, overdue_data, next_payment)
     if overdue_data[:count] > 0
       total_str = format('%.2f', overdue_data[:total])
       types = overdue_data[:payments].map { |p| detect_charge_type(p['description']) }.uniq

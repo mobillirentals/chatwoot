@@ -1,12 +1,13 @@
-# Reuses the same CRM lookup the BotFlow bot already relies on (Bitrix deal + Asaas invoices),
-# so Captain and the bot always tell the customer the same thing.
+# Reuses the same Bitrix lookup the BotFlow bot relies on, so Captain and the bot never contradict
+# each other about who the customer is.
 #
-# This exists to stop the assistant from guessing. Anything about the customer's own contract,
-# motorcycle or invoices is account-specific: without the record in front of it, a language model
-# will happily invent a due date, and the customer will believe it.
+# This exists to stop the assistant from guessing. Whether someone holds an active contract, and on
+# which motorcycle, is account-specific: without the record in front of it, a language model will
+# happily invent an answer and the customer will believe it.
 class Captain::Tools::CrmLookupTool < Captain::Tools::BasePublicTool
-  description "Look up this customer's rental record: active contract, motorcycle, overdue invoices and the next one due. " \
-              'Call this BEFORE answering anything about their own contract, motorcycle or payments. Never guess those.'
+  description "Look up this customer's rental record: whether they have an active contract, and which motorcycle is on it. " \
+              'Call this BEFORE answering anything about their own contract or motorcycle. Never guess those. ' \
+              'It does NOT return invoices, charges or payment links — those questions go to a human team.'
 
   def perform(tool_context)
     conversation = find_conversation(tool_context.state)
@@ -28,14 +29,14 @@ class Captain::Tools::CrmLookupTool < Captain::Tools::BasePublicTool
 
   private
 
+  # No invoices here on purpose. Charges are not modelled yet — their nature is inferred from free
+  # text — so quoting one to a customer means quoting a guess. Money questions go to Financeiro.
   def format_profile(profile)
     [
       "Customer: #{profile[:name]}",
       "CPF: #{profile[:cpf].presence || 'not on file'}",
       contract_line(profile),
-      motorcycle_line(profile),
-      overdue_line(profile),
-      next_payment_line(profile)
+      motorcycle_line(profile)
     ].compact.join("\n")
   end
 
@@ -51,27 +52,6 @@ class Captain::Tools::CrmLookupTool < Captain::Tools::BasePublicTool
     return 'Motorcycle: none on the contract' if plate.blank? && model.blank?
 
     "Motorcycle: #{[model, plate].compact.join(' - ')}"
-  end
-
-  def overdue_line(profile)
-    count = profile[:overdue_count].to_i
-    return 'Overdue invoices: none' if count.zero?
-
-    detail = Array(profile[:overdue_payments]).map { |p| payment_text(p) }.join('; ')
-    "Overdue invoices: #{count}, totalling R$ #{format('%.2f', profile[:overdue_total].to_f)} (#{detail})"
-  end
-
-  def next_payment_line(profile)
-    payment = profile[:next_payment]
-    return 'Next invoice: none pending' if payment.blank?
-
-    "Next invoice: #{payment_text(payment)}"
-  end
-
-  def payment_text(payment)
-    text = "R$ #{format('%.2f', payment[:value].to_f)} due #{payment[:due_date]}"
-    text += " - #{payment[:invoice_url]}" if payment[:invoice_url].present?
-    text
   end
 
   def permissions

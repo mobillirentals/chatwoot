@@ -26,7 +26,7 @@ class Captain::CrmProfileCache
     phone = conversation.contact&.phone_number.presence
     return nil if phone.blank?
 
-    profile = ::Crm::ClientProfileService.new(phone).perform
+    profile = ::Crm::ClientProfileService.new(phone, include_payments: false).perform
     store(profile)
     profile
   rescue StandardError => e
