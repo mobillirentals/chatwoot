@@ -60,16 +60,12 @@ class SuperAdmin::InstanceStatusesController < SuperAdmin::ApplicationController
   end
 
   # Attachments live in the configured ActiveStorage service (Azure Blob in production).
-  # Object stores expose no capacity ceiling to read back, so we report what Rails tracks
-  # and only render a total when STORAGE_QUOTA_GB is set — as a budget marker, not a hard limit.
+  # Object stores expose no capacity ceiling to read back, so only usage is reported. It is
+  # summed from what Rails tracks, which avoids paginating the whole container on every render.
   def blob_storage_metrics
     used = ActiveStorage::Blob.sum(:byte_size)
-    quota = storage_quota_bytes
 
-    usage = human_size(used)
-    usage += " / #{human_size(quota)} (#{percent_of(used, quota)}%)" if quota
-
-    @metrics["Blob storage (#{storage_service_name})"] = "#{usage} in #{ActiveStorage::Blob.count} files"
+    @metrics["Blob storage (#{storage_service_name})"] = "#{human_size(used)} in #{ActiveStorage::Blob.count} files"
   rescue StandardError => e
     @metrics['Blob storage'] = "unavailable (#{e.class})"
   end
@@ -88,13 +84,6 @@ class SuperAdmin::InstanceStatusesController < SuperAdmin::ApplicationController
 
   def storage_service_name
     ActiveStorage::Blob.service.class.name.demodulize.delete_suffix('Service')
-  end
-
-  def storage_quota_bytes
-    gb = InstallationConfig.find_by(name: 'STORAGE_QUOTA_GB')&.value.to_f
-    return if gb <= 0
-
-    (gb * (1024**3)).round
   end
 
   def disk_usage
