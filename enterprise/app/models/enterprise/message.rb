@@ -42,6 +42,13 @@ module Enterprise::Message
     return unless outgoing?
     return if private?
     return unless sender.is_a?(::Captain::Assistant)
+
+    # Reload first. ResponseBuilderJob loaded this conversation before the agent ran, and the tool
+    # wrote the mark through a different instance of the same row — so the copy reachable from here
+    # still has the attributes it had a minute ago, and the mark is invisible. Without this, every
+    # transfer left the customer's conversation sitting in the bot's queue with a team on it and
+    # nobody looking at it. (The job hit the same wall and re-reads :status straight from the row.)
+    conversation.reload
     return unless conversation.pending?
 
     key = ::Captain::Tools::AssignTeamTool::HANDOFF_PENDING_KEY
