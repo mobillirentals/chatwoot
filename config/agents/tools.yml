@@ -39,3 +39,13 @@
   title: 'Handoff to Human'
   description: 'Hand off the conversation to a human agent'
   icon: 'user-switch'
+
+- id: assign_team
+  title: 'Transferir para Time'
+  description: 'Transfere a conversa para o time responsável pelo assunto e entrega a um atendente humano'
+  icon: 'people-team'
+
+- id: crm_lookup
+  title: 'Consultar CRM'
+  description: 'Consulta o cadastro do cliente: contrato ativo, moto, faturas vencidas e a próxima a vencer'
+  icon: 'person-search'
