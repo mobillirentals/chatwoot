@@ -10,6 +10,7 @@ module Enterprise::Message
       scope :with_call, -> { includes(call: [:contact, { inbox: :channel }]) }
 
       after_create_commit :schedule_captain_sentiment_analysis
+      after_create_commit :schedule_captain_crm_warmup
     end
   end
 
@@ -29,6 +30,21 @@ module Enterprise::Message
     ::Captain::Conversation::SentimentAnalysisJob
       .set(wait: SENTIMENT_ANALYSIS_DELAY)
       .perform_later(conversation_id)
+  end
+
+  # Fires on the first customer message only: by the time they have said what they want, the CRM
+  # answer is already on the conversation, so crm_lookup reads it instead of waiting on Bitrix.
+  def schedule_captain_crm_warmup
+    return unless incoming?
+    return if private?
+    return unless account.feature_enabled?('captain_integration')
+    return unless first_incoming_message?
+
+    ::Captain::Conversation::CrmWarmupJob.perform_later(conversation_id)
+  end
+
+  def first_incoming_message?
+    conversation.messages.where(message_type: :incoming, private: false).limit(2).count == 1
   end
 
   def mark_pending_conversation_as_open_for_human_response
