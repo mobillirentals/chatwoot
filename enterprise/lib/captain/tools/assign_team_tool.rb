@@ -5,6 +5,10 @@
 class Captain::Tools::AssignTeamTool < Captain::Tools::BasePublicTool
   include Captain::Tools::Concerns::BusinessHoursReadable
 
+  # Set on the conversation so Enterprise::Message can finish the handoff after the assistant's
+  # reply has been posted. See #transfer for why the two steps cannot be one.
+  HANDOFF_PENDING_KEY = 'captain_handoff_pending'.freeze
+
   description 'Transfer the conversation to the team that handles the subject, and hand it over to a human agent. ' \
               'Use this once you know which team the customer needs, or whenever you cannot resolve the request yourself.'
   param :team, type: 'string', desc: 'Name of the team that should take over the conversation'
@@ -42,12 +46,30 @@ class Captain::Tools::AssignTeamTool < Captain::Tools::BasePublicTool
       'Tell the customer nobody is available at the moment and when the team will be back.'
   end
 
+  # Deliberately does NOT hand the conversation off here, even though that is what it looks like
+  # this method should do.
+  #
+  # ResponseBuilderJob only posts the assistant's own words when the conversation is still
+  # pending; the moment a tool opens it, the job takes a handoff branch that replaces the reply
+  # with a canned line. A customer who wrote "acabaram de roubar minha moto" then got silence:
+  # the transfer landed, but the words that mattered — go and file the police report, nobody is
+  # on shift until 8am — were thrown away with it.
+  #
+  # So the conversation stays pending, the job posts what the assistant actually said, and
+  # Enterprise::Message finishes the handoff once that message exists.
   def transfer(conversation, team, reason)
-    note(conversation, reason) if reason.present?
-    conversation.update!(team: team)
-    # Leaves the bot queue so the team's agents actually see it. Already-open conversations
-    # (a human is on it) keep their status; only the team changes.
-    conversation.bot_handoff! if conversation.pending?
+    note(conversation, reason) if reason.present? && !handoff_pending?(conversation)
+
+    attributes = conversation.additional_attributes.to_h
+    # Only while the bot still owns the conversation. On one a human already picked up, this
+    # just re-routes the team — there is no handoff left to finish.
+    attributes = attributes.merge(HANDOFF_PENDING_KEY => true) if conversation.pending?
+
+    conversation.update!(team: team, additional_attributes: attributes)
+  end
+
+  def handoff_pending?(conversation)
+    conversation.additional_attributes.to_h[HANDOFF_PENDING_KEY].present?
   end
 
   def note(conversation, reason)
