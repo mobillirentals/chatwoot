@@ -94,7 +94,7 @@ class Captain::Assistant < ApplicationRecord
   def agent_tools
     [
       self.class.resolve_tool_class('faq_lookup').new(self),
-      self.class.resolve_tool_class('handoff').new(self)
+      self.class.resolve_tool_class('assign_team').new(self)
     ]
   end
 
@@ -111,7 +111,8 @@ class Captain::Assistant < ApplicationRecord
         }
       end,
       response_guidelines: response_guidelines || [],
-      guardrails: guardrails || []
+      guardrails: guardrails || [],
+      available_teams: account.teams.pluck(:name)
     }
   end
 
