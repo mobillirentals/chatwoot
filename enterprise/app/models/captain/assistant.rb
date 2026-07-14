@@ -94,8 +94,6 @@ class Captain::Assistant < ApplicationRecord
   def agent_tools
     [
       self.class.resolve_tool_class('faq_lookup').new(self),
-      self.class.resolve_tool_class('crm_lookup').new(self),
-      self.class.resolve_tool_class('business_hours_check').new(self),
       self.class.resolve_tool_class('assign_team').new(self)
     ]
   end
