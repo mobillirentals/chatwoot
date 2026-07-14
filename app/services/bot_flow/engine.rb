@@ -3,7 +3,6 @@ class BotFlow::Engine
     start
     menu
     financeiro
-    financeiro_link_enviado
     atendimento
     atendimento_veiculo
     atendimento_documentos
@@ -42,7 +41,6 @@ class BotFlow::Engine
     when 'start'                   then handle_start
     when 'menu'                    then handle_menu
     when 'financeiro'              then handle_financeiro
-    when 'financeiro_link_enviado' then handle_more_help('financeiro_link_enviado')
     when 'atendimento'             then handle_atendimento
     when 'atendimento_veiculo'     then handle_atendimento_veiculo
     when 'atendimento_documentos'  then handle_atendimento_documentos
@@ -67,17 +65,13 @@ class BotFlow::Engine
   # ── start / menu ────────────────────────────────────────────────────────────
 
   def handle_start
-    # Nome nativo do WhatsApp, sem esperar o CRM: a saudação não pode depender de uma
-    # chamada de rede. O CRM é aquecido em background e só entra em jogo mais adiante,
-    # quando o cliente escolhe "Financeiro" (ver enter_financeiro/crm_cache_or_fetch).
+    # Nome nativo do WhatsApp: a saudação não depende de nenhuma chamada de rede.
     name     = contact_first_name
     greeting = name.present? ? "Olá, **#{name}**! 👋" : 'Olá! 👋'
     messages = [
       "#{greeting} Bem-vindo à **Mobílli Rentals**.",
       'Sou o assistente virtual. Como posso te ajudar?'
     ]
-
-    BotFlow::CrmWarmupJob.perform_later(@conversation.id)
 
     { messages: messages, buttons: menu_buttons, next_state: 'menu' }
   end
@@ -94,21 +88,17 @@ class BotFlow::Engine
 
   # ── Financeiro (autoatendimento CRM) ─────────────────────────────────────────
 
-  # Sem prévia de valor/tipo de cobrança aqui: o tipo (multa x parcela x cobrança) é
-  # adivinhado por texto livre (ver Crm::ClientProfileService#detect_charge_type) e já
-  # errou uma vez — ver crm_lookup no Captain. Os botões (financeiro_buttons) já bastam
-  # como sinal de "tem algo pendente" sem afirmar valor nenhum de cabeça.
+  # Sem autoatendimento de cobrança aqui: nem valor, nem tipo, nem link — o tipo
+  # (multa x parcela x cobrança) é adivinhado por texto livre e já errou uma vez
+  # (ver crm_lookup no Captain). Dinheiro é sempre assunto do time financeiro.
   def enter_financeiro
-    crm = crm_cache_or_fetch
     { messages: ['Vamos ao seu financeiro. Como posso te ajudar?' + voltar_hint],
-      buttons: financeiro_buttons(crm), next_state: 'financeiro' }
+      buttons: financeiro_buttons, next_state: 'financeiro' }
   end
 
   def handle_financeiro
     case normalize(@user_input)
-    when match_any('quero o link', 'link', 'proxima', 'pagar', '1')
-      enviar_link_pagamento
-    when match_any('atendente', 'falar com financeiro', 'financeiro')
+    when match_any('atendente', 'falar com financeiro', 'financeiro', 'link', 'quero o link', 'pagar', 'fatura', 'boleto', '1')
       transfer_to('financeiro',
                   'Vou te encaminhar para a nossa equipe **financeira**. Um instante! 💬')
     when match_any('menu', 'voltar')
@@ -116,17 +106,6 @@ class BotFlow::Engine
     else
       enter_financeiro
     end
-  end
-
-  def enviar_link_pagamento
-    crm = crm_cache_or_fetch
-    payment_msg = crm[:payment_message].presence ||
-                  'Não encontrei uma cobrança em aberto no momento. Nossa equipe financeira pode te ajudar!'
-    {
-      messages: [payment_msg, 'Posso te ajudar em mais alguma coisa?'],
-      buttons: sim_nao_buttons,
-      next_state: 'financeiro_link_enviado'
-    }
   end
 
   # ── Atendimento (sub-setores) ────────────────────────────────────────────────
@@ -326,15 +305,8 @@ class BotFlow::Engine
     ]
   end
 
-  def financeiro_buttons(crm)
-    buttons = []
-    if crm[:overdue_count].to_i.positive?
-      buttons << { title: '💳 Quero o link', value: 'quero o link' }
-    elsif crm[:has_next_payment]
-      buttons << { title: '💳 Link da próxima', value: 'quero o link' }
-    end
-    buttons << { title: '🎧 Atendente', value: 'atendente' }
-    buttons
+  def financeiro_buttons
+    [{ title: '🎧 Atendente', value: 'atendente' }]
   end
 
   def atendimento_buttons
@@ -381,33 +353,15 @@ class BotFlow::Engine
     'Com esses documentos em mãos a locação é rápida!'
   end
 
-  # ── CRM ──────────────────────────────────────────────────────────────────────
+  # ── Nome do contato ──────────────────────────────────────────────────────────
 
-  # Fallback do nome quando o cliente não está no Bitrix: usa o nome do contato
-  # no WhatsApp/Chatwoot (ignora quando o "nome" é apenas o número de telefone).
+  # Nome do contato no WhatsApp/Chatwoot (ignora quando o "nome" é apenas o número de telefone).
   def contact_first_name
     raw = @conversation.contact&.name.to_s.strip
     return nil if raw.blank?
     return nil if raw.match?(/\A\+?[\d\s()-]+\z/) # parece um número de telefone
 
     raw.split(/\s+/).first
-  end
-
-  def save_crm_cache(crm)
-    update_attrs('bot_crm' => crm.transform_keys(&:to_s))
-  end
-
-  # Lê o cache aquecido em background pelo CrmWarmupJob (o caminho comum: o cliente leva
-  # alguns segundos pra ler a saudação e escolher uma opção). Se ainda estiver frio — job
-  # atrasado, ou o cliente foi rápido demais — busca ao vivo, igual ao CrmProfileCache do
-  # Captain: nunca quebra, só fica mais lento nesse caso raro.
-  def crm_cache_or_fetch
-    cached = attrs['bot_crm']
-    return cached.transform_keys(&:to_sym) if cached.present?
-
-    crm = BotFlow::CrmLookup.fetch(@conversation)
-    save_crm_cache(crm)
-    crm
   end
 
   # ── Estado ────────────────────────────────────────────────────────────────────
