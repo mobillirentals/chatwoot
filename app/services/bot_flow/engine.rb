@@ -67,15 +67,17 @@ class BotFlow::Engine
   # ── start / menu ────────────────────────────────────────────────────────────
 
   def handle_start
-    crm = fetch_crm_data
-    save_crm_cache(crm)
-
-    name     = crm[:found] ? crm[:first_name].presence : contact_first_name
+    # Nome nativo do WhatsApp, sem esperar o CRM: a saudação não pode depender de uma
+    # chamada de rede. O CRM é aquecido em background e só entra em jogo mais adiante,
+    # quando o cliente escolhe "Financeiro" (ver enter_financeiro/crm_cache_or_fetch).
+    name     = contact_first_name
     greeting = name.present? ? "Olá, **#{name}**! 👋" : 'Olá! 👋'
     messages = [
       "#{greeting} Bem-vindo à **Mobílli Rentals**.",
       'Sou o assistente virtual. Como posso te ajudar?'
     ]
+
+    BotFlow::CrmWarmupJob.perform_later(@conversation.id)
 
     { messages: messages, buttons: menu_buttons, next_state: 'menu' }
   end
@@ -92,10 +94,14 @@ class BotFlow::Engine
 
   # ── Financeiro (autoatendimento CRM) ─────────────────────────────────────────
 
+  # Sem prévia de valor/tipo de cobrança aqui: o tipo (multa x parcela x cobrança) é
+  # adivinhado por texto livre (ver Crm::ClientProfileService#detect_charge_type) e já
+  # errou uma vez — ver crm_lookup no Captain. Os botões (financeiro_buttons) já bastam
+  # como sinal de "tem algo pendente" sem afirmar valor nenhum de cabeça.
   def enter_financeiro
-    crm   = crm_cache
-    intro = crm[:intro_message].presence || 'Vamos ao seu financeiro. Como posso te ajudar?'
-    { messages: [intro + voltar_hint], buttons: financeiro_buttons(crm), next_state: 'financeiro' }
+    crm = crm_cache_or_fetch
+    { messages: ['Vamos ao seu financeiro. Como posso te ajudar?' + voltar_hint],
+      buttons: financeiro_buttons(crm), next_state: 'financeiro' }
   end
 
   def handle_financeiro
@@ -113,7 +119,7 @@ class BotFlow::Engine
   end
 
   def enviar_link_pagamento
-    crm = crm_cache
+    crm = crm_cache_or_fetch
     payment_msg = crm[:payment_message].presence ||
                   'Não encontrei uma cobrança em aberto no momento. Nossa equipe financeira pode te ajudar!'
     {
@@ -387,46 +393,21 @@ class BotFlow::Engine
     raw.split(/\s+/).first
   end
 
-  def fetch_crm_data
-    phone = @conversation.contact&.phone_number
-    return empty_crm unless phone.present?
-
-    result = Crm::ClientProfileService.new(phone).perform
-    normalize_crm(result)
-  rescue StandardError => e
-    Rails.logger.error("[BotFlow] CRM fetch falhou: #{e.message}")
-    empty_crm
-  end
-
-  def normalize_crm(result)
-    return empty_crm unless result[:found]
-
-    {
-      found:            true,
-      first_name:       result[:first_name],
-      name:             result[:name],
-      intro_message:    result[:intro_message],
-      payment_message:  result[:payment_message],
-      overdue_count:    result[:overdue_count].to_i,
-      overdue_total:    result[:overdue_total].to_f,
-      has_next_payment: result[:next_payment].present?
-    }
-  end
-
-  def empty_crm
-    { found: false, first_name: nil, intro_message: nil, payment_message: nil,
-      overdue_count: 0, overdue_total: 0.0, has_next_payment: false }
-  end
-
   def save_crm_cache(crm)
     update_attrs('bot_crm' => crm.transform_keys(&:to_s))
   end
 
-  def crm_cache
+  # Lê o cache aquecido em background pelo CrmWarmupJob (o caminho comum: o cliente leva
+  # alguns segundos pra ler a saudação e escolher uma opção). Se ainda estiver frio — job
+  # atrasado, ou o cliente foi rápido demais — busca ao vivo, igual ao CrmProfileCache do
+  # Captain: nunca quebra, só fica mais lento nesse caso raro.
+  def crm_cache_or_fetch
     cached = attrs['bot_crm']
-    return empty_crm if cached.blank?
+    return cached.transform_keys(&:to_sym) if cached.present?
 
-    cached.transform_keys(&:to_sym)
+    crm = BotFlow::CrmLookup.fetch(@conversation)
+    save_crm_cache(crm)
+    crm
   end
 
   # ── Estado ────────────────────────────────────────────────────────────────────
