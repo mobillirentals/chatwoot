@@ -7,7 +7,10 @@ class Whatsapp::LiquidTemplateProcessorService
     end
   end
 
-  pattr_initialize [:campaign!, :contact!]
+  # campaign: anything that responds to #sender/#inbox/#account — a real Campaign, or a
+  # WhatsappBulkDispatch (bulk-dispatch has no persistent Contact, so it passes contact: nil
+  # and its own per-row variables as `row:` instead).
+  pattr_initialize [:campaign!, :contact!, { row: nil }]
 
   def process_template_params(template_params)
     return template_params if template_params.blank?
@@ -35,12 +38,15 @@ class Whatsapp::LiquidTemplateProcessorService
   end
 
   def drops
-    {
+    base = {
       'contact' => ContactDrop.new(contact),
       'agent' => UserDrop.new(campaign.sender),
       'inbox' => InboxDrop.new(campaign.inbox),
       'account' => AccountDrop.new(campaign.account)
     }
+    return base if row.blank?
+
+    base.merge('row' => row.transform_keys(&:to_s))
   end
 
   def blank_render?(original, rendered)
