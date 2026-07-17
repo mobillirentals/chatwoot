@@ -135,6 +135,9 @@ Rails.application.routes.draw do
             end
           end
           resources :campaigns, only: [:index, :create, :show, :update, :destroy]
+          resources :whatsapp_bulk_dispatches, only: [:index, :create, :show, :update] do
+            member { post :confirm }
+          end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           namespace :channels do
             resource :twilio_channel, only: [:create]
