@@ -16,6 +16,29 @@ class WhatsappBulkDispatch < ApplicationRecord
   validates :title, presence: true
   validate :validate_dispatch_inbox
 
+  # The variable identifiers in column_mapping (everything except the phone key). Real WhatsApp
+  # templates seen in this account are all POSITIONAL ("1", "2", ... matching {{1}}, {{2}}), and
+  # jsonb does not reliably preserve Hash key order — so when the keys are plain digit strings,
+  # order is derived by sorting numerically instead of trusting iteration order. Named-parameter
+  # templates (non-numeric keys) don't have this problem: Meta matches those by name, not position.
+  def variable_names
+    keys = column_mapping.keys - [WhatsappBulkDispatch::ValidationService::PHONE_KEY]
+    keys.all? { |key| key.match?(/\A\d+\z/) } ? keys.sort_by(&:to_i) : keys
+  end
+
+  # Builds the same template_params shape Campaign#template_params uses, except every body
+  # variable is a Liquid expression pointing at this dispatch's own row context (see
+  # Whatsapp::LiquidTemplateProcessorService) instead of a value the operator typed by hand —
+  # the mapping already says which variable is which, so there's nothing left to type.
+  def liquid_template_params
+    {
+      'name' => template_name,
+      'namespace' => template_namespace,
+      'language' => template_language,
+      'processed_params' => { 'body' => variable_names.index_with { |name| "{{ row.#{name} }}" } }
+    }
+  end
+
   private
 
   def validate_dispatch_inbox
