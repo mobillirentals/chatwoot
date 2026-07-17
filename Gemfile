@@ -68,6 +68,8 @@ gem 'redis'
 gem 'redis-namespace'
 # super fast record imports in bulk
 gem 'activerecord-import'
+# read CSV/XLSX uniformly (WhatsApp bulk dispatch spreadsheet upload)
+gem 'roo'
 
 gem 'searchkick'
 gem 'opensearch-ruby'
