@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_14_130100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1325,6 +1325,40 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
     t.string "name"
     t.string "secret"
     t.index ["account_id", "url"], name: "index_webhooks_on_account_id_and_url", unique: true
+  end
+
+  create_table "whatsapp_bulk_dispatch_recipients", force: :cascade do |t|
+    t.bigint "whatsapp_bulk_dispatch_id", null: false
+    t.string "phone_number", null: false
+    t.jsonb "variables", default: {}
+    t.integer "status", default: 0, null: false
+    t.string "error_message"
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["whatsapp_bulk_dispatch_id", "phone_number"], name: "index_wa_bulk_dispatch_recipients_on_dispatch_and_phone", unique: true
+    t.index ["whatsapp_bulk_dispatch_id", "status"], name: "index_wa_bulk_dispatch_recipients_on_dispatch_and_status"
+  end
+
+  create_table "whatsapp_bulk_dispatches", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "sender_id"
+    t.string "title", null: false
+    t.integer "status", default: 0, null: false
+    t.string "template_name"
+    t.string "template_namespace"
+    t.string "template_language"
+    t.jsonb "column_mapping", default: {}
+    t.datetime "scheduled_at"
+    t.integer "total_recipients", default: 0
+    t.integer "sent_count", default: 0
+    t.integer "failed_count", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_bulk_dispatches_on_account_id"
+    t.index ["inbox_id"], name: "index_whatsapp_bulk_dispatches_on_inbox_id"
+    t.index ["sender_id"], name: "index_whatsapp_bulk_dispatches_on_sender_id"
   end
 
   create_table "working_hours", force: :cascade do |t|
