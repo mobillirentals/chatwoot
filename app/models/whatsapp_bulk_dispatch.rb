@@ -39,7 +39,25 @@ class WhatsappBulkDispatch < ApplicationRecord
     }
   end
 
+  # Raw approved body text ({{1}}, {{2}} left as-is) for the campaign list card — there's no
+  # single "the message" for a bulk dispatch the way Campaign#message has one (every recipient
+  # gets different values), and showing one real recipient's row here would leak their data into
+  # a list every administrator can see. The template itself is the honest, generic stand-in.
+  def template_body_text
+    body_component(matching_template)&.dig('text')
+  end
+
   private
+
+  def matching_template
+    inbox.channel.message_templates&.find do |candidate|
+      candidate['name'] == template_name && candidate['language'] == template_language
+    end
+  end
+
+  def body_component(template)
+    template&.dig('components')&.find { |component| component['type'] == 'BODY' }
+  end
 
   def validate_dispatch_inbox
     return if inbox.blank?

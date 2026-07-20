@@ -135,7 +135,7 @@ Rails.application.routes.draw do
             end
           end
           resources :campaigns, only: [:index, :create, :show, :update, :destroy]
-          resources :whatsapp_bulk_dispatches, only: [:index, :create, :show, :update] do
+          resources :whatsapp_bulk_dispatches, only: [:index, :create, :show, :update, :destroy] do
             member { post :confirm }
           end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]

@@ -12,6 +12,7 @@ end
 json.sender do
   json.partial! 'api/v1/models/agent', formats: [:json], resource: resource.sender if resource.sender.present?
 end
+json.message resource.template_body_text
 json.template_name resource.template_name
 json.template_namespace resource.template_namespace
 json.template_language resource.template_language

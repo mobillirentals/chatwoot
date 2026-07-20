@@ -43,6 +43,11 @@ class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::B
     WhatsappBulkDispatch::DispatchService.new(dispatch: @dispatch).call
   end
 
+  def destroy
+    @dispatch.destroy!
+    head :ok
+  end
+
   private
 
   # Named set_dispatch, not dispatch — ActionController::Metal already defines #dispatch as its
