@@ -22,4 +22,8 @@ class WhatsappBulkDispatchPolicy < ApplicationPolicy
   def destroy?
     @account_user.administrator?
   end
+
+  def template_spreadsheet?
+    @account_user.administrator?
+  end
 end
