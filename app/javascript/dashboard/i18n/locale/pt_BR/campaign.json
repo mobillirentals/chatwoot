@@ -142,6 +142,9 @@
     "WHATSAPP": {
       "HEADER_TITLE": "Campanhas do WhatsApp",
       "NEW_CAMPAIGN": "Criar campanha",
+      "CREATE_MENU": {
+        "LABEL_BASED": "Campanha por etiqueta"
+      },
       "EMPTY_STATE": {
         "TITLE": "Nenhuma campanha do WhatsApp está disponível",
         "SUBTITLE": "Inicie uma campanha do WhatsApp para atingir seus clientes diretamente. Envie ofertas ou faça anúncios facilmente. Clique em \"Criar campanha\" para começar."
@@ -191,8 +194,7 @@
           "SCHEDULED_AT": {
             "LABEL": "Horário agendado",
             "PLACEHOLDER": "Por favor insira a hora",
-            "ERROR": "Horário agendado é necessário",
-            "HELP_TEXT": "O servidor executa tarefas agendadas a cada {interval} minutos. O disparo poderá ocorrer com um pequeno atraso dependendo do minuto escolhido."
+            "ERROR": "Horário agendado é necessário"
           },
           "BUTTONS": {
             "CREATE": "Criar",
@@ -202,6 +204,65 @@
             "SUCCESS_MESSAGE": "Campanha do WhatsApp criada com sucesso",
             "ERROR_MESSAGE": "Houve um erro. Por favor, tente novamente."
           }
+        }
+      },
+      "BULK_DISPATCH": {
+        "BUTTON_LABEL": "Disparo em massa",
+        "TITLE": "Disparo em massa de WhatsApp",
+        "STEPS": {
+          "TEMPLATE": {
+            "TITLE": "Escolha um template",
+            "DISPATCH_TITLE_LABEL": "Nome do disparo",
+            "DISPATCH_TITLE_PLACEHOLDER": "ex.: Fatura com vencimento em 17 de julho",
+            "INBOX_LABEL": "Selecionar caixa de entrada",
+            "INBOX_PLACEHOLDER": "Selecionar caixa de entrada",
+            "TEMPLATE_LABEL": "Template do WhatsApp",
+            "TEMPLATE_PLACEHOLDER": "Selecione um template"
+          },
+          "UPLOAD": {
+            "TITLE": "Enviar planilha",
+            "DESCRIPTION": "Envie um arquivo CSV ou XLSX com uma linha por destinatário. A primeira linha deve conter os cabeçalhos das colunas.",
+            "TEMPLATE_PREVIEW_LABEL": "Texto do template selecionado:",
+            "DOWNLOAD_TEMPLATE": "Baixar planilha modelo",
+            "CHOOSE_FILE": "Escolher arquivo",
+            "CHANGE": "Alterar"
+          },
+          "MAPPING": {
+            "TITLE": "Mapear colunas",
+            "DESCRIPTION": "Diga qual coluna da planilha alimenta cada variável do template.",
+            "PHONE_COLUMN_LABEL": "Coluna do telefone",
+            "VARIABLE_LABEL": "Variável {number}",
+            "COLUMN_PLACEHOLDER": "Selecione uma coluna"
+          },
+          "VALIDATION": {
+            "TITLE": "Revisão",
+            "VALID_COUNT": "{count} destinatários válidos",
+            "REJECTED_COUNT": "{count} linhas rejeitadas",
+            "REJECTED_REASON": "Linha {row}: {reason}",
+            "NO_VALID_ROWS": "Nenhum destinatário válido encontrado nesta planilha."
+          },
+          "PREVIEW": {
+            "DESCRIPTION": "Isto é exatamente o que estes destinatários vão receber:"
+          },
+          "CONFIRM": {
+            "TITLE": "Enviar",
+            "SEND_BUTTON": "Enviar para {count} destinatários"
+          }
+        },
+        "NAVIGATION": {
+          "BACK": "Voltar",
+          "NEXT": "Avançar",
+          "CANCEL": "Cancelar",
+          "CLOSE": "Fechar"
+        },
+        "REPORT": {
+          "TITLE": "Disparo em andamento",
+          "PROCESSING": "Enviando... {sent} enviados, {failed} falharam, de {total}",
+          "COMPLETED": "Concluído — {sent} enviados, {failed} falharam",
+          "DOWNLOAD_REJECTED": "Baixar linhas rejeitadas"
+        },
+        "API": {
+          "ERROR_MESSAGE": "Houve um erro. Por favor, tente novamente."
         }
       }
     },

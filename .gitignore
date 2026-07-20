@@ -117,3 +117,6 @@ CLAUDE.local.md
 .pnpm-store/*
 local/
 Procfile.worktree
+
+# Local dev overrides (per-machine, e.g. pointing at a native Vite instead of Docker)
+docker-compose.override.yml

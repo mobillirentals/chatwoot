@@ -3,7 +3,7 @@ import { reactive, computed, watch, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
-import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useMapGetter } from 'dashboard/composables/store';
 
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -34,11 +34,6 @@ const initialState = {
 
 const state = reactive({ ...initialState });
 const templateParserRef = ref(null);
-const store = useStore();
-
-const scheduledCampaignInterval = computed(() => {
-  return store.getters['globalConfig/get'].scheduledCampaignInterval || 5;
-});
 
 const rules = {
   title: { required, minLength: minLength(1) },
@@ -177,7 +172,11 @@ watch(
 </script>
 
 <template>
-  <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
+  <!-- A plain div, not a <form>: this now renders inside BulkDispatchWizard's shared
+       Dialog component, which already wraps its slot content in its own <form> — nesting
+       a second <form> inside it is invalid HTML and the two submit handlers would
+       conflict. Submission is triggered by the button below instead. -->
+  <div class="flex flex-col gap-4">
     <Input
       v-model="state.title"
       :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.TITLE.LABEL')"
@@ -242,22 +241,12 @@ watch(
     </div>
 
     <div class="flex flex-col gap-1">
-      <div class="flex items-center gap-1 mb-0.5">
-        <label
-          for="whatsapp-scheduled-at"
-          class="text-heading-3 text-n-slate-12"
-        >
-          {{ t('CAMPAIGN.WHATSAPP.CREATE.FORM.SCHEDULED_AT.LABEL') }}
-        </label>
-        <span
-          v-tooltip.top="
-            t('CAMPAIGN.WHATSAPP.CREATE.FORM.SCHEDULED_AT.HELP_TEXT', {
-              interval: scheduledCampaignInterval,
-            })
-          "
-          class="i-lucide-help-circle size-3.5 text-n-slate-11 cursor-help"
-        />
-      </div>
+      <label
+        for="whatsapp-scheduled-at"
+        class="mb-0.5 text-heading-3 text-n-slate-12"
+      >
+        {{ t('CAMPAIGN.WHATSAPP.CREATE.FORM.SCHEDULED_AT.LABEL') }}
+      </label>
       <Input
         id="whatsapp-scheduled-at"
         v-model="state.scheduledAt"
@@ -283,10 +272,11 @@ watch(
       <Button
         :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.BUTTONS.CREATE')"
         class="w-full"
-        type="submit"
+        type="button"
         :is-loading="isCreating"
         :disabled="isCreating || isSubmitDisabled"
+        @click="handleSubmit"
       />
     </div>
-  </form>
+  </div>
 </template>
