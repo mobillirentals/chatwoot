@@ -194,8 +194,7 @@
           "SCHEDULED_AT": {
             "LABEL": "Horário agendado",
             "PLACEHOLDER": "Por favor insira a hora",
-            "ERROR": "Horário agendado é necessário",
-            "HELP_TEXT": "O servidor executa tarefas agendadas a cada {interval} minutos. O disparo poderá ocorrer com um pequeno atraso dependendo do minuto escolhido."
+            "ERROR": "Horário agendado é necessário"
           },
           "BUTTONS": {
             "CREATE": "Criar",

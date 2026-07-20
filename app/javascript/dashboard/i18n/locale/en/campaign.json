@@ -194,8 +194,7 @@
           "SCHEDULED_AT": {
             "LABEL": "Scheduled time",
             "PLACEHOLDER": "Please select the time",
-            "ERROR": "Scheduled time is required",
-            "HELP_TEXT": "The server executes scheduled tasks every {interval} minutes. The dispatch may occur with a slight delay depending on the minute chosen."
+            "ERROR": "Scheduled time is required"
           },
           "BUTTONS": {
             "CREATE": "Create",
