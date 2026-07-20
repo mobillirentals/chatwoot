@@ -177,7 +177,11 @@ watch(
 </script>
 
 <template>
-  <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
+  <!-- A plain div, not a <form>: this now renders inside BulkDispatchWizard's shared
+       Dialog component, which already wraps its slot content in its own <form> — nesting
+       a second <form> inside it is invalid HTML and the two submit handlers would
+       conflict. Submission is triggered by the button below instead. -->
+  <div class="flex flex-col gap-4">
     <Input
       v-model="state.title"
       :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.TITLE.LABEL')"
@@ -283,10 +287,11 @@ watch(
       <Button
         :label="t('CAMPAIGN.WHATSAPP.CREATE.FORM.BUTTONS.CREATE')"
         class="w-full"
-        type="submit"
+        type="button"
         :is-loading="isCreating"
         :disabled="isCreating || isSubmitDisabled"
+        @click="handleSubmit"
       />
     </div>
-  </form>
+  </div>
 </template>
