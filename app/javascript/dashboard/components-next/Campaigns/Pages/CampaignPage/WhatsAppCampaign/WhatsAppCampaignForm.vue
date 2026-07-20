@@ -11,6 +11,16 @@ import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import TagMultiSelectComboBox from 'dashboard/components-next/combobox/TagMultiSelectComboBox.vue';
 import WhatsAppTemplateParser from 'dashboard/components-next/whatsapp/WhatsAppTemplateParser.vue';
 
+// Seeds the form from a snapshot the parent dialog took before an accidental outside-click/Esc
+// close would otherwise have thrown it away — see WhatsAppCampaignDialog.vue. Left null on a
+// genuinely fresh open (or after a deliberate Cancel/successful submit, which clear it there).
+const props = defineProps({
+  initialState: {
+    type: Object,
+    default: null,
+  },
+});
+
 const emit = defineEmits(['submit', 'cancel']);
 
 const { t } = useI18n();
@@ -24,7 +34,7 @@ const formState = {
   ),
 };
 
-const initialState = {
+const defaultState = {
   title: '',
   inboxId: null,
   templateId: null,
@@ -32,7 +42,7 @@ const initialState = {
   selectedAudience: [],
 };
 
-const state = reactive({ ...initialState });
+const state = reactive({ ...defaultState, ...props.initialState });
 const templateParserRef = ref(null);
 
 const rules = {
@@ -117,7 +127,7 @@ const formatToUTCString = localDateTime =>
   localDateTime ? new Date(localDateTime).toISOString() : null;
 
 const resetState = () => {
-  Object.assign(state, initialState);
+  Object.assign(state, defaultState);
   v$.value.$reset();
 };
 
@@ -169,6 +179,10 @@ watch(
     state.templateId = null;
   }
 );
+
+// Lets the parent dialog read a live snapshot of what's been typed so far, to restore it if
+// this component gets unmounted by an accidental outside-click/Esc close.
+defineExpose({ state });
 </script>
 
 <template>

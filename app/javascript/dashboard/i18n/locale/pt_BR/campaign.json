@@ -256,7 +256,14 @@
           },
           "CONFIRM": {
             "TITLE": "Enviar",
-            "SEND_BUTTON": "Enviar para {count} destinatários"
+            "DESCRIPTION": "{count} destinatários prontos para envio.",
+            "SEND_BUTTON": "Enviar para {count} destinatários",
+            "SEND_NOW": "Enviar agora",
+            "SCHEDULE": "Agendar",
+            "SCHEDULE_BUTTON": "Agendar para {count} destinatários",
+            "SCHEDULED_AT_LABEL": "Horário agendado",
+            "SCHEDULED_AT_PLACEHOLDER": "Por favor insira a hora",
+            "SCHEDULED_AT_HELP_TEXT": "O servidor executa tarefas agendadas a cada {interval} minutos. O disparo poderá ocorrer com um pequeno atraso dependendo do minuto escolhido."
           }
         },
         "NAVIGATION": {
@@ -267,6 +274,7 @@
         },
         "REPORT": {
           "TITLE": "Disparo em andamento",
+          "SCHEDULED": "Disparo agendado para {date}.",
           "PROCESSING": "Enviando... {sent} enviados, {failed} falharam, de {total}",
           "COMPLETED": "Concluído — {sent} enviados, {failed} falharam",
           "DOWNLOAD_REJECTED": "Baixar linhas rejeitadas"

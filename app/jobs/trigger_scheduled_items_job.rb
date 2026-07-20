@@ -8,6 +8,12 @@ class TriggerScheduledItemsJob < ApplicationJob
       Campaigns::TriggerOneoffCampaignJob.perform_later(campaign)
     end
 
+    # trigger the scheduled whatsapp bulk dispatch jobs
+    WhatsappBulkDispatch.where(status: :scheduled)
+                        .where(scheduled_at: 3.days.ago..Time.current).find_each(batch_size: 100) do |dispatch|
+      WhatsappBulkDispatch::TriggerScheduledDispatchJob.perform_later(dispatch)
+    end
+
     # Job to reopen snoozed conversations
     Conversations::ReopenSnoozedConversationsJob.perform_later
 

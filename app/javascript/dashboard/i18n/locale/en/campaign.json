@@ -256,7 +256,14 @@
           },
           "CONFIRM": {
             "TITLE": "Send",
-            "SEND_BUTTON": "Send to {count} recipients"
+            "DESCRIPTION": "{count} recipients ready to send.",
+            "SEND_BUTTON": "Send to {count} recipients",
+            "SEND_NOW": "Send now",
+            "SCHEDULE": "Schedule",
+            "SCHEDULE_BUTTON": "Schedule for {count} recipients",
+            "SCHEDULED_AT_LABEL": "Scheduled time",
+            "SCHEDULED_AT_PLACEHOLDER": "Please select the time",
+            "SCHEDULED_AT_HELP_TEXT": "The server executes scheduled tasks every {interval} minutes. The dispatch may occur with a slight delay depending on the minute chosen."
           }
         },
         "NAVIGATION": {
@@ -267,6 +274,7 @@
         },
         "REPORT": {
           "TITLE": "Dispatch in progress",
+          "SCHEDULED": "Dispatch scheduled for {date}.",
           "PROCESSING": "Sending... {sent} sent, {failed} failed, out of {total}",
           "COMPLETED": "Done — {sent} sent, {failed} failed",
           "DOWNLOAD_REJECTED": "Download rejected rows"

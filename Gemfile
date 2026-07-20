@@ -70,6 +70,8 @@ gem 'redis-namespace'
 gem 'activerecord-import'
 # read CSV/XLSX uniformly (WhatsApp bulk dispatch spreadsheet upload)
 gem 'roo'
+# write XLSX (WhatsApp bulk dispatch template spreadsheet download)
+gem 'caxlsx'
 
 gem 'searchkick'
 gem 'opensearch-ruby'

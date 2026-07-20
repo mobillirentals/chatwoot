@@ -1,9 +1,18 @@
 class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::BaseController
-  before_action :set_dispatch, except: [:index, :create]
+  before_action :set_dispatch, except: [:index, :create, :template_spreadsheet]
   before_action :check_authorization
 
   def index
     @dispatches = Current.account.whatsapp_bulk_dispatches.order(created_at: :desc)
+  end
+
+  # No dispatch exists yet at this point in the wizard (upload step, right after choosing a
+  # template) — the client already knows the variable count from the template it loaded, same
+  # place WhatsAppCampaignForm gets it from for the label-based flow.
+  def template_spreadsheet
+    xlsx = WhatsappBulkDispatch::TemplateSpreadsheetService.new(variable_names: variable_names_param).call
+    send_data xlsx, filename: 'modelo_disparo_em_massa.xlsx',
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   end
 
   def show; end
@@ -39,8 +48,16 @@ class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::B
     ).call
   end
 
+  # Same split as Campaign#trigger! / TriggerScheduledItemsJob: send right away, or park it as
+  # `scheduled` for the same 5-minute scheduler job that already picks up one-off campaigns.
   def confirm
-    WhatsappBulkDispatch::DispatchService.new(dispatch: @dispatch).call
+    @dispatch.update!(scheduled_at: params[:scheduled_at]) if params[:scheduled_at].present?
+
+    if @dispatch.scheduled_at.present? && @dispatch.scheduled_at.future?
+      @dispatch.update!(status: :scheduled)
+    else
+      WhatsappBulkDispatch::DispatchService.new(dispatch: @dispatch).call
+    end
   end
 
   def destroy

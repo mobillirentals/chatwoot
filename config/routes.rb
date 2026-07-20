@@ -137,6 +137,7 @@ Rails.application.routes.draw do
           resources :campaigns, only: [:index, :create, :show, :update, :destroy]
           resources :whatsapp_bulk_dispatches, only: [:index, :create, :show, :update, :destroy] do
             member { post :confirm }
+            collection { get :template_spreadsheet }
           end
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
           namespace :channels do
