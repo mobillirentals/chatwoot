@@ -32,8 +32,18 @@ class WhatsappBulkDispatchAPI extends ApiClient {
     return axios.patch(`${this.url}/${id}`, { column_mapping: columnMapping });
   }
 
-  confirm(id) {
-    return axios.post(`${this.url}/${id}/confirm`);
+  confirm(id, scheduledAt) {
+    return axios.post(`${this.url}/${id}/confirm`, {
+      scheduled_at: scheduledAt || undefined,
+    });
+  }
+
+  templateSpreadsheet(variableNames) {
+    const params = new URLSearchParams();
+    variableNames.forEach(name => params.append('variable_names[]', name));
+    return axios.get(`${this.url}/template_spreadsheet?${params.toString()}`, {
+      responseType: 'blob',
+    });
   }
 }
 

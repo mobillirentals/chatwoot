@@ -15,6 +15,9 @@ const store = useStore();
 const { t } = useI18n();
 
 const dialogRef = ref(null);
+const formRef = ref(null);
+const savedFormState = ref(null);
+let isDeliberateClose = false;
 
 const addCampaign = async campaignDetails => {
   try {
@@ -40,11 +43,27 @@ const handleSubmit = campaignDetails => {
 // Bound to Dialog's own @close (fires on Esc, click-outside, or our requestClose()
 // below — Dialog's close() emits this itself). Must not call dialogRef.close() here:
 // see BulkDispatchWizard.vue, which hit the infinite-loop version of this mistake.
-const handleClose = () => emit('close');
+//
+// Also snapshots whatever's currently in the form before Dialog's v-if unmounts it — an
+// accidental outside-click/Esc shouldn't throw away in-progress typing. Skipped when the close
+// was deliberate (requestClose already cleared the snapshot itself, right below).
+const handleClose = () => {
+  if (!isDeliberateClose && formRef.value) {
+    savedFormState.value = { ...formRef.value.state };
+  }
+  isDeliberateClose = false;
+  emit('close');
+};
 
 // Bound to the form's own Cancel button and to its post-submit auto-cancel (both via
-// @cancel) — Dialog's built-in buttons are off, so this is what actually closes it.
-const requestClose = () => dialogRef.value?.close();
+// @cancel) — Dialog's built-in buttons are off, so this is what actually closes it. A
+// deliberate exit, so the saved snapshot is cleared before Dialog's own @close (handleClose
+// above) would otherwise re-capture it.
+const requestClose = () => {
+  isDeliberateClose = true;
+  savedFormState.value = null;
+  dialogRef.value?.close();
+};
 
 defineExpose({ dialogRef });
 </script>
@@ -58,6 +77,11 @@ defineExpose({ dialogRef });
     :show-confirm-button="false"
     @close="handleClose"
   >
-    <WhatsAppCampaignForm @submit="handleSubmit" @cancel="requestClose" />
+    <WhatsAppCampaignForm
+      ref="formRef"
+      :initial-state="savedFormState"
+      @submit="handleSubmit"
+      @cancel="requestClose"
+    />
   </Dialog>
 </template>

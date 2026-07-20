@@ -1,11 +1,14 @@
 <script setup>
 import { reactive, computed, ref, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { messageStamp } from 'shared/helpers/timeHelper';
 
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
+import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -13,6 +16,7 @@ import whatsappBulkDispatchAPI from 'dashboard/api/whatsappBulkDispatch';
 
 const emit = defineEmits(['close']);
 const { t } = useI18n();
+const store = useStore();
 
 const STEPS = {
   TEMPLATE: 1,
@@ -46,14 +50,54 @@ const columnMapping = reactive({});
 const PHONE_KEY = '__phone__';
 
 const validation = ref(null);
+const sendMode = ref('now');
+const scheduledAt = ref(null);
+const showSendModeMenu = ref(false);
+
+// Same split-button shape as ArticleEditorHeader.vue's publish/draft menu — the chevron just
+// switches which mode is selected, the primary button (in the template) is what actually sends.
+const sendModeMenuItems = computed(() => [
+  {
+    value: 'now',
+    action: 'now',
+    icon: 'i-lucide-send',
+    label: t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SEND_NOW'),
+    isSelected: sendMode.value === 'now',
+  },
+  {
+    value: 'scheduled',
+    action: 'scheduled',
+    icon: 'i-lucide-calendar-clock',
+    label: t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SCHEDULE'),
+    isSelected: sendMode.value === 'scheduled',
+  },
+]);
+
+const handleSendModeAction = ({ action }) => {
+  sendMode.value = action;
+  showSendModeMenu.value = false;
+};
 const reportState = reactive({
   status: 'draft',
   totalRecipients: 0,
   sentCount: 0,
   failedCount: 0,
   failedRowsUrl: null,
+  scheduledAt: null,
 });
 let pollTimer = null;
+
+// Same pattern as WhatsAppCampaignForm.vue's scheduled-at field — disables picking a time
+// that's already in the past.
+const currentDateTime = computed(() => {
+  const now = new Date();
+  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localTime.toISOString().slice(0, 16);
+});
+
+const scheduledCampaignInterval = computed(
+  () => store.getters['globalConfig/get'].scheduledCampaignInterval || 5
+);
 
 const mapToOptions = (items, valueKey, labelKey) =>
   items?.map(item => ({ value: item[valueKey], label: item[labelKey] })) ?? [];
@@ -93,28 +137,21 @@ const templateBodyText = computed(() => {
   return body?.text || '';
 });
 
-// Column names match the "telefone" / "variavel_N" hints ColumnMapperService already
-// looks for, so uploading the file back auto-suggests the mapping in the next step.
-const downloadTemplateSpreadsheet = () => {
+// Column names match the "telefone" / "variavel_N" hints ColumnMapperService already looks
+// for, so uploading the file back auto-suggests the mapping in the next step. Built as a real
+// .xlsx on the backend (via caxlsx) — operators here default to Excel, and a CSV renamed to
+// .xlsx would just show as a corrupt-file warning when opened.
+const downloadTemplateSpreadsheet = async () => {
   const template = selectedTemplate.value;
   if (!template) return;
 
-  const headerRow = [
-    'telefone',
-    ...templateVariableNames.value.map(name => `variavel_${name}`),
-  ];
-  const csvContent = `${headerRow.join(',')}\n`;
-  // BOM so Excel (still the default spreadsheet app for most operators here) opens the
-  // CSV as UTF-8 instead of guessing a legacy codepage.
-  const utf8Bom = '﻿';
-
-  const blob = new Blob([utf8Bom, csvContent], {
-    type: 'text/csv;charset=utf-8;',
-  });
-  const url = URL.createObjectURL(blob);
+  const { data } = await whatsappBulkDispatchAPI.templateSpreadsheet(
+    templateVariableNames.value
+  );
+  const url = URL.createObjectURL(data);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `modelo-${template.name}.csv`;
+  link.download = `modelo-${template.name}.xlsx`;
   link.click();
   URL.revokeObjectURL(url);
 };
@@ -155,6 +192,9 @@ const resetState = () => {
   headers.value = [];
   Object.keys(columnMapping).forEach(key => delete columnMapping[key]);
   validation.value = null;
+  sendMode.value = 'now';
+  scheduledAt.value = null;
+  showSendModeMenu.value = false;
   step.value = STEPS.TEMPLATE;
 };
 
@@ -162,16 +202,25 @@ const resetState = () => {
 // below — Dialog's close() emits this itself). Must NOT call dialogRef.close() here:
 // that's what emits this event in the first place, so doing it again from inside the
 // handler is an infinite loop (confirmed the hard way — Maximum call stack exceeded).
+//
+// Deliberately does NOT reset state in most cases: an accidental outside-click/Esc while
+// filling out the wizard shouldn't throw away the title/file/mapping typed so far. Only once
+// the dispatch is actually sent/scheduled (STEPS.REPORT) is there no more in-progress data to
+// protect, so any close at that point resets — otherwise reopening would show a stale finished
+// report instead of a fresh wizard. Deliberate cancels go through requestClose below instead.
 const handleClose = () => {
   if (pollTimer) clearInterval(pollTimer);
-  resetState();
+  pollTimer = null;
+  if (step.value === STEPS.REPORT) resetState();
   emit('close');
 };
 
-// Bound to our own Cancel/Close footer buttons, which bypass Dialog's built-in ones
-// entirely (show-cancel-button/show-confirm-button are both off). Only asks Dialog to
-// close; handleClose above does the state cleanup once Dialog's own @close fires back.
+// Bound to our own Cancel/Close footer buttons, which bypass Dialog's built-in ones entirely
+// (show-cancel-button/show-confirm-button are both off). A deliberate exit — resets first so
+// the next open starts fresh, then asks Dialog to close (handleClose above fires too, but by
+// then step is already back to STEPS.TEMPLATE, so its own reset check no-ops).
 const requestClose = () => {
+  resetState();
   dialogRef.value?.close();
 };
 
@@ -241,10 +290,24 @@ const pollReport = async () => {
 const handleSend = async () => {
   isSubmitting.value = true;
   try {
-    await whatsappBulkDispatchAPI.confirm(dispatchId.value);
+    const scheduledAtIso =
+      sendMode.value === 'scheduled' && scheduledAt.value
+        ? new Date(scheduledAt.value).toISOString()
+        : null;
+
+    const { data } = await whatsappBulkDispatchAPI.confirm(
+      dispatchId.value,
+      scheduledAtIso
+    );
     step.value = STEPS.REPORT;
-    await pollReport();
-    pollTimer = setInterval(pollReport, 3000);
+    reportState.status = data.status;
+
+    if (data.status === 'scheduled') {
+      reportState.scheduledAt = data.scheduled_at;
+    } else {
+      await pollReport();
+      pollTimer = setInterval(pollReport, 3000);
+    }
   } catch (error) {
     useAlert(t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.API.ERROR_MESSAGE'));
   } finally {
@@ -255,6 +318,12 @@ const handleSend = async () => {
 const goBack = () => {
   if (step.value > STEPS.TEMPLATE) step.value -= 1;
 };
+
+const formattedScheduledAt = computed(() =>
+  reportState.scheduledAt
+    ? messageStamp(new Date(reportState.scheduledAt * 1000), 'LLL d, h:mm a')
+    : ''
+);
 
 onBeforeUnmount(() => {
   if (pollTimer) clearInterval(pollTimer);
@@ -494,17 +563,56 @@ defineExpose({ dialogRef });
       <template v-else-if="step === STEPS.CONFIRM && validation">
         <p class="text-sm text-n-slate-12">
           {{
-            t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SEND_BUTTON', {
+            t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.DESCRIPTION', {
               count: validation.validCount,
             })
           }}
         </p>
+        <div v-if="sendMode === 'scheduled'" class="flex flex-col gap-1">
+          <label class="mb-0.5 text-sm font-medium text-n-slate-12">
+            {{
+              t(
+                'CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SCHEDULED_AT_LABEL'
+              )
+            }}
+          </label>
+          <Input
+            v-model="scheduledAt"
+            type="datetime-local"
+            :min="currentDateTime"
+            :placeholder="
+              t(
+                'CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SCHEDULED_AT_PLACEHOLDER'
+              )
+            "
+          />
+          <p class="mt-1 text-xs text-n-slate-11">
+            {{
+              t(
+                'CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SCHEDULED_AT_HELP_TEXT',
+                { interval: scheduledCampaignInterval }
+              )
+            }}
+          </p>
+        </div>
       </template>
 
       <!-- Step 6: report -->
       <template v-else-if="step === STEPS.REPORT">
         <div
-          v-if="reportState.status === 'processing'"
+          v-if="reportState.status === 'scheduled'"
+          class="flex flex-col gap-2"
+        >
+          <p class="text-sm text-n-slate-12">
+            {{
+              t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.REPORT.SCHEDULED', {
+                date: formattedScheduledAt,
+              })
+            }}
+          </p>
+        </div>
+        <div
+          v-else-if="reportState.status === 'processing'"
           class="flex items-center gap-2"
         >
           <Spinner />
@@ -598,19 +706,51 @@ defineExpose({ dialogRef });
           :label="t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.NAVIGATION.NEXT')"
           @click="step = STEPS.CONFIRM"
         />
-        <Button
+        <ButtonGroup
           v-else-if="step === STEPS.CONFIRM"
-          class="w-full"
-          type="button"
-          :is-loading="isSubmitting"
-          :disabled="isSubmitting"
-          :label="
-            t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SEND_BUTTON', {
-              count: validation.validCount,
-            })
-          "
-          @click="handleSend"
-        />
+          class="flex items-center w-full"
+        >
+          <Button
+            class="w-full ltr:rounded-r-none rtl:rounded-l-none"
+            type="button"
+            no-animation
+            :is-loading="isSubmitting"
+            :disabled="
+              isSubmitting || (sendMode === 'scheduled' && !scheduledAt)
+            "
+            :label="
+              sendMode === 'scheduled'
+                ? t(
+                    'CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SCHEDULE_BUTTON',
+                    { count: validation.validCount }
+                  )
+                : t(
+                    'CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.CONFIRM.SEND_BUTTON',
+                    { count: validation.validCount }
+                  )
+            "
+            @click="handleSend"
+          />
+          <div
+            v-on-click-outside="() => (showSendModeMenu = false)"
+            class="relative flex-shrink-0"
+          >
+            <Button
+              icon="i-lucide-chevron-down"
+              type="button"
+              no-animation
+              class="ltr:rounded-l-none rtl:rounded-r-none"
+              :disabled="isSubmitting"
+              @click.stop="showSendModeMenu = !showSendModeMenu"
+            />
+            <DropdownMenu
+              v-if="showSendModeMenu"
+              :menu-items="sendModeMenuItems"
+              class="mt-2 ltr:right-0 rtl:left-0 bottom-full"
+              @action="handleSendModeAction"
+            />
+          </div>
+        </ButtonGroup>
         <Button
           v-else-if="step === STEPS.REPORT"
           class="w-full"
