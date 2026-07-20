@@ -51,6 +51,17 @@ class WhatsappBulkDispatch < ApplicationRecord
     body_component(matching_template)&.dig('text')
   end
 
+  # Composes the final text a recipient actually received: the approved body with each {{N}}
+  # placeholder swapped for that row's own rendered value. Only used by
+  # WhatsappBulkDispatch::ReplyBackfillService — the real send never needs this, Meta renders the
+  # template server-side from structured parameters, not a string we compose ourselves.
+  def render_message(variables)
+    text = template_body_text
+    return text if text.blank?
+
+    text.gsub(/\{\{\s*(\d+)\s*\}\}/) { variables[Regexp.last_match(1)].to_s }
+  end
+
   private
 
   def matching_template
