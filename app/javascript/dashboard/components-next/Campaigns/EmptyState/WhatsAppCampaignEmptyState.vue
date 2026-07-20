@@ -1,4 +1,5 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
 import { ONE_OFF_CAMPAIGN_EMPTY_STATE_CONTENT } from './CampaignEmptyStateContent';
 
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
@@ -14,6 +15,8 @@ defineProps({
     default: '',
   },
 });
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -30,6 +33,8 @@ defineProps({
           :sender="campaign.sender"
           :inbox="campaign.inbox"
           :scheduled-at="campaign.scheduled_at"
+          :type-label="t('CAMPAIGN.WHATSAPP.CREATE_MENU.LABEL_BASED')"
+          type-color="iris"
         />
       </div>
     </template>

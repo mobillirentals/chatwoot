@@ -12,10 +12,11 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['edit', 'delete']);
+const emit = defineEmits(['edit', 'delete', 'details']);
 
 const handleEdit = campaign => emit('edit', campaign);
 const handleDelete = campaign => emit('delete', campaign);
+const handleDetails = campaign => emit('details', campaign);
 </script>
 
 <template>
@@ -31,8 +32,13 @@ const handleDelete = campaign => emit('delete', campaign);
       :inbox="campaign.inbox"
       :scheduled-at="campaign.scheduled_at"
       :is-live-chat-type="isLiveChatType"
+      :type-label="campaign.type_label"
+      :type-color="campaign.type_color"
+      :show-details-button="campaign.kind === 'bulk_dispatch'"
+      :can-delete="campaign.can_delete"
       @edit="handleEdit(campaign)"
       @delete="handleDelete(campaign)"
+      @details="handleDetails(campaign)"
     />
   </div>
 </template>

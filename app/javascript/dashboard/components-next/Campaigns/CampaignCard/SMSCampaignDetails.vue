@@ -1,9 +1,15 @@
 <script setup>
+import { computed } from 'vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import { messageStamp } from 'shared/helpers/timeHelper';
 
 import { useI18n } from 'vue-i18n';
-defineProps({
+const props = defineProps({
+  sender: {
+    type: Object,
+    default: null,
+  },
   inboxName: {
     type: String,
     default: '',
@@ -19,9 +25,28 @@ defineProps({
 });
 
 const { t } = useI18n();
+
+const senderName = computed(() => props.sender?.name || '');
 </script>
 
 <template>
+  <template v-if="senderName">
+    <span class="flex-shrink-0 text-sm text-n-slate-11 whitespace-nowrap">
+      {{ t('CAMPAIGN.SMS.CARD.CAMPAIGN_DETAILS.CREATED_BY') }}
+    </span>
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <Avatar
+        :name="senderName"
+        :src="sender?.thumbnail"
+        :size="16"
+        rounded-full
+      />
+      <span class="text-sm font-medium text-n-slate-12">
+        {{ senderName }}
+      </span>
+    </div>
+  </template>
+
   <span class="flex-shrink-0 text-sm text-n-slate-11 whitespace-nowrap">
     {{ t('CAMPAIGN.SMS.CARD.CAMPAIGN_DETAILS.SENT_FROM') }}
   </span>

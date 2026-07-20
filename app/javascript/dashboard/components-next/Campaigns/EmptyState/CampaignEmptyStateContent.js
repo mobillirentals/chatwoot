@@ -113,6 +113,10 @@ export const ONE_OFF_CAMPAIGN_EMPTY_STATE_CONTENT = [
       phone_number: '+29818373149903',
       provider: 'default',
     },
+    sender: {
+      id: 1,
+      name: 'Alexa Rivera',
+    },
     message:
       'Hello! Enjoying our product? Share your feedback on G2 and earn a $25 Amazon coupon: https://chwt.app/g2-review',
     campaign_status: 'active',
@@ -138,6 +142,10 @@ export const ONE_OFF_CAMPAIGN_EMPTY_STATE_CONTENT = [
       channel_type: 'Channel::Sms',
       phone_number: '+29818373149903',
       provider: 'default',
+    },
+    sender: {
+      id: 2,
+      name: 'Jamie Lee',
     },
     message: 'Welcome aboard! 🎉 Let us know if you have any questions.',
     campaign_status: 'completed',
@@ -166,6 +174,10 @@ export const ONE_OFF_CAMPAIGN_EMPTY_STATE_CONTENT = [
       phone_number: '+29818373149903',
       provider: 'default',
     },
+    sender: {
+      id: 3,
+      name: 'Chris Barlow',
+    },
     message: 'Hello! We’re excited to have your business with us!',
     campaign_status: 'active',
     enabled: true,
@@ -193,6 +205,10 @@ export const ONE_OFF_CAMPAIGN_EMPTY_STATE_CONTENT = [
       channel_type: 'Channel::Sms',
       phone_number: '+29818373149903',
       provider: 'default',
+    },
+    sender: {
+      id: 1,
+      name: 'Alexa Rivera',
     },
     message: 'Welcome to the team! Reach out if you have questions.',
     campaign_status: 'completed',

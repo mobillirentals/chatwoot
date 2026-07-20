@@ -1,5 +1,8 @@
 {
   "CAMPAIGN": {
+    "CARD": {
+      "DELETE_DISABLED_TOOLTIP": "Completed campaigns can't be deleted — the record is the only proof of what was sent."
+    },
     "LIVE_CHAT": {
       "HEADER_TITLE": "Live chat campaigns",
       "NEW_CAMPAIGN": "Create campaign",
@@ -90,9 +93,11 @@
         "STATUS": {
           "PROCESSING": "Processing",
           "COMPLETED": "Completed",
-          "SCHEDULED": "Scheduled"
+          "SCHEDULED": "Scheduled",
+          "FAILED": "Failed"
         },
         "CAMPAIGN_DETAILS": {
+          "CREATED_BY": "Created by",
           "SENT_FROM": "Sent from",
           "ON": "on"
         }
@@ -144,6 +149,11 @@
       "NEW_CAMPAIGN": "Create campaign",
       "CREATE_MENU": {
         "LABEL_BASED": "Campaign by label"
+      },
+      "SEARCH_PLACEHOLDER": "Search by title",
+      "FILTER": {
+        "ALL": "All",
+        "NO_RESULTS": "No results for this filter."
       },
       "EMPTY_STATE": {
         "TITLE": "No WhatsApp campaigns are available",
@@ -260,6 +270,18 @@
           "PROCESSING": "Sending... {sent} sent, {failed} failed, out of {total}",
           "COMPLETED": "Done — {sent} sent, {failed} failed",
           "DOWNLOAD_REJECTED": "Download rejected rows"
+        },
+        "DETAILS": {
+          "TOTAL": "Total",
+          "SENT": "Sent",
+          "FAILED": "Failed",
+          "EMPTY": "No recipients match this filter.",
+          "FILTERS": {
+            "ALL": "All",
+            "SENT": "Sent",
+            "FAILED": "Failed",
+            "PENDING": "Pending"
+          }
         },
         "API": {
           "ERROR_MESSAGE": "There was an error. Please try again."

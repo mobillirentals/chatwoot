@@ -6,6 +6,7 @@ import { getInboxIconByType } from 'dashboard/helper/inbox';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Label from 'dashboard/components-next/label/Label.vue';
 import LiveChatCampaignDetails from './LiveChatCampaignDetails.vue';
 import SMSCampaignDetails from './SMSCampaignDetails.vue';
 
@@ -42,25 +43,51 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  // Only set on the WhatsApp page, where label-based campaigns and spreadsheet bulk dispatches
+  // now share one list — the tag is what tells the two apart at a glance. Left blank (the
+  // default) on SMS/live-chat cards, which only ever have one kind of item.
+  typeLabel: {
+    type: String,
+    default: '',
+  },
+  typeColor: {
+    type: String,
+    default: 'slate',
+  },
+  // Only bulk dispatches have a recipient-by-recipient breakdown worth a dedicated view —
+  // label-based campaigns don't track individual sends the same way.
+  showDetailsButton: {
+    type: Boolean,
+    default: false,
+  },
+  // A completed campaign's record is the only proof of what was actually sent — deleting it
+  // doesn't undo the send, it just destroys that history. Defaults to true so SMS/live-chat
+  // cards (which never pass this prop) keep behaving exactly as before.
+  canDelete: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const emit = defineEmits(['edit', 'delete']);
+const emit = defineEmits(['edit', 'delete', 'details']);
 
 const { t } = useI18n();
 
 const STATUS_COMPLETED = 'completed';
 const STATUS_PROCESSING = 'processing';
+const STATUS_FAILED = 'failed';
 
 const { formatMessage } = useMessageFormatter();
 
-const isActive = computed(() =>
-  props.isLiveChatType ? props.isEnabled : props.status !== STATUS_COMPLETED
-);
-
-const statusTextColor = computed(() => ({
-  'text-n-teal-11': isActive.value,
-  'text-n-slate-12': !isActive.value,
-}));
+const statusTextColor = computed(() => {
+  if (props.status === STATUS_FAILED) return 'text-n-ruby-11';
+  if (!props.isLiveChatType && props.status === STATUS_COMPLETED) {
+    return 'text-n-slate-12';
+  }
+  return props.isLiveChatType && !props.isEnabled
+    ? 'text-n-slate-12'
+    : 'text-n-teal-11';
+});
 
 const campaignStatus = computed(() => {
   if (props.isLiveChatType) {
@@ -75,6 +102,10 @@ const campaignStatus = computed(() => {
 
   if (props.status === STATUS_PROCESSING) {
     return t('CAMPAIGN.SMS.CARD.STATUS.PROCESSING');
+  }
+
+  if (props.status === STATUS_FAILED) {
+    return t('CAMPAIGN.SMS.CARD.STATUS.FAILED');
   }
 
   return t('CAMPAIGN.SMS.CARD.STATUS.SCHEDULED');
@@ -103,6 +134,7 @@ const inboxIcon = computed(() => {
         >
           {{ campaignStatus }}
         </span>
+        <Label v-if="typeLabel" :label="typeLabel" :color="typeColor" compact />
       </div>
       <div
         v-dompurify-html="formatMessage(message, false, false, false)"
@@ -117,13 +149,14 @@ const inboxIcon = computed(() => {
         />
         <SMSCampaignDetails
           v-else
+          :sender="sender"
           :inbox-name="inboxName"
           :inbox-icon="inboxIcon"
           :scheduled-at="scheduledAt"
         />
       </div>
     </div>
-    <div class="flex items-center justify-end w-20 gap-2">
+    <div class="flex items-center justify-end gap-2 w-fit">
       <Button
         v-if="isLiveChatType"
         variant="faded"
@@ -133,10 +166,22 @@ const inboxIcon = computed(() => {
         @click="emit('edit')"
       />
       <Button
+        v-if="showDetailsButton"
+        variant="faded"
+        size="sm"
+        color="slate"
+        icon="i-lucide-bar-chart-3"
+        @click="emit('details')"
+      />
+      <Button
+        v-tooltip.top="
+          canDelete ? null : t('CAMPAIGN.CARD.DELETE_DISABLED_TOOLTIP')
+        "
         variant="faded"
         color="ruby"
         size="sm"
         icon="i-lucide-trash"
+        :disabled="!canDelete"
         @click="emit('delete')"
       />
     </div>
