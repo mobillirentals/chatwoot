@@ -11,6 +11,13 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  // Only set on the WhatsApp page, where the list mixes real Campaign records with
+  // WhatsappBulkDispatch ones — those delete through a different API entirely. Left null
+  // everywhere else, which keeps the default store dispatch below as-is.
+  deleteHandler: {
+    type: Function,
+    default: null,
+  },
 });
 
 const { t } = useI18n();
@@ -18,11 +25,15 @@ const store = useStore();
 
 const dialogRef = ref(null);
 
-const deleteCampaign = async id => {
-  if (!id) return;
+const deleteCampaign = async campaign => {
+  if (!campaign) return;
 
   try {
-    await store.dispatch('campaigns/delete', id);
+    if (props.deleteHandler) {
+      await props.deleteHandler(campaign);
+    } else {
+      await store.dispatch('campaigns/delete', campaign.id);
+    }
     useAlert(t('CAMPAIGN.CONFIRM_DELETE.API.SUCCESS_MESSAGE'));
   } catch (error) {
     useAlert(t('CAMPAIGN.CONFIRM_DELETE.API.ERROR_MESSAGE'));
@@ -30,7 +41,7 @@ const deleteCampaign = async id => {
 };
 
 const handleDialogConfirm = async () => {
-  await deleteCampaign(props.selectedCampaign.id);
+  await deleteCampaign(props.selectedCampaign);
   dialogRef.value?.close();
 };
 

@@ -1,5 +1,8 @@
 {
   "CAMPAIGN": {
+    "CARD": {
+      "DELETE_DISABLED_TOOLTIP": "Campanhas concluídas não podem ser excluídas, pois o registro representa o histórico oficial dos envios realizados."
+    },
     "LIVE_CHAT": {
       "HEADER_TITLE": "Campanhas de chat ao vivo",
       "NEW_CAMPAIGN": "Criar campanha",
@@ -90,9 +93,11 @@
         "STATUS": {
           "PROCESSING": "Processando",
           "COMPLETED": "Concluído",
-          "SCHEDULED": "Agendada"
+          "SCHEDULED": "Agendada",
+          "FAILED": "Falhou"
         },
         "CAMPAIGN_DETAILS": {
+          "CREATED_BY": "Criado por",
           "SENT_FROM": "Enviado de",
           "ON": "ativado"
         }
@@ -144,6 +149,11 @@
       "NEW_CAMPAIGN": "Criar campanha",
       "CREATE_MENU": {
         "LABEL_BASED": "Campanha por etiqueta"
+      },
+      "SEARCH_PLACEHOLDER": "Buscar por título",
+      "FILTER": {
+        "ALL": "Todos",
+        "NO_RESULTS": "Nenhum resultado para esse filtro."
       },
       "EMPTY_STATE": {
         "TITLE": "Nenhuma campanha do WhatsApp está disponível",
@@ -260,6 +270,18 @@
           "PROCESSING": "Enviando... {sent} enviados, {failed} falharam, de {total}",
           "COMPLETED": "Concluído — {sent} enviados, {failed} falharam",
           "DOWNLOAD_REJECTED": "Baixar linhas rejeitadas"
+        },
+        "DETAILS": {
+          "TOTAL": "Total",
+          "SENT": "Enviados",
+          "FAILED": "Falharam",
+          "EMPTY": "Nenhum destinatário nesse filtro.",
+          "FILTERS": {
+            "ALL": "Todos",
+            "SENT": "Enviados",
+            "FAILED": "Falharam",
+            "PENDING": "Pendentes"
+          }
         },
         "API": {
           "ERROR_MESSAGE": "Houve um erro. Por favor, tente novamente."

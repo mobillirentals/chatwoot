@@ -18,4 +18,8 @@ class WhatsappBulkDispatchPolicy < ApplicationPolicy
   def confirm?
     @account_user.administrator?
   end
+
+  def destroy?
+    @account_user.administrator?
+  end
 end
