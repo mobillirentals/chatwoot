@@ -43,7 +43,15 @@ class WhatsappBulkDispatch::SendBatchJob < ApplicationJob
 
     return mark_failed(dispatch, recipient, 'template not found, or all variables rendered blank') if name.blank?
 
-    channel.send_template(recipient.phone_number, { name: name, namespace: nil, lang_code: lang_code, parameters: parameters }, nil)
+    # send_template never raises on a rejected message — WhatsappCloudService#process_response
+    # logs the Graph API error and returns nil, silently, by design (it's written for the
+    # in-conversation reply path where a Message record already exists to carry the failure).
+    # Caught locally: with a bad token every recipient here still came back `sent`, because
+    # "no exception" isn't the same as "delivered". The truthy/blank message id is the only
+    # signal send_template actually gives back.
+    message_id = channel.send_template(recipient.phone_number, { name: name, namespace: nil, lang_code: lang_code, parameters: parameters }, nil)
+    return mark_failed(dispatch, recipient, 'WhatsApp API rejected the message') if message_id.blank?
+
     recipient.update!(status: :sent, sent_at: Time.current)
     dispatch.increment!(:sent_count)
   rescue StandardError => e
