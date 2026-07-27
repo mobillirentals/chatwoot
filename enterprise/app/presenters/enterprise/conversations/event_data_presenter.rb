@@ -9,10 +9,12 @@ module Enterprise::Conversations::EventDataPresenter
   private
 
   def sla_data
+    sla_applicable = sla_applicable?
+
     {
-      applied_sla: applied_sla&.push_event_data,
-      sla_events: sla_events.map(&:push_event_data),
-      sla_policy_id: sla_policy_id
+      applied_sla: sla_applicable ? applied_sla&.push_event_data : nil,
+      sla_events: sla_applicable ? sla_events.map(&:push_event_data) : [],
+      sla_policy_id: sla_applicable ? sla_policy_id : nil
     }
   end
 end

@@ -2,6 +2,33 @@
 # não tem público persistente por etiqueta nem agendamento recorrente — é uma rajada única
 # (`scheduled_at` só atrasa QUANDO essa rajada única dispara, não a repete), com o arquivo de
 # origem anexado, e os destinatários vivem em `recipients`, não em Contact.
+# == Schema Information
+#
+# Table name: whatsapp_bulk_dispatches
+#
+#  id                 :bigint           not null, primary key
+#  column_mapping     :jsonb
+#  failed_count       :integer          default(0)
+#  scheduled_at       :datetime
+#  sent_count         :integer          default(0)
+#  status             :integer          default("draft"), not null
+#  template_language  :string
+#  template_name      :string
+#  template_namespace :string
+#  title              :string           not null
+#  total_recipients   :integer          default(0)
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  account_id         :bigint           not null
+#  inbox_id           :bigint           not null
+#  sender_id          :bigint
+#
+# Indexes
+#
+#  index_whatsapp_bulk_dispatches_on_account_id  (account_id)
+#  index_whatsapp_bulk_dispatches_on_inbox_id    (inbox_id)
+#  index_whatsapp_bulk_dispatches_on_sender_id   (sender_id)
+#
 class WhatsappBulkDispatch < ApplicationRecord
   has_one_attached :file
   has_one_attached :failed_rows
