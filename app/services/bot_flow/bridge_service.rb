@@ -1,5 +1,5 @@
 class BotFlow::BridgeService
-  def initialize(payload, _typebot_id = nil)
+  def initialize(payload, _bot_id = nil)
     @payload      = payload.deep_symbolize_keys
     @event        = @payload[:event]
     @content      = @payload[:content]
