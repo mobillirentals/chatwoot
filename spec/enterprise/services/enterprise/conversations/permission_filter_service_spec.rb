@@ -166,6 +166,62 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
       end
     end
 
+    context 'when user has only the conversation_reply_restricted permission' do
+      it 'still returns all conversations in assigned inboxes, same as a regular agent' do
+        test_account = create(:account)
+        test_inbox = create(:inbox, account: test_account)
+        test_inbox2 = create(:inbox, account: test_account)
+
+        test_agent = create(:user, account: test_account, role: :agent)
+        create(:inbox_member, user: test_agent, inbox: test_inbox)
+
+        test_custom_role = create(:custom_role, account: test_account, permissions: %w[conversation_reply_restricted])
+        account_user = AccountUser.find_by(user: test_agent, account: test_account)
+        account_user.update(role: :agent, custom_role: test_custom_role)
+
+        assigned_conversation = create(:conversation, account: test_account, inbox: test_inbox, assignee: test_agent)
+        unassigned_conversation = create(:conversation, account: test_account, inbox: test_inbox, assignee: nil)
+        other_assigned_conversation = create(:conversation, account: test_account, inbox: test_inbox, assignee: create(:user, account: test_account))
+        other_inbox_conversation = create(:conversation, account: test_account, inbox: test_inbox2, assignee: nil)
+
+        result = Conversations::PermissionFilterService.new(
+          test_account.conversations,
+          test_agent,
+          test_account
+        ).perform
+
+        expect(result.count).to eq(3)
+        expect(result).to include(assigned_conversation)
+        expect(result).to include(unassigned_conversation)
+        expect(result).to include(other_assigned_conversation)
+        expect(result).not_to include(other_inbox_conversation)
+      end
+    end
+
+    context 'when user has a custom role with no recognized conversation permission' do
+      it 'returns no conversations' do
+        test_account = create(:account)
+        test_inbox = create(:inbox, account: test_account)
+
+        test_agent = create(:user, account: test_account, role: :agent)
+        create(:inbox_member, user: test_agent, inbox: test_inbox)
+
+        test_custom_role = create(:custom_role, account: test_account, permissions: %w[contact_manage])
+        account_user = AccountUser.find_by(user: test_agent, account: test_account)
+        account_user.update(role: :agent, custom_role: test_custom_role)
+
+        create(:conversation, account: test_account, inbox: test_inbox, assignee: test_agent)
+
+        result = Conversations::PermissionFilterService.new(
+          test_account.conversations,
+          test_agent,
+          test_account
+        ).perform
+
+        expect(result.count).to eq(0)
+      end
+    end
+
     context 'when user has both participating and unassigned permissions (hierarchical test)' do
       it 'gives higher priority to unassigned_manage over participating_manage' do
         # Create a new isolated test environment

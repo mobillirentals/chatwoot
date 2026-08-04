@@ -18,7 +18,10 @@ module Enterprise::Conversations::PermissionFilterService
   def filter_by_permissions(permissions)
     # Permission-based filtering with hierarchy
     # conversation_manage > conversation_unassigned_manage > conversation_participating_manage
-    if permissions.include?('conversation_manage')
+    # conversation_reply_restricted is not a visibility grant, only restricts replying
+    # (see ConversationPolicy#reply?) — treated like conversation_manage here so a role
+    # with only this permission doesn't fall through to Conversation.none below.
+    if permissions.include?('conversation_manage') || permissions.include?('conversation_reply_restricted')
       accessible_conversations
     elsif permissions.include?('conversation_unassigned_manage')
       filter_unassigned_and_mine
