@@ -11,6 +11,7 @@ class BotFlow::BridgeService
 
     conversation = find_conversation
     return unless conversation
+    return if human_assigned?(conversation)
     return if conversation.inbox.out_of_office?
 
     skip = false
@@ -57,6 +58,18 @@ class BotFlow::BridgeService
     end
 
     true
+  end
+
+  # A human already owns this conversation — stay silent. Without this, a
+  # conversation an agent starts manually (e.g. sending a template and
+  # self-assigning before the customer's first reply) has no bot_state yet,
+  # so the customer's reply falls through to the 'start' state and the bot
+  # runs its full greeting/menu flow on top of the agent already talking to
+  # them. Once the bot itself hands off, bot_state is already 'atendente'
+  # (see Engine#handle_atendente) by the time round-robin can populate
+  # assignee_id, so this check never interferes with that path.
+  def human_assigned?(conversation)
+    conversation.assignee_id.present?
   end
 
   def find_conversation
