@@ -122,6 +122,37 @@ describe('Conversation Helpers', () => {
       ).toBe(true);
     });
 
+    it('returns true for any user with conversation_reply_restricted permission', () => {
+      const role = 'custom_role';
+      const permissions = ['conversation_reply_restricted'];
+      const currentUserId = 1;
+
+      expect(
+        applyRoleFilter(
+          conversationWithAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(true);
+      expect(
+        applyRoleFilter(
+          conversationWithDifferentAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(true);
+      expect(
+        applyRoleFilter(
+          conversationWithoutAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(true);
+    });
+
     // Test for custom role with 'conversation_unassigned_manage' permission
     describe('with conversation_unassigned_manage permission', () => {
       const role = 'custom_role';

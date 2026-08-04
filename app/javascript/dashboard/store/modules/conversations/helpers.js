@@ -85,8 +85,14 @@ export const applyRoleFilter = (
     return true;
   }
 
-  // Check for full conversation management permission
-  if (permissions.includes('conversation_manage')) {
+  // conversation_manage and conversation_reply_restricted both grant full
+  // visibility here — conversation_reply_restricted only restricts replying
+  // (enforced server-side in ConversationPolicy#reply?), not which
+  // conversations the agent can see.
+  if (
+    permissions.includes('conversation_manage') ||
+    permissions.includes('conversation_reply_restricted')
+  ) {
     return true;
   }
 
