@@ -11,7 +11,7 @@ class BotFlow::BridgeService
 
     conversation = find_conversation
     return unless conversation
-    return if human_assigned?(conversation)
+    return if human_owns_conversation?(conversation)
     return if conversation.inbox.out_of_office?
 
     skip = false
@@ -70,6 +70,26 @@ class BotFlow::BridgeService
   # assignee_id, so this check never interferes with that path.
   def human_assigned?(conversation)
     conversation.assignee_id.present?
+  end
+
+  # Um humano já dono da conversa: o bot fica em silêncio (ver comentário de
+  # human_assigned? acima). Toda conversa nova nasce 'pending' nesta inbox
+  # (bot ativo — Conversation#set_active_bot_conversation), e só o handoff do
+  # próprio bot (Engine#hand_off_to_human) marca 'open'. Uma conversa que o
+  # agente inicia sozinho (ex.: mandando template e se autoatribuindo) nunca
+  # passa pelo bot, então fica presa em 'pending' pra sempre — aqui, na
+  # primeira resposta do cliente, abrimos ela.
+  def human_owns_conversation?(conversation)
+    return false unless human_assigned?(conversation)
+
+    open_pending_conversation(conversation)
+    true
+  end
+
+  def open_pending_conversation(conversation)
+    return unless conversation.pending?
+
+    conversation.update!(status: :open)
   end
 
   def find_conversation
