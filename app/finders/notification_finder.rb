@@ -37,7 +37,9 @@ class NotificationFinder
   end
 
   def find_all_notifications
-    @notifications = current_user.notifications.where(account_id: @current_account.id)
+    @notifications = current_user.notifications
+                                 .where(account_id: @current_account.id)
+                                 .where(primary_actor_id: @current_account.conversations.select(:id))
   end
 
   def filter_snoozed_notifications
