@@ -25,6 +25,7 @@ class Captain::Tools::Copilot::SearchConversationsService < Captain::Tools::Base
 
   def active?
     user_has_permission('conversation_manage') ||
+      user_has_permission('conversation_reply_restricted') ||
       user_has_permission('conversation_unassigned_manage') ||
       user_has_permission('conversation_participating_manage')
   end

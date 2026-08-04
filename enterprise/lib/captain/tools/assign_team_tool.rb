@@ -104,6 +104,6 @@ class Captain::Tools::AssignTeamTool < Captain::Tools::BasePublicTool
   end
 
   def permissions
-    %w[conversation_manage conversation_unassigned_manage conversation_participating_manage]
+    %w[conversation_manage conversation_reply_restricted conversation_unassigned_manage conversation_participating_manage]
   end
 end

@@ -19,7 +19,8 @@ module Enterprise::ConversationPolicy
   private
 
   def manage_all_conversations?(permissions)
-    permissions.include?('conversation_manage')
+    # conversation_reply_restricted doesn't restrict visibility, only replying (see #reply?)
+    permissions.include?('conversation_manage') || permissions.include?('conversation_reply_restricted')
   end
 
   def permits_unassigned_manage?(permissions)

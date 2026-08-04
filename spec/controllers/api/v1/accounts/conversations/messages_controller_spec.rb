@@ -133,7 +133,7 @@ RSpec.describe 'Conversation Messages API', type: :request do
     context 'when the agent has the conversation_reply_restricted custom role permission' do
       let(:agent) { create(:user, account: account, role: :agent) }
       let(:custom_role) do
-        create(:custom_role, account: account, permissions: %w[conversation_manage conversation_reply_restricted])
+        create(:custom_role, account: account, permissions: %w[conversation_reply_restricted])
       end
 
       before do
