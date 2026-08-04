@@ -1,5 +1,6 @@
 class Conversations::UnreadCounts::Counter
   MANAGE_ALL_PERMISSION = 'conversation_manage'.freeze
+  REPLY_RESTRICTED_PERMISSION = 'conversation_reply_restricted'.freeze
   UNASSIGNED_PERMISSION = 'conversation_unassigned_manage'.freeze
   PARTICIPATING_PERMISSION = 'conversation_participating_manage'.freeze
   BUILD_LOCK_TTL = 15.minutes.to_i
@@ -156,7 +157,7 @@ class Conversations::UnreadCounts::Counter
 
   def permission_mode
     @permission_mode ||=
-      if !custom_role_agent? || permissions.include?(MANAGE_ALL_PERMISSION)
+      if !custom_role_agent? || permissions.include?(MANAGE_ALL_PERMISSION) || permissions.include?(REPLY_RESTRICTED_PERMISSION)
         :base
       elsif permissions.include?(UNASSIGNED_PERMISSION)
         :unassigned_and_mine
