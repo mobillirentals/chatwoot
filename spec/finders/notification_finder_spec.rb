@@ -23,6 +23,19 @@ RSpec.describe NotificationFinder do
       end
     end
 
+    context 'when a notification points to an already-deleted conversation' do
+      let(:params) { {} }
+
+      before do
+        orphaned = create(:notification, account: account, user: user)
+        orphaned.update_column(:primary_actor_id, 0) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it 'excludes the orphaned notification instead of erroring out' do
+        expect(subject.size).to eq(3)
+      end
+    end
+
     context 'with params including read and snoozed statuses' do
       let(:params) { { includes: %w[read snoozed] } }
 
@@ -91,6 +104,20 @@ RSpec.describe NotificationFinder do
       it 'adjusts counts based on included statuses' do
         expect(subject.unread_count).to eq(4) # 3 unread + 1 snoozed (which is unread)
         expect(subject.count).to eq(6) # all notifications including read and snoozed
+      end
+    end
+
+    context 'when a notification points to an already-deleted conversation' do
+      let(:params) { {} }
+
+      before do
+        orphaned = create(:notification, account: account, user: user)
+        orphaned.update_column(:primary_actor_id, 0) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it 'does not count the orphaned notification' do
+        expect(subject.unread_count).to eq(3)
+        expect(subject.count).to eq(3)
       end
     end
   end
