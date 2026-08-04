@@ -99,7 +99,11 @@ const getters = {
   },
   getUnAssignedChats: _state => activeFilters => {
     return _state.allConversations.filter(conversation => {
-      const isUnAssigned = !conversation.meta.assignee;
+      const { assignee, assignee_type: assigneeType } = conversation.meta;
+      // A conversation auto-claimed by an AgentBot (no human assignee yet) is
+      // still unassigned from a human standpoint — matches the backend's own
+      // `unassigned` scope, which only checks assignee_id.
+      const isUnAssigned = !assignee || assigneeType === 'AgentBot';
       const shouldFilter = applyPageFilters(conversation, activeFilters);
       return isUnAssigned && shouldFilter;
     });
