@@ -7,8 +7,11 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def create
     user = Current.user || @resource
+    authorize(@conversation, :reply?) if reply_authorization_required?(user)
     mb = Messages::MessageBuilder.new(user, @conversation, params)
     @message = mb.perform
+  rescue Pundit::NotAuthorizedError
+    render_unauthorized('You are not authorized to reply to this conversation')
   rescue StandardError => e
     render_could_not_create_error(e.message)
   end
@@ -58,6 +61,10 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   private
+
+  def reply_authorization_required?(user)
+    user.is_a?(User) && !ActiveModel::Type::Boolean.new.cast(params[:private])
+  end
 
   def message
     @message ||= @conversation.messages.find(permitted_params[:id])

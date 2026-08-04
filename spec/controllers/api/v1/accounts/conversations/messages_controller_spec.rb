@@ -130,6 +130,56 @@ RSpec.describe 'Conversation Messages API', type: :request do
       end
     end
 
+    context 'when the agent has the conversation_reply_restricted custom role permission' do
+      let(:agent) { create(:user, account: account, role: :agent) }
+      let(:custom_role) do
+        create(:custom_role, account: account, permissions: %w[conversation_manage conversation_reply_restricted])
+      end
+
+      before do
+        create(:inbox_member, inbox: conversation.inbox, user: agent)
+        agent.account_users.find_by(account: account).update!(custom_role: custom_role)
+      end
+
+      it 'denies posting a public reply to a conversation assigned to someone else' do
+        other_agent = create(:user, account: account, role: :agent)
+        conversation.update!(assignee: other_agent)
+
+        post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { content: 'test-message', private: false },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(conversation.messages.count).to eq(0)
+      end
+
+      it 'allows posting a public reply to a conversation assigned to the agent' do
+        conversation.update!(assignee: agent)
+
+        post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { content: 'test-message', private: false },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(conversation.messages.count).to eq(1)
+      end
+
+      it 'still allows posting a private note to a conversation assigned to someone else' do
+        other_agent = create(:user, account: account, role: :agent)
+        conversation.update!(assignee: other_agent)
+
+        post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: { content: 'test-message', private: true },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(conversation.messages.count).to eq(1)
+      end
+    end
+
     context 'when it is an authenticated agent bot' do
       let!(:agent_bot) { create(:agent_bot) }
 

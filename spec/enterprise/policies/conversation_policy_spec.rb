@@ -62,4 +62,56 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
   end
+
+  permissions :reply? do
+    context 'when the agent has no custom role' do
+      it 'allows replying to any conversation' do
+        conversation = create(:conversation, account: account, inbox: inbox, assignee: nil)
+
+        expect(subject).to permit(context, conversation)
+      end
+    end
+
+    context 'when role does not grant conversation_reply_restricted' do
+      let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_manage']) }
+
+      before do
+        agent_account_user.update!(role: :agent, custom_role: custom_role)
+      end
+
+      it 'allows replying to conversations assigned to someone else' do
+        other_agent = create(:user, account: account, role: :agent)
+        conversation = create(:conversation, account: account, inbox: inbox, assignee: other_agent)
+
+        expect(subject).to permit(context, conversation)
+      end
+    end
+
+    context 'when role grants conversation_reply_restricted' do
+      let(:custom_role) { create(:custom_role, account: account, permissions: %w[conversation_manage conversation_reply_restricted]) }
+
+      before do
+        agent_account_user.update!(role: :agent, custom_role: custom_role)
+      end
+
+      it 'allows replying to conversations assigned to the agent' do
+        conversation = create(:conversation, account: account, inbox: inbox, assignee: agent)
+
+        expect(subject).to permit(context, conversation)
+      end
+
+      it 'denies replying to conversations assigned to someone else' do
+        other_agent = create(:user, account: account, role: :agent)
+        conversation = create(:conversation, account: account, inbox: inbox, assignee: other_agent)
+
+        expect(subject).not_to permit(context, conversation)
+      end
+
+      it 'denies replying to unassigned conversations' do
+        conversation = create(:conversation, account: account, inbox: inbox, assignee: nil)
+
+        expect(subject).not_to permit(context, conversation)
+      end
+    end
+  end
 end

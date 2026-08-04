@@ -10,6 +10,12 @@ module Enterprise::ConversationPolicy
     permits_participating?(permissions)
   end
 
+  def reply?
+    return super unless custom_role_permissions.include?('conversation_reply_restricted')
+
+    assigned_to_user?
+  end
+
   private
 
   def manage_all_conversations?(permissions)
