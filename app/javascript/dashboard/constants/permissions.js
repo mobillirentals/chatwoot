@@ -14,9 +14,12 @@ export const CONVERSATION_PERMISSIONS = [
   'conversation_manage',
   'conversation_unassigned_manage',
   'conversation_participating_manage',
+  'conversation_reply_restricted',
 ];
 
 export const MANAGE_ALL_CONVERSATION_PERMISSIONS = 'conversation_manage';
+
+export const REPLY_RESTRICTED_PERMISSIONS = 'conversation_reply_restricted';
 
 export const CONVERSATION_UNASSIGNED_PERMISSIONS =
   'conversation_unassigned_manage';
@@ -40,6 +43,7 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
     permissions: [
       ...ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
+      REPLY_RESTRICTED_PERMISSIONS,
       CONVERSATION_UNASSIGNED_PERMISSIONS,
     ],
   },
@@ -48,6 +52,7 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
     permissions: [
       ...ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
+      REPLY_RESTRICTED_PERMISSIONS,
       CONVERSATION_PARTICIPATING_PERMISSIONS,
     ],
   },

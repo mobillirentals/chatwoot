@@ -27,6 +27,11 @@ describe('#defaultRedirectPage', () => {
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
   });
 
+  it('should return dashboard route for users with only conversation_reply_restricted permission', () => {
+    const permissions = ['conversation_reply_restricted', 'custom_role'];
+    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+  });
+
   it('should return contacts route for users with contact permissions', () => {
     const permissions = ['contact_manage'];
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/contacts');
