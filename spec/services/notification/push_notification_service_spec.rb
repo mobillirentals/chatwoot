@@ -40,6 +40,34 @@ describe Notification::PushNotificationService do
           expect(Rails.logger).to have_received(:info).with("FCM push sent to #{user.email} with title #{notification.push_message_title}")
         end
       end
+
+      it 'builds the browser push payload with the message body' do
+        with_modified_env VAPID_PUBLIC_KEY: 'test' do
+          create(:notification_subscription, user: notification.user)
+
+          described_class.new(notification: notification).perform
+
+          expected_body = notification.push_message_body
+          expect(WebPush).to have_received(:payload_send).with(
+            hash_including(message: satisfy { |msg| JSON.parse(msg)['body'] == expected_body })
+          )
+        end
+      end
+
+      context 'when the user has a locale set' do
+        it 'builds the push message title using the user locale, not the job default' do
+          with_modified_env VAPID_PUBLIC_KEY: 'test' do
+            user.update!(ui_settings: { 'locale' => 'pt_BR' })
+            create(:notification_subscription, user: notification.user)
+
+            expected_title = I18n.with_locale('pt_BR') { notification.push_message_title }
+
+            described_class.new(notification: notification).perform
+
+            expect(Rails.logger).to have_received(:info).with("Browser push sent to #{user.email} with title #{expected_title}")
+          end
+        end
+      end
     end
   end
 

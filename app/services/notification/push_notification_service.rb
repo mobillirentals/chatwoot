@@ -6,10 +6,12 @@ class Notification::PushNotificationService
   def perform
     return unless user_subscribed_to_notification?
 
-    notification_subscriptions.each do |subscription|
-      send_browser_push(subscription)
-      send_fcm_push(subscription)
-      send_push_via_chatwoot_hub(subscription)
+    I18n.with_locale(locale) do
+      notification_subscriptions.each do |subscription|
+        send_browser_push(subscription)
+        send_fcm_push(subscription)
+        send_push_via_chatwoot_hub(subscription)
+      end
     end
   end
 
@@ -18,6 +20,13 @@ class Notification::PushNotificationService
   delegate :user, to: :notification
   delegate :notification_subscriptions, to: :user
   delegate :notification_settings, to: :user
+
+  # Jobs rodam fora de uma requisição HTTP, então SwitchLocale (usado nos
+  # controllers) nunca entra em ação aqui — sem isso, o título/corpo sempre
+  # saía em inglês (I18n.default_locale), mesmo com o usuário/conta em pt-BR.
+  def locale
+    user.ui_settings&.dig('locale').presence || notification.account.locale.presence || I18n.default_locale
+  end
 
   def user_subscribed_to_notification?
     notification_setting = notification_settings.find_by(account_id: notification.account.id)
@@ -33,6 +42,8 @@ class Notification::PushNotificationService
   def push_message
     {
       title: notification.push_message_title,
+      body: notification.push_message_body,
+      icon: conversation.contact.avatar_url.presence,
       tag: "#{notification.notification_type}_#{conversation.display_id}_#{notification.id}",
       url: push_url
     }
