@@ -63,4 +63,48 @@ shared_examples_for 'assignment_handler' do
       end
     end
   end
+
+  describe '#update_assignee' do
+    let(:conversation) { create(:conversation) }
+    let(:team) { create(:team, account: conversation.account, allow_auto_assign: false) }
+    let(:team_member) do
+      agent = create(:user, account: conversation.account, role: :agent)
+      create(:team_member, team: team, user: agent)
+      agent
+    end
+    let(:outsider) { create(:user, account: conversation.account, role: :agent) }
+
+    before { conversation.update!(team: team) }
+
+    context 'when the new assignee does not belong to the conversation team' do
+      it 'clears the team instead of the assignee' do
+        conversation.update!(assignee: outsider)
+
+        conversation.reload
+        expect(conversation.assignee).to eq outsider
+        expect(conversation.team).to be_nil
+      end
+    end
+
+    context 'when the new assignee belongs to the conversation team' do
+      it 'keeps both the team and the assignee' do
+        conversation.update!(assignee: team_member)
+
+        conversation.reload
+        expect(conversation.assignee).to eq team_member
+        expect(conversation.team).to eq team
+      end
+    end
+
+    context 'when unassigning the conversation' do
+      it 'keeps the team' do
+        conversation.update!(assignee: team_member)
+        conversation.update!(assignee: nil)
+
+        conversation.reload
+        expect(conversation.assignee).to be_nil
+        expect(conversation.team).to eq team
+      end
+    end
+  end
 end

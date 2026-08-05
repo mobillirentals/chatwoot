@@ -10,14 +10,28 @@ module AssignmentHandler
   private
 
   def ensure_assignee_is_from_team
-    return unless team_id_changed?
-
-    validate_current_assignee_team
-    self.assignee ||= find_assignee_from_team
+    if team_id_changed?
+      validate_current_assignee_team
+      self.assignee ||= find_assignee_from_team
+    elsif assignee_id_changed?
+      clear_team_unless_assignee_belongs
+    end
   end
 
   def validate_current_assignee_team
     self.assignee_id = nil if team&.members&.exclude?(assignee)
+  end
+
+  # Espelha validate_current_assignee_team na direção oposta: se só o
+  # assignee mudou (o time continua o mesmo) e o novo assignee não pertence
+  # a esse time, limpa o time em vez do assignee. Sem isso dava pra ficar com
+  # uma conversa atribuída a um agente de fora do time do card, sem aviso.
+  # `assignee.blank?` cobre o caso de desatribuir (assignee_id -> nil): isso
+  # não deve tirar a conversa da fila do time.
+  def clear_team_unless_assignee_belongs
+    return if assignee.blank?
+
+    self.team_id = nil if team&.members&.exclude?(assignee)
   end
 
   def find_assignee_from_team
