@@ -39,7 +39,8 @@
       "CONVERSATION_REPLY_RESTRICTED": "Só responder conversas atribuídas a eles",
       "CONTACT_MANAGE": "Gerenciar contatos",
       "REPORT_MANAGE": "Gerenciar relatórios",
-      "KNOWLEDGE_BASE_MANAGE": "Gerenciar base de conhecimento"
+      "KNOWLEDGE_BASE_MANAGE": "Gerenciar base de conhecimento",
+      "CAMPAIGN_MANAGE": "Gerenciar campanhas"
     },
     "FORM": {
       "NAME": {

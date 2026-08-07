@@ -36,6 +36,27 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(body.first[:id]).to eq(campaign.display_id)
       end
     end
+
+    context 'when the agent has the campaign_manage custom role permission' do
+      let(:agent) { create(:user, account: account, role: :agent) }
+      let(:custom_role) { create(:custom_role, account: account, permissions: %w[campaign_manage]) }
+      let(:inbox) { create(:inbox, account: account) }
+      let!(:campaign) { create(:campaign, account: account, inbox: inbox, trigger_rules: { url: 'https://test.com' }) }
+
+      before do
+        agent.account_users.find_by(account: account).update!(custom_role: custom_role)
+      end
+
+      it 'returns all campaigns' do
+        get "/api/v1/accounts/#{account.id}/campaigns",
+            headers: agent.create_new_auth_token,
+            as: :json
+
+        expect(response).to have_http_status(:success)
+        body = JSON.parse(response.body, symbolize_names: true)
+        expect(body.first[:id]).to eq(campaign.display_id)
+      end
+    end
   end
 
   describe 'GET /api/v1/accounts/{account.id}/campaigns/:id' do
@@ -149,6 +170,25 @@ RSpec.describe 'Campaigns API', type: :request do
         expect(response_data[:scheduled_at].present?).to be true
         expect(response_data[:scheduled_at]).to eq(scheduled_at.to_i)
         expect(response_data[:audience].pluck(:id)).to include(label1.id, label2.id)
+      end
+    end
+
+    context 'when the agent has the campaign_manage custom role permission' do
+      let(:agent) { create(:user, account: account, role: :agent) }
+      let(:custom_role) { create(:custom_role, account: account, permissions: %w[campaign_manage]) }
+
+      before do
+        agent.account_users.find_by(account: account).update!(custom_role: custom_role)
+      end
+
+      it 'creates a new campaign' do
+        post "/api/v1/accounts/#{account.id}/campaigns",
+             params: { inbox_id: inbox.id, title: 'test', message: 'test message' },
+             headers: agent.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(JSON.parse(response.body, symbolize_names: true)[:title]).to eq('test')
       end
     end
   end

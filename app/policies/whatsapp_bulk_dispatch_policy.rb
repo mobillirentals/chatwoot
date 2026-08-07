@@ -27,3 +27,5 @@ class WhatsappBulkDispatchPolicy < ApplicationPolicy
     @account_user.administrator?
   end
 end
+
+WhatsappBulkDispatchPolicy.prepend_mod_with('WhatsappBulkDispatchPolicy')
