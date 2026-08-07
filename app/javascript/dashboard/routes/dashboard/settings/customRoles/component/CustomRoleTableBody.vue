@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { getI18nKey } from 'dashboard/routes/dashboard/settings/helper/settingsHelper';
 
 import Button from 'dashboard/components-next/button/Button.vue';
+import Label from 'dashboard/components-next/label/Label.vue';
 import { BaseTableRow, BaseTableCell } from 'dashboard/components-next/table';
 
 defineProps({
@@ -19,12 +20,6 @@ defineProps({
 const emit = defineEmits(['edit', 'delete']);
 
 const { t } = useI18n();
-
-const getFormattedPermissions = role => {
-  return role.permissions
-    .map(event => t(getI18nKey('CUSTOM_ROLE.PERMISSIONS', event)))
-    .join(', ');
-};
 </script>
 
 <template>
@@ -34,22 +29,27 @@ const getFormattedPermissions = role => {
     :item="customRole"
   >
     <template #default>
-      <BaseTableCell>
+      <BaseTableCell class="max-w-40">
         <span class="text-body-main text-n-slate-12 truncate block">
           {{ customRole.name }}
         </span>
       </BaseTableCell>
 
-      <BaseTableCell>
-        <span class="text-body-main text-n-slate-11 truncate block">
+      <BaseTableCell class="max-w-xs">
+        <span class="text-body-main text-n-slate-11 line-clamp-2 block">
           {{ customRole.description }}
         </span>
       </BaseTableCell>
 
-      <BaseTableCell>
-        <span class="text-body-main text-n-slate-11 block">
-          {{ getFormattedPermissions(customRole) }}
-        </span>
+      <BaseTableCell class="max-w-sm">
+        <div class="flex flex-wrap gap-1.5">
+          <Label
+            v-for="permission in customRole.permissions"
+            :key="permission"
+            :label="t(getI18nKey('CUSTOM_ROLE.PERMISSIONS', permission))"
+            compact
+          />
+        </div>
       </BaseTableCell>
 
       <BaseTableCell align="end" class="w-24">
