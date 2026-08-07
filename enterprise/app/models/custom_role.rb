@@ -24,6 +24,7 @@
 # - 'contact_manage': Can manage contacts.
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.
+# - 'campaign_manage': Can manage campaigns.
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -41,6 +42,7 @@ class CustomRole < ApplicationRecord
     contact_manage
     report_manage
     knowledge_base_manage
+    campaign_manage
   ].freeze
 
   validates :name, presence: true
