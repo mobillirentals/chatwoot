@@ -3,9 +3,11 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { messageStamp } from 'shared/helpers/timeHelper';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Label from 'dashboard/components-next/label/Label.vue';
 import LiveChatCampaignDetails from './LiveChatCampaignDetails.vue';
 import SMSCampaignDetails from './SMSCampaignDetails.vue';
@@ -42,6 +44,13 @@ const props = defineProps({
   scheduledAt: {
     type: Number,
     default: 0,
+  },
+  // Only set for a bulk dispatch that's actually scheduled for the future (draft/immediate
+  // sends leave this null) — drives a small badge next to the status pill, kept separate from
+  // scheduledAt above so that field's own meaning (used in the row further down) stays untouched.
+  scheduledFor: {
+    type: Number,
+    default: null,
   },
   // Only set on the WhatsApp page, where label-based campaigns and spreadsheet bulk dispatches
   // now share one list — the tag is what tells the two apart at a glance. Left blank (the
@@ -111,6 +120,13 @@ const campaignStatus = computed(() => {
   return t('CAMPAIGN.SMS.CARD.STATUS.SCHEDULED');
 });
 
+const formattedScheduledFor = computed(() => {
+  if (!props.scheduledFor) return '';
+  // Matches SMSCampaignDetails' own scheduledAt handling just below: messageStamp expects unix
+  // seconds and multiplies by 1000 itself, so wrap in `new Date` without doing that here too.
+  return messageStamp(new Date(props.scheduledFor), 'LLL d, h:mm a');
+});
+
 const inboxName = computed(() => props.inbox?.name || '');
 
 const inboxIcon = computed(() => {
@@ -138,6 +154,16 @@ const inboxIcon = computed(() => {
         >
           {{ campaignStatus }}
         </span>
+        <Label
+          v-if="formattedScheduledFor"
+          :label="formattedScheduledFor"
+          color="teal"
+          compact
+        >
+          <template #icon>
+            <Icon icon="i-lucide-calendar-clock" class="size-3.5" />
+          </template>
+        </Label>
         <Label v-if="typeLabel" :label="typeLabel" :color="typeColor" compact />
       </div>
       <div

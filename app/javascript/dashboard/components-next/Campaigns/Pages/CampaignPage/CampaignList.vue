@@ -31,6 +31,7 @@ const handleDetails = campaign => emit('details', campaign);
       :sender="campaign.sender"
       :inbox="campaign.inbox"
       :scheduled-at="campaign.scheduled_at"
+      :scheduled-for="campaign.scheduled_for"
       :is-live-chat-type="isLiveChatType"
       :type-label="campaign.type_label"
       :type-color="campaign.type_color"
