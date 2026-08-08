@@ -15,7 +15,21 @@ class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::B
                     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   end
 
-  def show; end
+  # Recipients only get materialized as real rows when DispatchService actually runs (immediate
+  # send, or the scheduler firing later — see TriggerScheduledDispatchJob). Before that, a
+  # `scheduled` dispatch has zero Recipient records, so the details dialog would show nothing
+  # despite the file already being uploaded and validated. Re-read + re-validate it here (same
+  # inputs DispatchService itself will use) purely to preview who'll receive it — nothing here is
+  # persisted, so it can't drift from or duplicate what the real send creates later.
+  def show
+    return unless @dispatch.scheduled? && @dispatch.file.attached?
+
+    parsed = WhatsappBulkDispatch::SpreadsheetReaderService.new(attachment: @dispatch.file).read
+    validation = WhatsappBulkDispatch::ValidationService.new(
+      rows: parsed[:rows], column_mapping: @dispatch.column_mapping, required_variable_names: @dispatch.variable_names
+    ).call
+    @preview_recipients = validation[:valid_rows]
+  end
 
   # Uploads the file and returns headers + a suggested column mapping. Nothing is persisted as
   # column_mapping yet — that only happens once the operator confirms it in #update. `variable_names`
