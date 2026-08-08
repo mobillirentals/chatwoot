@@ -129,6 +129,11 @@ const toDisplayItem = (record, kind) => {
       kind === 'campaign'
         ? record.scheduled_at
         : Math.floor(new Date(record.created_at).getTime() / 1000),
+    // Only bulk dispatches need this: their own scheduled_at is nullable (draft/immediate
+    // sends never set it) and distinct from scheduled_at above, which always falls back to
+    // created_at for the "Enviado de X em Y" row further down — this feeds a separate badge
+    // next to the status pill instead, so that row's meaning stays exactly as it was.
+    scheduled_for: kind === 'bulk_dispatch' ? record.scheduled_at : null,
     type_label:
       kind === 'campaign'
         ? t('CAMPAIGN.WHATSAPP.CREATE_MENU.LABEL_BASED')
