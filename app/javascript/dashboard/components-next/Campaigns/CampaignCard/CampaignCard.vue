@@ -127,6 +127,15 @@ const formattedScheduledFor = computed(() => {
   return messageStamp(new Date(props.scheduledFor), 'LLL d, h:mm a');
 });
 
+// Completed dispatches keep their original scheduled_at (it's when they were due to fire, which
+// for a finished send is effectively when it went out) — a check mark instead of a clock tells
+// the two states apart at a glance: already sent vs. still waiting to fire.
+const scheduledForIcon = computed(() =>
+  props.status === STATUS_COMPLETED
+    ? 'i-lucide-calendar-check'
+    : 'i-lucide-calendar-clock'
+);
+
 const inboxName = computed(() => props.inbox?.name || '');
 
 const inboxIcon = computed(() => {
@@ -161,7 +170,7 @@ const inboxIcon = computed(() => {
           compact
         >
           <template #icon>
-            <Icon icon="i-lucide-calendar-clock" class="size-3.5" />
+            <Icon :icon="scheduledForIcon" class="size-3.5" />
           </template>
         </Label>
         <Label v-if="typeLabel" :label="typeLabel" :color="typeColor" compact />
