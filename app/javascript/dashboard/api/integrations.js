@@ -38,6 +38,27 @@ class IntegrationsAPI extends ApiClient {
       shop_domain: shopDomain,
     });
   }
+
+  getWhatsappCheckerStatus() {
+    return axios.get(`${this.baseUrl()}/integrations/whatsapp_number_checker`);
+  }
+
+  disconnectWhatsappChecker() {
+    return axios.delete(
+      `${this.baseUrl()}/integrations/whatsapp_number_checker`
+    );
+  }
+
+  // responseType blob: essa chamada busca a imagem do QR code (nao JSON) — o componente
+  // converte pra um object URL local pra exibir num <img>.
+  getWhatsappCheckerQr() {
+    return axios.get(
+      `${this.baseUrl()}/integrations/whatsapp_number_checker/qr`,
+      {
+        responseType: 'blob',
+      }
+    );
+  }
 }
 
 export default new IntegrationsAPI();

@@ -133,6 +133,11 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
       @contact_inbox = build_contact_inbox
       process_avatar_from_url
     end
+
+    # So chega aqui pra criacao manual (form "Novo Contato") — importacao via CSV usa
+    # DataImportJob/Contact.import direto, e contato criado por mensagem recebida usa
+    # ContactInboxWithContactBuilder — nenhum dos dois passa por este controller.
+    Contacts::WhatsappPresenceCheckJob.perform_later(@contact.id)
   end
 
   def update

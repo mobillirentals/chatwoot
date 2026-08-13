@@ -253,6 +253,14 @@ shopify:
   allow_multiple_hooks: false
   visible_properties: []
 
+whatsapp_number_checker:
+  id: whatsapp_number_checker
+  logo: whatsapp_number_checker.png
+  i18n_key: whatsapp_number_checker
+  hook_type: account
+  allow_multiple_hooks: false
+  visible_properties: ['connected_number']
+
 leadsquared:
   id: leadsquared
   feature_flag: crm_integration

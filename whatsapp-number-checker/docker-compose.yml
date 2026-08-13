@@ -1,0 +1,31 @@
+# Build/Dockerfile continuam 100% autocontidos nesta pasta — so a REDE passa a ser
+# compartilhada com o app principal (`chatwoot-develop_default`, criada automaticamente pelo
+# docker-compose.yaml da raiz), pra o container `rails` conseguir chamar
+# `http://whatsapp-number-checker:3300` pelo nome. Nao entra no `docker compose up` da
+# aplicacao (continua um comando separado) e nenhum arquivo fora desta pasta foi alterado.
+#
+# Rodar:    docker compose -f whatsapp-number-checker/docker-compose.yml up -d --build
+#           (precisa do docker-compose.yaml principal já ter subido ao menos uma vez, pra
+#           a rede `chatwoot-develop_default` existir)
+# Remover:  docker compose -f whatsapp-number-checker/docker-compose.yml down
+#           (depois, se quiser tirar o modulo inteiro do projeto: apagar esta pasta)
+services:
+  whatsapp-number-checker:
+    build: .
+    image: whatsapp-number-checker:local
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PORT=3300
+    ports:
+      - '3300:3300'
+    volumes:
+      - ./auth_session:/app/auth_session
+    networks:
+      - default
+
+networks:
+  default:
+    external: true
+    name: chatwoot-develop_default

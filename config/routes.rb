@@ -391,6 +391,9 @@ Rails.application.routes.draw do
                 get :list_all_channels
               end
             end
+            resource :whatsapp_number_checker, only: [:show, :destroy], controller: 'whatsapp_number_checker' do
+              collection { get :qr }
+            end
             resource :dyte, controller: 'dyte', only: [] do
               collection do
                 post :create_a_meeting

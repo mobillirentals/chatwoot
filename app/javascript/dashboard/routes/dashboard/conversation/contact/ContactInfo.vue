@@ -17,6 +17,8 @@ import ComposeConversation from 'dashboard/components-next/NewConversation/Compo
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
+import StatusLabel from 'dashboard/components-next/label/Label.vue';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 
 export default {
   components: {
@@ -30,6 +32,8 @@ export default {
     ContactDeleteModal,
     VoiceCallButton,
     InlineInput,
+    StatusLabel,
+    Icon,
   },
   props: {
     contact: {
@@ -65,6 +69,12 @@ export default {
     },
     additionalAttributes() {
       return this.contact.additional_attributes || {};
+    },
+    // Preenchido de forma assincrona por Contacts::WhatsappPresenceCheckJob (so pra contato
+    // criado manualmente — ver contacts_controller.rb#create) — fica ausente ate o job rodar,
+    // ou pra sempre se o servico de verificacao nao estiver configurado. Puramente informativo.
+    whatsappVerification() {
+      return this.contact.custom_attributes?.whatsapp_verification;
     },
     location() {
       const {
@@ -259,6 +269,28 @@ export default {
             editable
             @update="value => onFieldUpdate('phone_number', value)"
           />
+          <StatusLabel
+            v-if="whatsappVerification"
+            :label="
+              whatsappVerification.exists
+                ? $t('CONTACT_PANEL.WHATSAPP_VERIFICATION.CONFIRMED')
+                : $t('CONTACT_PANEL.WHATSAPP_VERIFICATION.NOT_FOUND')
+            "
+            :color="whatsappVerification.exists ? 'teal' : 'amber'"
+            compact
+            class="ltr:ml-1 rtl:mr-1"
+          >
+            <template #icon>
+              <Icon
+                :icon="
+                  whatsappVerification.exists
+                    ? 'i-lucide-circle-check'
+                    : 'i-lucide-circle-alert'
+                "
+                class="size-3.5"
+              />
+            </template>
+          </StatusLabel>
           <ContactInfoRow
             v-if="contact.identifier"
             :value="contact.identifier"

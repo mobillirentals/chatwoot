@@ -394,6 +394,25 @@
         "CONFIRM": "Yes, delete",
         "CANCEL": "Cancel"
       }
+    },
+    "WHATSAPP_NUMBER_CHECKER": {
+      "HEADER": "WhatsApp Number Checker",
+      "CONNECTED_AS": "Connected as +{number}",
+      "STATUS": {
+        "CONNECTED": "Connected",
+        "WAITING_QR": "Scan the QR code with WhatsApp to connect",
+        "CONNECTING": "Connecting…",
+        "DISCONNECTED": "Disconnected",
+        "UNAVAILABLE": "Service unavailable"
+      },
+      "DISCONNECT_SUCCESS": "WhatsApp number disconnected successfully",
+      "DISCONNECT_ERROR": "Could not disconnect, please try again",
+      "DELETE": {
+        "TITLE": "Disconnect this WhatsApp number?",
+        "MESSAGE": "The number will be logged out of WhatsApp and stop verifying numbers until reconnected.",
+        "CONFIRM": "Yes, disconnect",
+        "CANCEL": "Cancel"
+      }
     }
   },
   "CAPTAIN": {

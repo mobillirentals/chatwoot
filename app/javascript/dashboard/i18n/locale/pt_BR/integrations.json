@@ -394,6 +394,25 @@
         "CONFIRM": "Sim, excluir",
         "CANCEL": "Cancelar"
       }
+    },
+    "WHATSAPP_NUMBER_CHECKER": {
+      "HEADER": "Verificação de WhatsApp",
+      "CONNECTED_AS": "Conectado como +{number}",
+      "STATUS": {
+        "CONNECTED": "Conectado",
+        "WAITING_QR": "Escaneie o QR code com o WhatsApp para conectar",
+        "CONNECTING": "Conectando…",
+        "DISCONNECTED": "Desconectado",
+        "UNAVAILABLE": "Serviço indisponível"
+      },
+      "DISCONNECT_SUCCESS": "Número do WhatsApp desconectado com sucesso",
+      "DISCONNECT_ERROR": "Não foi possível desconectar, tente novamente",
+      "DELETE": {
+        "TITLE": "Desconectar este número do WhatsApp?",
+        "MESSAGE": "O número será deslogado do WhatsApp e vai parar de verificar números até ser reconectado.",
+        "CONFIRM": "Sim, desconectar",
+        "CANCEL": "Cancelar"
+      }
     }
   },
   "CAPTAIN": {

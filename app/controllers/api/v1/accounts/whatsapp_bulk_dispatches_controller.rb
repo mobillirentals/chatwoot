@@ -56,6 +56,7 @@ class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::B
     @validation = WhatsappBulkDispatch::ValidationService.new(
       rows: parsed[:rows], column_mapping: @dispatch.column_mapping, required_variable_names: @dispatch.variable_names
     ).call
+    @whatsapp_check = whatsapp_check_summary(@validation[:valid_rows])
 
     @preview = WhatsappBulkDispatch::PreviewService.new(
       dispatch: @dispatch, valid_rows: @validation[:valid_rows], template_params: @dispatch.liquid_template_params
@@ -99,5 +100,21 @@ class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::B
 
   def column_mapping_params
     params.require(:column_mapping).permit!
+  end
+
+  # Checagem consultiva contra o whatsapp-number-checker (servico standalone, ver
+  # .ai/features/whatsapp-number-checker/status.md) — puramente informativa, nunca bloqueia a
+  # validacao da planilha. Se o servico estiver fora do ar ou nao configurado, tudo cai em
+  # `unchecked` e o front so deixa de mostrar a contagem, sem erro nenhum pro operador.
+  def whatsapp_check_summary(valid_rows)
+    return { confirmed: 0, not_found: 0, unchecked: 0 } if valid_rows.blank?
+
+    results = Integrations::WhatsappNumberChecker::Client.new.check(valid_rows.pluck(:phone_number))
+    existence = valid_rows.map { |row| results[row[:phone_number]] }
+
+    { confirmed: existence.count(true), not_found: existence.count(false), unchecked: existence.count(&:nil?) }
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsappBulkDispatch] whatsapp existence check failed: #{e.message}")
+    { confirmed: 0, not_found: 0, unchecked: valid_rows.size }
   end
 end

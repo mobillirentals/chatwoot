@@ -1,0 +1,17 @@
+{
+  "name": "whatsapp-number-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Servico standalone para verificar se um numero existe no WhatsApp (protocolo multi-device via Baileys). Isolado de proposito: sem nenhuma integracao com o resto da aplicacao.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.0",
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  }
+}

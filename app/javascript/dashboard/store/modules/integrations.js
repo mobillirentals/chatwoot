@@ -89,6 +89,22 @@ export const actions = {
     return null;
   },
 
+  getWhatsappCheckerStatus: async () => {
+    try {
+      const response = await IntegrationsAPI.getWhatsappCheckerStatus();
+      return response.data;
+    } catch (error) {
+      return null;
+    }
+  },
+  disconnectWhatsappChecker: async ({ commit }) => {
+    await IntegrationsAPI.disconnectWhatsappChecker();
+    commit(types.default.DELETE_INTEGRATION, {
+      id: 'whatsapp_number_checker',
+      enabled: false,
+    });
+  },
+
   deleteIntegration: async ({ commit }, integrationId) => {
     commit(types.default.SET_INTEGRATIONS_UI_FLAG, { isDeleting: true });
     try {
