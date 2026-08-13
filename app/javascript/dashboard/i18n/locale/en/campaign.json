@@ -247,6 +247,7 @@
           "VALIDATION": {
             "TITLE": "Review",
             "VALID_COUNT": "{count} valid recipients",
+            "WHATSAPP_CHECK": "{confirmed} of {total} numbers confirmed on WhatsApp",
             "REJECTED_COUNT": "{count} rows rejected",
             "REJECTED_REASON": "Row {row}: {reason}",
             "NO_VALID_ROWS": "No valid recipients found in this spreadsheet."

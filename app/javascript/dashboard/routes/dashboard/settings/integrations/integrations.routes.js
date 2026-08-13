@@ -9,6 +9,7 @@ import Slack from './Slack.vue';
 import Linear from './Linear.vue';
 import Notion from './Notion.vue';
 import Shopify from './Shopify.vue';
+import WhatsappNumberChecker from './WhatsappNumberChecker.vue';
 
 export default {
   routes: [
@@ -87,6 +88,14 @@ export default {
             permissions: ['administrator'],
           },
           props: route => ({ error: route.query.error }),
+        },
+        {
+          path: 'whatsapp_number_checker',
+          name: 'settings_integrations_whatsapp_number_checker',
+          component: WhatsappNumberChecker,
+          meta: {
+            permissions: ['administrator'],
+          },
         },
         {
           path: ':integration_id',

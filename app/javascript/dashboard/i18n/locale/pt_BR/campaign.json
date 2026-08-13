@@ -247,6 +247,7 @@
           "VALIDATION": {
             "TITLE": "Revisão",
             "VALID_COUNT": "{count} destinatários válidos",
+            "WHATSAPP_CHECK": "{confirmed} de {total} números confirmados no WhatsApp",
             "REJECTED_COUNT": "{count} linhas rejeitadas",
             "REJECTED_REASON": "Linha {row}: {reason}",
             "NO_VALID_ROWS": "Nenhum destinatário válido encontrado nesta planilha."

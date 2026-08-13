@@ -50,6 +50,12 @@ const columnMapping = reactive({});
 const PHONE_KEY = '__phone__';
 
 const validation = ref(null);
+// confirmed+notFound (nao inclui unchecked) — total de numeros que o servico de verificacao
+// de fato respondeu; 0 quando o servico esta fora do ar/nao configurado, escondendo a linha.
+const whatsappCheckTotal = computed(() => {
+  const check = validation.value?.whatsappCheck;
+  return check ? check.confirmed + check.not_found : 0;
+});
 const sendMode = ref('now');
 const scheduledAt = ref(null);
 const showSendModeMenu = ref(false);
@@ -264,6 +270,7 @@ const handleConfirmMapping = async () => {
       validCount: data.valid_count,
       rejectedRows: data.rejected_rows,
       preview: data.preview,
+      whatsappCheck: data.whatsapp_check,
     };
     step.value = STEPS.REVIEW;
   } catch (error) {
@@ -516,6 +523,19 @@ defineExpose({ dialogRef });
             t('CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.VALIDATION.VALID_COUNT', {
               count: validation.validCount,
             })
+          }}
+        </p>
+        <!-- So aparece quando o servico de verificacao respondeu algo de verdade — se estiver
+        fora do ar/nao configurado, confirmed+notFound = 0 e essa linha some, sem erro nenhum. -->
+        <p v-if="whatsappCheckTotal > 0" class="text-sm text-n-slate-11">
+          {{
+            t(
+              'CAMPAIGN.WHATSAPP.BULK_DISPATCH.STEPS.VALIDATION.WHATSAPP_CHECK',
+              {
+                confirmed: validation.whatsappCheck.confirmed,
+                total: whatsappCheckTotal,
+              }
+            )
           }}
         </p>
         <div v-if="validation.rejectedRows.length" class="flex flex-col gap-1">

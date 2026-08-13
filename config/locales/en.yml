@@ -430,6 +430,10 @@ en:
       name: 'LeadSquared'
       short_description: 'Sync your contacts and conversations with LeadSquared CRM.'
       description: 'Sync your contacts and conversations with LeadSquared CRM. This integration automatically creates leads in LeadSquared when new contacts are added, and logs conversation activity to provide your sales team with complete context.'
+    whatsapp_number_checker:
+      name: 'WhatsApp Number Checker'
+      short_description: 'Check whether a phone number is registered on WhatsApp.'
+      description: 'Connect a WhatsApp number to check whether other phone numbers are registered on WhatsApp before messaging them — used to avoid wasting sends on invalid numbers in bulk dispatches, new contacts and new conversations.'
   captain:
     copilot_message_required: Message is required
     copilot_error: 'Please connect an assistant to this inbox to use Copilot'

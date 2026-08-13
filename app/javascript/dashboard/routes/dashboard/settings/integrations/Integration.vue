@@ -21,7 +21,14 @@ const props = defineProps({
   integrationAction: { type: String, default: '' },
   actionButtonText: { type: String, default: '' },
   deleteConfirmationText: { type: Object, default: () => ({}) },
+  // Integrações que não seguem o fluxo padrão de hook (ex: sessão pareada por QR code em vez
+  // de OAuth) precisam de uma lógica própria de desconexão — emite `delete` em vez de chamar
+  // a action genérica. Nenhuma integração existente passa isso, então o comportamento delas
+  // não muda em nada.
+  useCustomDelete: { type: Boolean, default: false },
 });
+
+const emit = defineEmits(['delete']);
 
 const { t } = useI18n();
 const store = useStore();
@@ -45,6 +52,11 @@ const closeDeletePopup = () => {
 };
 
 const deleteIntegration = async () => {
+  if (props.useCustomDelete) {
+    emit('delete');
+    return;
+  }
+
   try {
     await store.dispatch('integrations/deleteIntegration', props.integrationId);
     useAlert(t('INTEGRATION_SETTINGS.DELETE.API.SUCCESS_MESSAGE'));
@@ -56,7 +68,9 @@ const deleteIntegration = async () => {
 const confirmDeletion = () => {
   closeDeletePopup();
   deleteIntegration();
-  router.push({ name: 'settings_applications' });
+  if (!props.useCustomDelete) {
+    router.push({ name: 'settings_applications' });
+  }
 };
 </script>
 

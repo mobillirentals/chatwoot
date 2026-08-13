@@ -3,6 +3,10 @@
     "NOT_AVAILABLE": "Not Available",
     "EMAIL_ADDRESS": "Email Address",
     "PHONE_NUMBER": "Phone number",
+    "WHATSAPP_VERIFICATION": {
+      "CONFIRMED": "Has WhatsApp",
+      "NOT_FOUND": "WhatsApp not found"
+    },
     "IDENTIFIER": "Identifier",
     "COPY_SUCCESSFUL": "Copied to clipboard successfully",
     "COMPANY": "Company",
