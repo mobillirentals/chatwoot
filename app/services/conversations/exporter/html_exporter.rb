@@ -5,9 +5,16 @@ require 'mini_magick'
 module Conversations
   module Exporter
     class HtmlExporter < BaseExporter
-      # Images are resized to this max width before base64 encoding.
-      # Keeps file size manageable while preserving legibility.
+      # Images are resized to fit within this box before base64 encoding. Keeps file size
+      # manageable, and — importantly for print — MAX_IMAGE_HEIGHT keeps any single image
+      # short enough to fit inside one A4 page's printable area (297mm - 15mm/20mm margins
+      # ≈ 990px), leaving room for the rest of that page's content. This is what makes it safe
+      # to give .attachment--image `page-break-inside: avoid` in show.html.erb — a tall
+      # portrait screenshot at native size used to overflow one page's height, and the browser
+      # printing engine can't honor "avoid" on a block taller than the page itself (it pushes
+      # the whole thing to the next page anyway and still cuts it mid-image).
       MAX_IMAGE_WIDTH  = 800
+      MAX_IMAGE_HEIGHT = 700
       IMAGE_QUALITY    = 75   # JPEG quality (1-100); 75 is visually lossless for documents
       EMBED_TIMEOUT    = 8    # seconds per image download
 
@@ -138,10 +145,10 @@ module Conversations
       end
 
       def compress_image(image)
-        # Resize only if wider than limit to avoid upscaling
-        if image.width > MAX_IMAGE_WIDTH
-          image.resize("#{MAX_IMAGE_WIDTH}x")
-        end
+        # ">" only shrinks images larger than the box (never upscales), fitting within BOTH
+        # dimensions while preserving aspect ratio — a tall portrait screenshot gets capped by
+        # height here, not just width.
+        image.resize("#{MAX_IMAGE_WIDTH}x#{MAX_IMAGE_HEIGHT}>")
 
         # Flatten transparent layers onto a white background to avoid black background in JPEGs
         image.combine_options do |c|

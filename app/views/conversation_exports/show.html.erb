@@ -33,6 +33,13 @@
          Só o cabecalho (pequeno, tamanho sempre previsivel) fica protegido de ficar orfao. */
       .conversation-header { page-break-after: avoid; }
 
+      /* .attachment--image is safe to protect: HtmlExporter::MAX_IMAGE_HEIGHT guarantees every
+         embedded image already fits within one page's printable height, so "avoid" can always
+         actually be honored here (unlike .conversation-block/.message-row above) — it just
+         pushes the image to start on a fresh page when it doesn't fit the remaining space,
+         instead of splitting it mid-image. */
+      .attachment--image { page-break-inside: avoid; }
+
       /* Ensure URLs are visible in print */
       a[href]::after {
         content: " [" attr(href) "]";
