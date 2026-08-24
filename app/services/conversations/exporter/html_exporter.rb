@@ -88,7 +88,7 @@ module Conversations
         attachments.map do |att|
           case att.file_type.to_sym
           when :image
-            { type: :image, data_uri: image_to_base64(att), filename: att.file&.filename.to_s }
+            decorate_image_attachment(att)
           when :audio
             { type: :audio, url: att.download_url, filename: att.file&.filename.to_s,
               size: human_size(att.file&.byte_size) }
@@ -104,6 +104,21 @@ module Conversations
           else
             { type: :other, url: att.download_url || att.external_url, filename: att.fallback_title }
           end
+        end
+      end
+
+      # GIFs chegam do WhatsApp classificadas como file_type :image (a API da Meta nao tem um
+      # tipo "animated image" separado), mas sao efetivamente um video curto — muitas vezes uma
+      # gravacao de tela. Achatar isso pra JPEG estatico pega SEMPRE o primeiro frame
+      # (MiniMagick#format usa page: 0 por padrao), que pode nao ter nada a ver com o conteudo
+      # real (ex: pegou o instante exato de um toque/circulo desenhado pelo app de gravacao).
+      # Tratado como :video (link, nao imagem embutida) — mais fiel que qualquer frame unico.
+      def decorate_image_attachment(att)
+        if att.file&.content_type == 'image/gif'
+          { type: :video, url: att.download_url, filename: att.file&.filename.to_s,
+            size: human_size(att.file&.byte_size) }
+        else
+          { type: :image, data_uri: image_to_base64(att), filename: att.file&.filename.to_s }
         end
       end
 
