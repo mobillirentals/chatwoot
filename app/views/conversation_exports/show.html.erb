@@ -25,8 +25,13 @@
 
       .no-print { display: none !important; }
 
-      .conversation-block { page-break-inside: avoid; }
-      .message-row        { page-break-inside: avoid; }
+      /* NÃO usar page-break-inside: avoid em .conversation-block/.message-row — ambos podem
+         ficar maiores que uma pagina inteira (conversa longa, ou mensagem com anexo de imagem
+         grande). Quando isso acontece, o navegador nao consegue honrar "avoid": ele empurra o
+         bloco inteiro pra pagina seguinte mesmo sem caber, deixando a pagina anterior com um
+         espaco em branco enorme, em cascata — e a imagem ainda corta no meio de qualquer jeito.
+         Só o cabecalho (pequeno, tamanho sempre previsivel) fica protegido de ficar orfao. */
+      .conversation-header { page-break-after: avoid; }
 
       /* Ensure URLs are visible in print */
       a[href]::after {
