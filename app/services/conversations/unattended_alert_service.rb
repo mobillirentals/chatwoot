@@ -107,14 +107,18 @@ class Conversations::UnattendedAlertService
   # Sem tipo de notificacao proprio de proposito: criar um novo `notification_type` custom
   # exigiria adicionar rotulo de preferencia de notificacao em quase 60 arquivos de i18n pra um
   # alerta interno estreito — reaproveita `assigned_conversation_new_message` (ja tem push/email
-  # funcionando) e conta com a nota privada abaixo pra dar o contexto real do motivo.
+  # funcionando).
   def escalate_to_administrators
-    Messages::MessageBuilder.new(nil, conversation, { content: layer2_note, private: true }).perform
+    note = Messages::MessageBuilder.new(nil, conversation, { content: layer2_note, private: true }).perform
 
     notify_users.each do |user|
       NotificationBuilder.new(
         notification_type: :assigned_conversation_new_message,
-        user: user, account: conversation.account, primary_actor: conversation
+        # secondary_actor vira o corpo da notificacao push/desktop (Notification#message_body).
+        # Sem isso (nosso job roda em background, sem Current.user) cai em nil e a notificacao
+        # chega como "Sem conteudo" — passar a nota que acabamos de criar mostra o motivo real
+        # (o texto de layer2_note) direto na notificacao, sem precisar abrir a conversa.
+        user: user, account: conversation.account, primary_actor: conversation, secondary_actor: note
       ).perform
     end
   end
