@@ -81,3 +81,10 @@ trash_cleanup_job:
   cron: '0 2 * * *'
   class: 'Trash::CleanupJob'
   queue: scheduled_jobs
+
+# executed every 2 minutes — mais frequente que o hub de 5 min acima porque a Camada 3 (agente
+# ausente) promete reagir rapido (limiar padrao de 5 min, ver Conversations::UnattendedAlertService)
+unattended_conversation_alert_scheduler_job:
+  cron: '*/2 * * * *'
+  class: 'Account::UnattendedConversationAlertSchedulerJob'
+  queue: scheduled_jobs
