@@ -12,10 +12,15 @@
 #     ADMINISTRADORES (nota interna + notificacao), sem reatribuir nada automaticamente.
 #
 # Camadas 1 e 3 sao mutuamente exclusivas em UMA mesma checagem (dependem do status atual do
-# agente, que so pode ser um), mas podem disparar as duas ao longo do MESMO ciclo se o status do
-# agente mudar entre checagens (ex: estava away, camada 3 disparou; agente fica online sem
-# responder, camada 1 dispara depois) — isso e intencional, cada uma e uma informacao nova.
+# agente, que so pode ser um). No MESMO ciclo, no maximo UMA mensagem pro cliente é enviada no
+# total (1 ou 3, a que disparar primeiro) — testado em producao e confirmado que 2 avisos
+# automaticos pro cliente em poucos minutos (ex: agente estava away, camada 3 disparou; virou
+# online sem responder, camada 1 disparou 4 min depois) passa impressao de excesso/robo
+# insistindo. Camada 2 (interna, pros administradores) continua independente e pode escalar
+# depois de qualquer uma das duas.
 class Conversations::UnattendedAlertService
+  CUSTOMER_LAYERS = [1, 3].freeze
+
   LAYER3_AWAY_MINUTES = ENV.fetch('UNATTENDED_ALERT_LAYER3_MINUTES', 5).to_i
   LAYER1_DELAY_MINUTES = ENV.fetch('UNATTENDED_ALERT_LAYER1_MINUTES', 10).to_i
   LAYER2_ESCALATE_MINUTES = ENV.fetch('UNATTENDED_ALERT_LAYER2_MINUTES', 30).to_i
@@ -65,6 +70,7 @@ class Conversations::UnattendedAlertService
 
   def try_layer(layer)
     return if layers_sent.include?(layer)
+    return if CUSTOMER_LAYERS.include?(layer) && customer_layer_already_sent?
 
     case layer
     when 1 then send_customer_message(LAYER1_MESSAGE)
@@ -76,7 +82,25 @@ class Conversations::UnattendedAlertService
     @layers_sent_changed = true
   end
 
+  def customer_layer_already_sent?
+    layers_sent.intersect?(CUSTOMER_LAYERS)
+  end
+
+  # Fora da janela de 24h do WhatsApp (`conversation.can_reply?` — mesmo metodo que ja pinta o
+  # banner "Restricoes de janela de mensagem de 24 horas" na UI), o envio via API é rejeitado pela
+  # Meta: mensagem de texto livre nao chega ao cliente, so fica com "Falha ao enviar" no Chatwoot.
+  # Em vez de tentar e falhar (e falhar de novo a cada checagem), pula o envio silenciosamente —
+  # a camada ainda e marcada como "tentada" nesse ciclo pelo chamador (try_layer), entao nao fica
+  # reprocessando a cada 2 min.
+  def customer_reachable?
+    return @customer_reachable if defined?(@customer_reachable)
+
+    @customer_reachable = conversation.can_reply?
+  end
+
   def send_customer_message(content)
+    return unless customer_reachable?
+
     Messages::MessageBuilder.new(nil, conversation, { content: content, private: false }).perform
   end
 
@@ -85,9 +109,7 @@ class Conversations::UnattendedAlertService
   # alerta interno estreito — reaproveita `assigned_conversation_new_message` (ja tem push/email
   # funcionando) e conta com a nota privada abaixo pra dar o contexto real do motivo.
   def escalate_to_administrators
-    note = "⚠️ Conversa aguardando resposta há mais de #{LAYER2_ESCALATE_MINUTES} min sem " \
-           'retorno do agente responsável.'
-    Messages::MessageBuilder.new(nil, conversation, { content: note, private: true }).perform
+    Messages::MessageBuilder.new(nil, conversation, { content: layer2_note, private: true }).perform
 
     notify_users.each do |user|
       NotificationBuilder.new(
@@ -99,6 +121,15 @@ class Conversations::UnattendedAlertService
 
   def notify_users
     (conversation.account.administrators.to_a + [conversation.assignee].compact).uniq
+  end
+
+  def layer2_note
+    base = "⚠️ Conversa aguardando resposta há mais de #{LAYER2_ESCALATE_MINUTES} min sem " \
+           'retorno do agente responsável.'
+    return base if customer_reachable?
+
+    "#{base} Cliente fora da janela de 24h do WhatsApp — mensagem automática pro cliente não foi " \
+      'enviada; só um modelo (template) chega até ele agora.'
   end
 
   def layers_sent
