@@ -18,6 +18,11 @@
 # online sem responder, camada 1 disparou 4 min depois) passa impressao de excesso/robo
 # insistindo. Camada 2 (interna, pros administradores) continua independente e pode escalar
 # depois de qualquer uma das duas.
+#
+# Fora do horário de atendimento (`inbox.out_of_office?` — mesmo Horário de Funcionamento nativo
+# que ja dispara a mensagem automatica de "fora do horario"), nenhuma camada dispara: não faz
+# sentido cobrar resposta de agente nem acordar administrador por algo esperando durante a
+# madrugada/fim de semana, quando ninguem esta escalado pra responder mesmo.
 class Conversations::UnattendedAlertService
   CUSTOMER_LAYERS = [1, 3].freeze
 
@@ -34,6 +39,7 @@ class Conversations::UnattendedAlertService
 
   def perform
     return if waited_minutes.nil?
+    return if conversation.inbox.out_of_office?
 
     try_layer(3) if layer3_due?
     try_layer(1) if layer1_due?
