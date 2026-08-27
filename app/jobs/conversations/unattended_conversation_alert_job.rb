@@ -12,6 +12,14 @@ class Conversations::UnattendedConversationAlertJob < ApplicationJob
     agent_status_by_id = OnlineStatusTracker.get_available_users(account.id)
 
     conversations.each do |conversation|
+      # O lote inteiro foi carregado no INICIO do metodo (candidate_conversations executa a query
+      # e materializa o array aqui) — se um agente responder ENQUANTO esse loop ainda esta
+      # processando outras conversas do mesmo lote, o objeto em memoria fica desatualizado.
+      # Recarrega bem antes de decidir, pra fechar essa janela (que sem isso ficaria do tamanho
+      # do lote inteiro) pro tempo de uma unica query.
+      conversation.reload
+      next if conversation.waiting_since.blank? || conversation.assignee_id.blank?
+
       Conversations::UnattendedAlertService.new(
         conversation: conversation,
         agent_status: agent_status_by_id[conversation.assignee_id.to_s] || 'offline'
