@@ -89,8 +89,9 @@ class BotFlow::Engine
     if MOTOFACIL_ANNOUNCEMENT_ENABLED
       messages = [
         "#{greeting} Bem-vindo à **Mobílli Rentals**.",
-        '📢 Estamos migrando nossa plataforma de cobranças para o **Moto Fácil**. Precisa de ' \
-        'ajuda pra acessar, ou prefere seguir com o atendimento normal?'
+        '📢 Estamos migrando nossa plataforma de cobranças! ' \
+        '🔄 O acesso aos pagamentos será feito por uma nova plataforma. ' \
+        'Precisa de ajuda pra acessar, ou prefere seguir com o atendimento normal?'
       ]
       { messages: messages, buttons: inicio_buttons, next_state: 'triagem_inicial' }
     else
@@ -336,8 +337,8 @@ class BotFlow::Engine
 
   def inicio_buttons
     [
-      { title: '📱 Moto Fácil',  value: 'moto facil' },
-      { title: '🎧 Atendimento', value: 'atendimento normal' }
+      { title: '📱 Ajuda plataforma', value: 'moto facil' },
+      { title: '🎧 Atendimento',      value: 'atendimento normal' }
     ]
   end
 
