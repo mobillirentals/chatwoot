@@ -103,10 +103,14 @@ class BotFlow::Engine
     end
   end
 
-  # "Moto Fácil" já é resolvido pelo atalho global em `process` (tanto no toque do botão
-  # quanto em texto livre) — aqui só trata quem escolhe seguir com o atendimento normal.
+  # Match explícito pro texto do botão em vez de confiar só no atalho global: o retorno do
+  # botão de resposta rápida do WhatsApp/Chatwoot é o TÍTULO visível ("Ajuda plataforma"), não
+  # o `value` interno configurado em `inicio_buttons` — confirmado em produção (o `value`
+  # "moto facil" nunca chega de volta no toque do botão, só quando o cliente digita de verdade).
   def handle_triagem_inicial
     case normalize(@user_input)
+    when match_any('ajuda plataforma', 'moto facil', '1')
+      transfer_to('suporte app', 'Vou te encaminhar para o nosso time de suporte da nova plataforma. Um instante! 📱')
     when match_any('atendimento normal', 'atendimento', 'normal', '2')
       { messages: ['Sou o assistente virtual. Como posso te ajudar?'], buttons: menu_buttons, next_state: 'menu' }
     else
@@ -337,7 +341,7 @@ class BotFlow::Engine
 
   def inicio_buttons
     [
-      { title: '📱 Ajuda plataforma', value: 'moto facil' },
+      { title: '📱 Ajuda plataforma', value: 'ajuda plataforma' },
       { title: '🎧 Atendimento',      value: 'atendimento normal' }
     ]
   end
