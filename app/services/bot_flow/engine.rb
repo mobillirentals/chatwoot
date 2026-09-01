@@ -1,6 +1,7 @@
 class BotFlow::Engine
   STATES = %w[
     start
+    triagem_inicial
     menu
     financeiro
     atendimento
@@ -16,6 +17,10 @@ class BotFlow::Engine
   ].freeze
 
   AGENDAMENTO_URL = ENV.fetch('AGENDAMENTO_URL', 'https://mobillirentals.com.br/agendamento').freeze
+
+  # Aviso temporário da migração pro Moto Fácil — desligar aqui (sem precisar de outro deploy
+  # de código, só variável de ambiente) quando a migração estiver estabilizada.
+  MOTOFACIL_ANNOUNCEMENT_ENABLED = ActiveModel::Type::Boolean.new.cast(ENV.fetch('BOTFLOW_MOTOFACIL_ANNOUNCEMENT', true))
 
   def initialize(conversation, user_input)
     @conversation = conversation
@@ -50,6 +55,7 @@ class BotFlow::Engine
 
     result = case state
     when 'start'                   then handle_start
+    when 'triagem_inicial'         then handle_triagem_inicial
     when 'menu'                    then handle_menu
     when 'financeiro'              then handle_financeiro
     when 'atendimento'             then handle_atendimento
@@ -79,12 +85,33 @@ class BotFlow::Engine
     # Nome nativo do WhatsApp: a saudação não depende de nenhuma chamada de rede.
     name     = contact_first_name
     greeting = name.present? ? "Olá, **#{name}**! 👋" : 'Olá! 👋'
-    messages = [
-      "#{greeting} Bem-vindo à **Mobílli Rentals**.",
-      'Sou o assistente virtual. Como posso te ajudar?'
-    ]
 
-    { messages: messages, buttons: menu_buttons, next_state: 'menu' }
+    if MOTOFACIL_ANNOUNCEMENT_ENABLED
+      messages = [
+        "#{greeting} Bem-vindo à **Mobílli Rentals**.",
+        '📢 Estamos migrando nossa plataforma de cobranças! ' \
+        '🔄 O acesso aos pagamentos será feito por uma nova plataforma. ' \
+        'Precisa de ajuda pra acessar, ou prefere seguir com o atendimento normal?'
+      ]
+      { messages: messages, buttons: inicio_buttons, next_state: 'triagem_inicial' }
+    else
+      messages = [
+        "#{greeting} Bem-vindo à **Mobílli Rentals**.",
+        'Sou o assistente virtual. Como posso te ajudar?'
+      ]
+      { messages: messages, buttons: menu_buttons, next_state: 'menu' }
+    end
+  end
+
+  # "Moto Fácil" já é resolvido pelo atalho global em `process` (tanto no toque do botão
+  # quanto em texto livre) — aqui só trata quem escolhe seguir com o atendimento normal.
+  def handle_triagem_inicial
+    case normalize(@user_input)
+    when match_any('atendimento normal', 'atendimento', 'normal', '2')
+      { messages: ['Sou o assistente virtual. Como posso te ajudar?'], buttons: menu_buttons, next_state: 'menu' }
+    else
+      { messages: ['Por favor, escolha uma das opções:'], buttons: inicio_buttons, next_state: 'triagem_inicial' }
+    end
   end
 
   def handle_menu
@@ -307,6 +334,13 @@ class BotFlow::Engine
   end
 
   # ── Botões (títulos ≤ 20 caracteres — limite do WhatsApp) ─────────────────────
+
+  def inicio_buttons
+    [
+      { title: '📱 Ajuda plataforma', value: 'moto facil' },
+      { title: '🎧 Atendimento',      value: 'atendimento normal' }
+    ]
+  end
 
   def menu_buttons
     [
