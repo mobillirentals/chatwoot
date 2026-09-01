@@ -37,6 +37,17 @@ class BotFlow::Engine
       return result
     end
 
+    # Atalho pra migração da plataforma de cobranças (Moto Fácil, ago/2026): pula o menu
+    # inteiro e cai direto no time de suporte, inclusive vindo de 'start' (é exatamente o
+    # estado de quem clica no link do app antigo com esse texto pré-preenchido). Só não
+    # interrompe quem já está em atendimento humano.
+    if moto_facil_keyword?(@user_input) && state != 'atendente'
+      result = transfer_to('suporte app',
+                           'Vou te encaminhar para o nosso time de suporte da nova plataforma **Moto Fácil**. Um instante! 📱')
+      save_state(result[:next_state])
+      return result
+    end
+
     result = case state
     when 'start'                   then handle_start
     when 'menu'                    then handle_menu
@@ -407,6 +418,14 @@ class BotFlow::Engine
   # Comando global de navegação: qualquer um destes retorna ao menu principal.
   def back_command?(input)
     ['voltar', 'menu', 'inicio', 'voltar ao menu', 'menu principal', 'voltar ao inicio'].include?(normalize(input))
+  end
+
+  # Detecta a menção ao Moto Fácil em texto livre (substring, não precisa ser exato) —
+  # cobre tanto "Moto Fácil" (com espaço, texto pré-preenchido do botão no app antigo)
+  # quanto "motofacil.club"/"motofacil" grudado (normalize vira "motofacil club"/"motofacil").
+  def moto_facil_keyword?(input)
+    normalized = normalize(input)
+    normalized.include?('moto facil') || normalized.include?('motofacil')
   end
 
   # Dica textual de navegação (substitui o antigo botão "Voltar" — libera slot de botão).
