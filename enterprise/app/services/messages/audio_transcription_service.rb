@@ -7,6 +7,9 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
   # transcription.
   TRANSCRIPTION_BYTE_LIMIT = 25_000_000
 
+  AZURE_HOSTS = ['.openai.azure.com', '.cognitiveservices.azure.com'].freeze
+  AZURE_API_VERSION = '2024-06-01'.freeze
+
   attr_reader :attachment, :message, :account, :transcription_model
 
   def initialize(attachment)
@@ -15,6 +18,7 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
     @message = attachment.message
     @account = message.account
     @transcription_model = Llm::FeatureRouter.resolve(feature: 'audio_transcription', account: account)[:model]
+    @client = azure_transcription_client if azure_endpoint?
   end
 
   def perform
@@ -31,6 +35,30 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
   end
 
   private
+
+  # O Azure não expõe transcrição na camada OpenAI-compatível: `/openai/v1/audio/transcriptions`
+  # devolve 404 e só a rota clássica `/openai/deployments/{deployment}/audio/transcriptions`
+  # responde (comprovado com o mesmo arquivo, chave e recurso). O gem cobre esse formato com
+  # `api_type: :azure` (troca o header pra `api-key` e acrescenta `?api-version=`), mas aí o
+  # `uri_base` precisa embutir o deployment — que varia por modelo. Por isso um client próprio aqui
+  # em vez de reaproveitar o do LegacyBaseOpenAiService, que é compartilhado com o upload de PDF
+  # (esse funciona no `/v1` e continua como está).
+  def azure_endpoint?
+    host = URI.parse(uri_base).host.to_s
+    AZURE_HOSTS.any? { |suffix| host.end_with?(suffix) }
+  rescue URI::InvalidURIError
+    false
+  end
+
+  def azure_transcription_client
+    OpenAI::Client.new(
+      access_token: InstallationConfig.find_by!(name: 'CAPTAIN_OPEN_AI_API_KEY').value,
+      uri_base: "#{uri_base.chomp('/')}/deployments/#{transcription_model}",
+      api_type: :azure,
+      api_version: AZURE_API_VERSION,
+      log_errors: Rails.env.development?
+    )
+  end
 
   def can_transcribe?
     return false unless account.feature_enabled?('captain_integration')
