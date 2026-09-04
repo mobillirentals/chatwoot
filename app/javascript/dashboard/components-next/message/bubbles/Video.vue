@@ -1,25 +1,39 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import BaseBubble from './Base.vue';
 import Icon from 'next/icon/Icon.vue';
 import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
+import { useLoadWithRetry } from 'dashboard/composables/loadWithRetry';
 import { useMessageContext } from '../provider.js';
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
 import { ATTACHMENT_TYPES } from '../constants';
 
 const emit = defineEmits(['error']);
-const hasError = ref(false);
 const showGallery = ref(false);
 const { filteredCurrentChatAttachments, attachments } = useMessageContext();
+
+const attachment = computed(() => {
+  return attachments.value[0];
+});
+
+// A midia do WhatsApp e baixada e anexada de forma sincrona antes da mensagem ser
+// transmitida em tempo real, mas o storage (S3/CDN) pode levar um instante pra propagar
+// a URL — sem retry, o <video> falhava de cara e ficava quebrado ate o agente sair e
+// voltar na conversa (o que forcava um novo carregamento). Mesmo padrao do Image.vue.
+const { isLoaded, hasError, loadWithRetry } = useLoadWithRetry({
+  type: 'video',
+});
+
+onMounted(() => {
+  if (attachment.value?.dataUrl) {
+    loadWithRetry(attachment.value.dataUrl);
+  }
+});
 
 const handleError = () => {
   hasError.value = true;
   emit('error');
 };
-
-const attachment = computed(() => {
-  return attachments.value[0];
-});
 
 const isReel = computed(() => {
   return attachment.value.fileType === ATTACHMENT_TYPES.IG_REEL;
@@ -32,7 +46,13 @@ const isReel = computed(() => {
     data-bubble-name="video"
     @click="showGallery = true"
   >
-    <div class="relative group rounded-lg overflow-hidden">
+    <div v-if="hasError" class="flex items-center gap-1 text-center rounded-lg">
+      <Icon icon="i-lucide-circle-off" class="text-n-slate-11" />
+      <p class="mb-0 text-n-slate-11">
+        {{ $t('COMPONENTS.MEDIA.LOADING_FAILED') }}
+      </p>
+    </div>
+    <div v-else-if="isLoaded" class="relative group rounded-lg overflow-hidden">
       <div
         v-if="isReel"
         class="absolute p-2 flex items-start justify-end right-0 pointer-events-none"

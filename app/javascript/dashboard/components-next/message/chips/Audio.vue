@@ -11,6 +11,7 @@ import { timeStampAppendedURL } from 'dashboard/helper/URLHelper';
 import { downloadFile } from '@chatwoot/utils';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
+import { useLoadWithRetry } from 'dashboard/composables/loadWithRetry';
 
 const { attachment } = defineProps({
   attachment: {
@@ -88,10 +89,26 @@ const playbackSpeedLabel = computed(() => {
 // There maybe a chance that the audioPlayer ref is not available
 // When the onLoadMetadata is called, so we need to set the duration
 // value when the component is mounted
+// (o <audio> só existe no DOM depois que isLoaded vira true, ver useLoadWithRetry abaixo —
+// nesse mount inicial ainda não existe, guard evita erro; @loadedmetadata cobre o valor real)
 onMounted(() => {
-  const d = audioPlayer.value?.duration;
+  if (!audioPlayer.value) return;
+  const d = audioPlayer.value.duration;
   if (Number.isFinite(d)) duration.value = d;
   audioPlayer.value.playbackRate = playbackSpeed.value;
+});
+
+// Mesmo problema do Video.vue: a mídia do WhatsApp é anexada de forma síncrona, mas o
+// storage/CDN pode levar um instante pra propagar a URL — sem retry, o áudio falhava de
+// cara e ficava quebrado até o agente sair e voltar na conversa.
+const { isLoaded, hasError, loadWithRetry } = useLoadWithRetry({
+  type: 'audio',
+});
+
+onMounted(() => {
+  if (attachment.dataUrl) {
+    loadWithRetry(attachment.dataUrl);
+  }
 });
 
 // Listen for global audio play events and pause if it's not this audio
@@ -163,6 +180,7 @@ const downloadAudio = async () => {
 
 <template>
   <audio
+    v-if="isLoaded"
     ref="audioPlayer"
     controls
     class="hidden"
@@ -174,6 +192,15 @@ const downloadAudio = async () => {
     <source :src="timeStampURL" />
   </audio>
   <div
+    v-if="hasError"
+    v-bind="$attrs"
+    class="flex items-center gap-1 text-xs text-n-slate-11"
+  >
+    <Icon icon="i-lucide-circle-off" class="text-n-slate-11" />
+    {{ $t('COMPONENTS.MEDIA.LOADING_FAILED') }}
+  </div>
+  <div
+    v-else-if="isLoaded"
     v-bind="$attrs"
     class="rounded-xl w-full gap-2 p-1.5 bg-n-alpha-white flex flex-col items-center border border-n-container shadow-[0px_2px_8px_0px_rgba(94,94,94,0.06)]"
   >
