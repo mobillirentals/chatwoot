@@ -34,7 +34,13 @@ module Llm::Config
     def configure_ruby_llm
       RubyLLM.configure do |config|
         config.openai_api_key = system_api_key if system_api_key.present?
-        config.openai_api_base = openai_endpoint.chomp('/') if openai_endpoint.present?
+        # O `/v1` faz parte da rota, não do endpoint configurado: CAPTAIN_OPEN_AI_ENDPOINT é
+        # guardado sem ele (ex.: https://<recurso>.cognitiveservices.azure.com/openai) e cada
+        # consumidor acrescenta — igual já fazem ai_agents.rb, Captain::BaseTaskService#api_base
+        # e o gem ruby-openai. Sem isso aqui, este método sobrescrevia a base correta já setada
+        # no boot com uma sem `/v1`, e toda chamada global do RubyLLM (embeddings, copilot,
+        # assistente) caía em 404 "Resource not found" no Azure OpenAI.
+        config.openai_api_base = "#{openai_endpoint.chomp('/')}/v1" if openai_endpoint.present?
         config.model_registry_file = Rails.root.join('config/llm_models.json').to_s
         config.logger = Rails.logger
       end
