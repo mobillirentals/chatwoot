@@ -132,4 +132,42 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
       expect(service.send(:transcribe_audio)).to eq('Audio transcript')
     end
   end
+
+  # O Azure só serve transcrição na rota clássica /openai/deployments/{deployment}/audio/...;
+  # a rota OpenAI-compatível (/openai/v1/audio/transcriptions) devolve 404 lá.
+  describe 'client selection by endpoint' do
+    let(:service) { described_class.new(attachment) }
+
+    context 'when the endpoint is an Azure resource' do
+      before do
+        config = InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')
+        config.value = 'https://example.cognitiveservices.azure.com/openai'
+        config.save!
+      end
+
+      it 'builds an azure client with the deployment in the uri base' do
+        expect(service.client.uri_base).to eq(
+          'https://example.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini-transcribe'
+        )
+      end
+
+      it 'switches the gem to azure mode so it appends the api-version and uses the api-key header' do
+        expect(service.client.api_type.to_sym).to eq(:azure)
+        expect(service.client.api_version).to eq(described_class::AZURE_API_VERSION)
+      end
+    end
+
+    context 'when the endpoint is not Azure' do
+      before do
+        config = InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')
+        config.value = 'https://api.openai.com'
+        config.save!
+      end
+
+      it 'keeps the shared client untouched' do
+        expect(service.client.uri_base).to eq('https://api.openai.com')
+        expect(service.client.api_type).to be_nil
+      end
+    end
+  end
 end
