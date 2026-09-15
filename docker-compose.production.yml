@@ -76,6 +76,7 @@ services:
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro              # carrega todos os .conf do diretório
       - /etc/letsencrypt:/etc/letsencrypt:ro      # certificados Let's Encrypt
+      - /var/www/certbot:/var/www/certbot:ro      # desafio HTTP do Let's Encrypt (renovação por webroot, sem parar o nginx)
       - nginx_logs:/var/log/nginx
     depends_on:
       - rails
