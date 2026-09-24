@@ -16,8 +16,6 @@ class BotFlow::Engine
     despedida
   ].freeze
 
-  AGENDAMENTO_URL = ENV.fetch('AGENDAMENTO_URL', 'https://mobillirentals.com.br/agendamento').freeze
-
   # Aviso temporário da migração pro Moto Fácil — desligar aqui (sem precisar de outro deploy
   # de código, só variável de ambiente) quando a migração estiver estabilizada.
   MOTOFACIL_ANNOUNCEMENT_ENABLED = ActiveModel::Type::Boolean.new.cast(ENV.fetch('BOTFLOW_MOTOFACIL_ANNOUNCEMENT', true))
@@ -177,11 +175,10 @@ class BotFlow::Engine
   def handle_atendimento_veiculo
     case normalize(@user_input)
     when match_any('agendar', 'revisao', 'agendamento', '1')
-      {
-        messages: [agendamento_message, 'Posso te ajudar em mais alguma coisa?'],
-        buttons: sim_nao_buttons,
-        next_state: 'pos_atendimento'
-      }
+      # O link de agendamento saiu a pedido da oficina (set/2026): o cliente clicava e caía na home do
+      # site, sem o booking, e a equipe prefere marcar pelo WhatsApp mesmo. Agora vai direto pro time.
+      transfer_to('manutenção',
+                  'Vou te encaminhar para a nossa equipe de **manutenção** para agendar a revisão da sua moto. Um instante! 📅')
     when match_any('atendente', 'falar com atendente', 'falar', '2')
       transfer_to('manutenção',
                   'Vou te encaminhar para a nossa equipe de **manutenção**. Um instante! 🔧')
@@ -389,10 +386,6 @@ class BotFlow::Engine
   end
 
   # ── Mensagens self-service ───────────────────────────────────────────────────
-
-  def agendamento_message
-    "📅 Para agendar a revisão da sua moto, é só escolher o melhor horário por aqui:\n#{AGENDAMENTO_URL}\n\nLeva menos de 1 minuto!"
-  end
 
   def documentos_locacao_message
     "📄 Para locar uma moto na Mobílli você precisa de:\n\n" \
