@@ -76,9 +76,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     resultado = Integrations::WhatsappNumberChecker::Client.new.check([@contact.phone_number])
     existe = resultado[@contact.phone_number]
 
-    if existe.nil?
-      return render json: { error: 'WhatsApp checker unavailable' }, status: :service_unavailable
-    end
+    return render json: { error: 'WhatsApp checker unavailable' }, status: :service_unavailable if existe.nil?
 
     @contact.update!(
       custom_attributes: @contact.custom_attributes.merge(
