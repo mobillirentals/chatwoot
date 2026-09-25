@@ -15,6 +15,7 @@ import {
   CMD_SEND_TRANSCRIPT,
   CMD_UNMUTE_CONVERSATION,
 } from 'dashboard/helper/commandbar/events';
+import { TOGGLE_MESSAGE_FILTER } from 'dashboard/constants/appEvents';
 
 // No props needed as we're getting currentChat from the store directly
 const store = useStore();
@@ -45,6 +46,13 @@ const actionMenuItems = computed(() => {
   }
 
   items.push({
+    icon: 'i-lucide-search',
+    label: t('CONVERSATION.MESSAGE_FILTER.MENU_ITEM'),
+    action: 'filter_messages',
+    value: 'filter_messages',
+  });
+
+  items.push({
     icon: 'i-lucide-share',
     label: t('CONTACT_PANEL.SEND_TRANSCRIPT'),
     action: 'send_transcript',
@@ -65,6 +73,8 @@ const handleActionClick = ({ action }) => {
     useAlert(t('CONTACT_PANEL.UNMUTED_SUCCESS'));
   } else if (action === 'send_transcript') {
     toggleEmailModal();
+  } else if (action === 'filter_messages') {
+    emitter.emit(TOGGLE_MESSAGE_FILTER);
   }
 };
 
