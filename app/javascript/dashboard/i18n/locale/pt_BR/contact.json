@@ -509,7 +509,13 @@
           "SUCCESS_MESSAGE": "Avatar excluído com sucesso",
           "ERROR_MESSAGE": "Não foi possível excluir o avatar. Por favor, tente novamente mais tarde."
         }
-      }
+      },
+      "HAS_WHATSAPP": "Tem WhatsApp vínculado a este número",
+      "NO_WHATSAPP": "WhatsApp não vículado a este número",
+      "WHATSAPP_CHECKED_AT": "Verificado {date}",
+      "CHECK_WHATSAPP": "Verificar se o número tem WhatsApp vínculado",
+      "WHATSAPP_CHECK_FAILED": "Não consegui verificar o número. O verificador de WhatsApp está pareado?",
+      "CHECKING_WHATSAPP": "Verificando WhatsApp…"
     },
     "SIDEBAR": {
       "TABS": {

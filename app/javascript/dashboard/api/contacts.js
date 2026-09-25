@@ -54,6 +54,18 @@ class ContactAPI extends ApiClient {
     return axios.get(`${this.url}/${contactId}/labels`);
   }
 
+  // refaz a checagem de "esse numero tem WhatsApp?" sob demanda
+  verificarWhatsapp(contactId) {
+    return axios.post(`${this.url}/${contactId}/whatsapp_check`);
+  }
+
+  // mesma checagem por numero solto, usada enquanto a pessoa digita no formulario de criacao
+  verificarNumeroWhatsapp(phoneNumber) {
+    return axios.post(`${this.url}/whatsapp_check_number`, {
+      phone_number: phoneNumber,
+    });
+  }
+
   initiateCall(contactId, inboxId, conversationId = null) {
     return axios.post(`${this.url}/${contactId}/call`, {
       inbox_id: inboxId,

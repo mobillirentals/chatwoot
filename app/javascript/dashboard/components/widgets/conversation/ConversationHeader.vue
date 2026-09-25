@@ -16,6 +16,7 @@ import { useInbox } from 'dashboard/composables/useInbox';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
+import { useWhatsappVerification } from 'dashboard/composables/useWhatsappVerification';
 
 const props = defineProps({
   chat: {
@@ -71,6 +72,11 @@ const isHMACVerified = computed(() => {
 const currentContact = computed(() =>
   store.getters['contacts/getContact'](props.chat.meta.sender.id)
 );
+
+// Selo de WhatsApp ao lado do nome, no mesmo padrão do aviso de identidade não verificada: só o
+// ícone, com tooltip. Revalida ao vivo quando o selo guardado já estiver velho — um número pode
+// ter WhatsApp hoje e não ter amanhã.
+const { selo: verificacaoWhatsapp } = useWhatsappVerification(currentContact);
 
 const isSnoozed = computed(
   () => currentChat.value.status === wootConstants.STATUS_TYPE.SNOOZED
@@ -142,6 +148,20 @@ const copyConversationId = async () => {
             size="14"
             class="text-n-amber-10 my-0 mx-0 min-w-[14px] flex-shrink-0"
             icon="warning"
+          />
+          <span
+            v-if="verificacaoWhatsapp"
+            v-tooltip="
+              verificacaoWhatsapp.exists
+                ? $t('CONTACTS_LAYOUT.DETAILS.HAS_WHATSAPP')
+                : $t('CONTACTS_LAYOUT.DETAILS.NO_WHATSAPP')
+            "
+            class="size-3.5 shrink-0"
+            :class="
+              verificacaoWhatsapp.exists
+                ? 'i-ph-whatsapp-logo text-n-teal-11'
+                : 'i-lucide-circle-x text-n-amber-11'
+            "
           />
         </div>
 

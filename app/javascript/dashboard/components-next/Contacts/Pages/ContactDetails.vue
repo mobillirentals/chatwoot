@@ -10,6 +10,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
+import { useWhatsappVerification } from 'dashboard/composables/useWhatsappVerification';
 import Policy from 'dashboard/components/policy.vue';
 
 const props = defineProps({
@@ -52,6 +53,27 @@ const createdAt = computed(() => {
     ? dynamicTime(contactData.value.createdAt)
     : '';
 });
+
+// Selo de "esse número tem WhatsApp?". Quem grava é o Contacts::WhatsappPresenceCheckJob, num
+// atributo do contato; até aqui o resultado existia no banco e não aparecia em lugar nenhum — o
+// recurso parecia não existir. O selo guardado é só o último resultado conhecido: ao abrir a
+// ficha, se já estiver velho, refaz a checagem ao vivo. Sem verificação possível (serviço não
+// pareado ou fora do ar), nada aparece.
+const contatoSelecionado = computed(() => props.selectedContact);
+const {
+  selo,
+  verificando: verificandoWhatsapp,
+  verificadoEm: whatsappVerificadoEm,
+  temTelefone,
+  verificar,
+} = useWhatsappVerification(contatoSelecionado);
+
+const verificadoEm = computed(() =>
+  whatsappVerificadoEm.value ? dynamicTime(whatsappVerificadoEm.value) : ''
+);
+
+// o botão sempre refaz a checagem na hora, ignorando o selo guardado
+const reverificarWhatsapp = () => verificar({ avisarErro: true });
 
 const lastActivityAt = computed(() => {
   return contactData.value?.lastActivityAt
@@ -155,6 +177,44 @@ const handleAvatarDelete = async () => {
                 date: lastActivityAt,
               })
             }}
+          </span>
+          <span
+            v-if="temTelefone"
+            class="inline-flex items-center gap-1.5 text-sm"
+          >
+            <span
+              v-if="selo"
+              v-tooltip="
+                $t('CONTACTS_LAYOUT.DETAILS.WHATSAPP_CHECKED_AT', {
+                  date: verificadoEm,
+                })
+              "
+              class="inline-flex items-center gap-1"
+              :class="selo.exists ? 'text-n-teal-11' : 'text-n-amber-11'"
+            >
+              <span
+                class="size-4"
+                :class="
+                  selo.exists ? 'i-ph-whatsapp-logo' : 'i-lucide-circle-x'
+                "
+              />
+              {{
+                selo.exists
+                  ? $t('CONTACTS_LAYOUT.DETAILS.HAS_WHATSAPP')
+                  : $t('CONTACTS_LAYOUT.DETAILS.NO_WHATSAPP')
+              }}
+            </span>
+            <!-- sem selo, o botão é o convite para verificar um contato antigo -->
+            <Button
+              v-tooltip="$t('CONTACTS_LAYOUT.DETAILS.CHECK_WHATSAPP')"
+              :label="selo ? '' : $t('CONTACTS_LAYOUT.DETAILS.CHECK_WHATSAPP')"
+              icon="i-lucide-refresh-cw"
+              variant="ghost"
+              color="slate"
+              size="xs"
+              :is-loading="verificandoWhatsapp"
+              @click="reverificarWhatsapp"
+            />
           </span>
         </div>
       </div>

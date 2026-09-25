@@ -294,7 +294,6 @@
       "ID": "(ID: {identifier})"
     }
   },
-
   "CONTACTS_LAYOUT": {
     "HEADER": {
       "TITLE": "Contacts",
@@ -510,7 +509,13 @@
           "SUCCESS_MESSAGE": "Avatar deleted successfully",
           "ERROR_MESSAGE": "Could not delete avatar. Please try again later."
         }
-      }
+      },
+      "HAS_WHATSAPP": "Has WhatsApp",
+      "NO_WHATSAPP": "No WhatsApp",
+      "WHATSAPP_CHECKED_AT": "Checked {date}",
+      "CHECK_WHATSAPP": "Check WhatsApp",
+      "WHATSAPP_CHECK_FAILED": "Could not check the number. Is the WhatsApp checker paired?",
+      "CHECKING_WHATSAPP": "Checking WhatsApp…"
     },
     "SIDEBAR": {
       "TABS": {
@@ -648,7 +653,6 @@
       "CONFIRM_SINGLE": "Delete contact"
     }
   },
-
   "COMPOSE_NEW_CONVERSATION": {
     "CONTACT_SEARCH": {
       "ERROR_MESSAGE": "We couldn’t complete the search. Please try again."
