@@ -50,7 +50,9 @@ export const buildConversationList = (
   context,
   requestPayload,
   responseData,
-  filterType
+  filterType,
+  // opcional: o state do modulo, para saber quantas conversas ja foram carregadas
+  state = null
 ) => {
   const { payload: conversationList, meta: metaData } = responseData;
   context.commit(types.SET_ALL_CONVERSATION, conversationList);
@@ -61,10 +63,21 @@ export const buildConversationList = (
   );
   context.commit(types.CLEAR_LIST_LOADING_STATUS);
   setContacts(context.commit, conversationList);
+
+  // Esperar uma pagina vazia para marcar o fim so funciona em lista pequena: numa caixa com 33 mil
+  // conversas isso seria na pagina 1.320, e ate la a tela pede pagina atras de pagina. Quando o
+  // total do meta diz que tudo ja foi carregado, para aqui.
+  const carregadas = state?.allConversations?.length;
+  const total = metaData?.all_count;
+  const carregouTudo =
+    Number.isInteger(carregadas) &&
+    Number.isInteger(total) &&
+    carregadas >= total;
+
   setPageFilter({
     dispatch: context.dispatch,
     filter: filterType,
     page: requestPayload.page,
-    markEndReached: !conversationList.length,
+    markEndReached: !conversationList.length || carregouTudo,
   });
 };

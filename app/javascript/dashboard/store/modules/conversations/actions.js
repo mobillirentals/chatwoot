@@ -61,7 +61,7 @@ const actions = {
     }
   },
 
-  fetchFilteredConversations: async ({ commit, dispatch }, params) => {
+  fetchFilteredConversations: async ({ commit, dispatch, state }, params) => {
     commit(types.SET_LIST_LOADING_STATUS);
     try {
       const { data } = await ConversationApi.filter(params);
@@ -69,7 +69,8 @@ const actions = {
         { commit, dispatch },
         params,
         data,
-        'appliedFilters'
+        'appliedFilters',
+        state
       );
     } catch (error) {
       // Handle error
