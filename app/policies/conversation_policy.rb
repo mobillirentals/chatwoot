@@ -7,8 +7,12 @@ class ConversationPolicy < ApplicationPolicy
     administrator?
   end
 
+  # Mesmo fantasma do `supervisor?` da ContactPolicy: o papel nunca existiu, entao para quem nao
+  # e administrador isto estourava NoMethodError (erro 500 em vez de 403). Fica so administrador,
+  # que e o acesso que ja valia na pratica; se a lixeira precisar de um papel proprio, vira uma
+  # permissao de funcao personalizada como a de exportacao.
   def manage_trash?
-    administrator? || account_user&.supervisor?
+    administrator?
   end
 
   def show?
