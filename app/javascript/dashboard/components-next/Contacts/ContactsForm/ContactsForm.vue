@@ -1,9 +1,9 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { required, email } from '@vuelidate/validators';
 import { useVuelidate } from '@vuelidate/core';
-import { splitName } from '@chatwoot/utils';
+import { splitName, debounce } from '@chatwoot/utils';
 import countries from 'shared/constants/countries.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -12,6 +12,7 @@ import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import CompanySelector from 'dashboard/components-next/Companies/CompanySelector.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNumberInput.vue';
+import ContactAPI from 'dashboard/api/contacts';
 
 const props = defineProps({
   contactData: {
@@ -81,6 +82,43 @@ const defaultState = {
 };
 
 const state = reactive({ ...defaultState });
+
+// Checagem de "esse numero tem WhatsApp?" enquanto a pessoa digita. Consultiva: nunca bloqueia o
+// envio do formulario nem vira erro de validacao — o numero pode estar certo e o servico fora do
+// ar. Silenciosa quando o servico nao responde (ninguem pediu a checagem).
+const verificacaoNumero = ref(null);
+const verificandoNumero = ref(false);
+
+const verificaNumero = debounce(
+  async numero => {
+    const digitos = String(numero || '').replace(/\D/g, '');
+    // menos que isso ainda e alguem digitando (DDI + DDD + numero)
+    if (digitos.length < 12) {
+      verificacaoNumero.value = null;
+      return;
+    }
+
+    verificandoNumero.value = true;
+    try {
+      const { data } = await ContactAPI.verificarNumeroWhatsapp(numero);
+      verificacaoNumero.value = data;
+    } catch (error) {
+      verificacaoNumero.value = null;
+    } finally {
+      verificandoNumero.value = false;
+    }
+  },
+  700,
+  false
+);
+
+watch(
+  () => state.phoneNumber,
+  numero => {
+    verificacaoNumero.value = null;
+    verificaNumero(numero);
+  }
+);
 
 const validationRules = {
   firstName: { required },
@@ -293,12 +331,45 @@ defineExpose({
             }"
             @update:model-value="handleCountrySelection"
           />
-          <PhoneNumberInput
+          <div
             v-else-if="item.key === 'PHONE_NUMBER'"
-            v-model="getFormBinding(item.key).value"
-            :placeholder="item.placeholder"
-            :show-border="isDetailsView"
-          />
+            class="flex flex-col gap-1"
+          >
+            <PhoneNumberInput
+              v-model="getFormBinding(item.key).value"
+              :placeholder="item.placeholder"
+              :show-border="isDetailsView"
+            />
+            <!-- resposta consultiva: nunca impede salvar, só informa -->
+            <span
+              v-if="verificandoNumero"
+              class="text-sm text-n-slate-11 inline-flex items-center gap-1"
+            >
+              <span class="i-lucide-loader-circle size-3.5 animate-spin" />
+              {{ $t('CONTACTS_LAYOUT.DETAILS.CHECKING_WHATSAPP') }}
+            </span>
+            <span
+              v-else-if="verificacaoNumero"
+              class="text-sm inline-flex items-center gap-1"
+              :class="
+                verificacaoNumero.exists ? 'text-n-teal-11' : 'text-n-amber-11'
+              "
+            >
+              <span
+                class="size-3.5"
+                :class="
+                  verificacaoNumero.exists
+                    ? 'i-ph-whatsapp-logo'
+                    : 'i-lucide-circle-x'
+                "
+              />
+              {{
+                verificacaoNumero.exists
+                  ? $t('CONTACTS_LAYOUT.DETAILS.HAS_WHATSAPP')
+                  : $t('CONTACTS_LAYOUT.DETAILS.NO_WHATSAPP')
+              }}
+            </span>
+          </div>
           <CompanySelector
             v-else-if="item.key === 'COMPANY_NAME' && showCompanySelector"
             :model-value="state.companyId"

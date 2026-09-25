@@ -18,7 +18,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   before_action :set_current_page, only: [:index, :active, :search, :filter]
   before_action :fetch_contact,
                 only: [:show, :update, :destroy, :avatar, :contactable_inboxes, :destroy_custom_attributes, :export_conversations,
-                       :search_conversations]
+                       :search_conversations, :whatsapp_check]
   before_action :set_include_contact_inboxes, only: [:index, :active, :search, :filter, :show, :update]
 
   def index
@@ -52,6 +52,38 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     filter_params = { :payload => params.permit!['payload'], :label => params.permit!['label'] }
     Account::ContactsExportJob.perform_later(Current.account.id, Current.user.id, column_names, filter_params)
     head :ok, message: I18n.t('errors.contacts.export.success')
+  end
+
+  # Refaz a checagem de "esse numero tem WhatsApp?" sob demanda. O automatico so roda quando o
+  # contato e criado, entao contato antigo (ou criado com o servico fora do ar) ficava sem selo
+  # pra sempre. Sincrono de proposito: o cliente tem timeout de 3s e nunca levanta excecao, e a
+  # pessoa esta esperando a resposta na tela.
+  # Mesma checagem, mas por numero solto: o formulario de criacao pergunta enquanto a pessoa
+  # digita, antes de existir contato.
+  def whatsapp_check_number
+    numero = params[:phone_number].to_s.strip
+    return render json: { error: 'phone_number is required' }, status: :unprocessable_entity if numero.blank?
+
+    existe = Integrations::WhatsappNumberChecker::Client.new.check([numero])[numero]
+    return render json: { error: 'WhatsApp checker unavailable' }, status: :service_unavailable if existe.nil?
+
+    render json: { phone_number: numero, exists: existe }
+  end
+
+  def whatsapp_check
+    return render json: { error: 'Contact has no phone number' }, status: :unprocessable_entity if @contact.phone_number.blank?
+
+    resultado = Integrations::WhatsappNumberChecker::Client.new.check([@contact.phone_number])
+    existe = resultado[@contact.phone_number]
+
+    return render json: { error: 'WhatsApp checker unavailable' }, status: :service_unavailable if existe.nil?
+
+    @contact.update!(
+      custom_attributes: @contact.custom_attributes.merge(
+        'whatsapp_verification' => { 'exists' => existe, 'checked_at' => Time.current }
+      )
+    )
+    render json: { whatsapp_verification: @contact.custom_attributes['whatsapp_verification'] }
   end
 
   def export_conversations

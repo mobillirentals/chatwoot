@@ -31,6 +31,15 @@ class ContactPolicy < ApplicationPolicy
     true
   end
 
+  # Checagem consultiva de "tem WhatsApp?" — mesma liberdade de quem já pode ver e editar contato
+  def whatsapp_check?
+    true
+  end
+
+  def whatsapp_check_number?
+    true
+  end
+
   def filter?
     true
   end

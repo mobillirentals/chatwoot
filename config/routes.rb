@@ -223,12 +223,18 @@ Rails.application.routes.draw do
               post :filter
               post :import
               post :export
+              # checagem de "tem WhatsApp?" por numero solto, usada no formulario de criacao
+              # (ali o contato ainda nao existe, entao a versao por membro nao serve)
+              post :whatsapp_check_number
             end
             member do
               get :contactable_inboxes
               post :destroy_custom_attributes
               post :export_conversations
               get :search_conversations
+              # refaz a checagem de "esse numero tem WhatsApp?" sob demanda (o automatico so roda
+              # quando o contato e criado)
+              post :whatsapp_check
               delete :avatar
             end
             scope module: :contacts do

@@ -5,6 +5,7 @@ import { INPUT_TYPES } from 'dashboard/components-next/taginput/helper/tagInputH
 
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useWhatsappVerification } from 'dashboard/composables/useWhatsappVerification';
 
 const props = defineProps({
   contacts: {
@@ -70,6 +71,13 @@ const contactsList = computed(() => {
   }));
 });
 
+// Selo de WhatsApp do contato escolhido. Só o ícone, com o tooltip da plataforma: aqui o espaço é
+// curto e o nome do contato é o que importa. A checagem é ao vivo (silenciosa: serviço fora do ar
+// = sem selo, sem erro na cara de quem só quer mandar mensagem).
+const contatoSelecionado = computed(() => props.selectedContact);
+const { selo: verificacaoWhatsapp } =
+  useWhatsappVerification(contatoSelecionado);
+
 const selectedContactLabel = computed(() => {
   const { name, email = '', phoneNumber = '' } = props.selectedContact || {};
   if (email) {
@@ -123,6 +131,20 @@ const handleInput = value => {
               : selectedContactLabel
           }}
         </span>
+        <span
+          v-if="verificacaoWhatsapp"
+          v-tooltip="
+            verificacaoWhatsapp.exists
+              ? $t('CONTACTS_LAYOUT.DETAILS.HAS_WHATSAPP')
+              : $t('CONTACTS_LAYOUT.DETAILS.NO_WHATSAPP')
+          "
+          class="size-3.5 shrink-0"
+          :class="[
+            verificacaoWhatsapp.exists
+              ? 'i-ph-whatsapp-logo text-n-teal-11'
+              : 'i-lucide-circle-x text-n-amber-11',
+          ]"
+        />
         <Button
           v-if="!contactId"
           variant="ghost"
