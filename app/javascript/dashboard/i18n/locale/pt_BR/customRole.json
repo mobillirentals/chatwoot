@@ -40,7 +40,8 @@
       "CONTACT_MANAGE": "Gerenciar contatos",
       "REPORT_MANAGE": "Gerenciar relatórios",
       "KNOWLEDGE_BASE_MANAGE": "Gerenciar base de conhecimento",
-      "CAMPAIGN_MANAGE": "Gerenciar campanhas"
+      "CAMPAIGN_MANAGE": "Gerenciar campanhas",
+      "CONVERSATION_EXPORT": "Exportar conversas"
     },
     "FORM": {
       "NAME": {

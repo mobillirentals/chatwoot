@@ -6,6 +6,8 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
+import { usePolicy } from 'dashboard/composables/usePolicy';
+import { CONVERSATION_EXPORT_PERMISSIONS } from 'dashboard/constants/permissions';
 import contactAPI from 'dashboard/api/contacts';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -23,7 +25,7 @@ const conversations = useMapGetter(
 const contactsById = useMapGetter('contacts/getContactById');
 const stateInbox = useMapGetter('inboxes/getInboxById');
 const accountLabels = useMapGetter('labels/getLabels');
-const currentUser = useMapGetter('getCurrentUser');
+const { checkPermissions } = usePolicy();
 
 const accountLabelsValue = computed(() => accountLabels.value);
 
@@ -36,10 +38,11 @@ const contactConversations = computed(
   () => conversations.value(contactId.value) || []
 );
 
-const canExport = computed(() => {
-  const role = currentUser.value?.role;
-  return role === 'administrator' || role === 'supervisor';
-});
+// Administrador sempre pode; para os demais, quem libera e a funcao personalizada. O papel
+// 'supervisor' que estava aqui nunca existiu no Chatwoot — era de um plano que nao saiu.
+const canExport = computed(() =>
+  checkPermissions(['administrator', CONVERSATION_EXPORT_PERMISSIONS])
+);
 
 // ── Filtro de período manual (client-side) ───────────────────────────────
 const dateFrom = ref(''); // 'YYYY-MM-DD'

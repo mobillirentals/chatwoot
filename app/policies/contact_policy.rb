@@ -15,12 +15,16 @@ class ContactPolicy < ApplicationPolicy
     @account_user.administrator?
   end
 
+  # Exportar transcrição e buscar no histórico do contato. Antes isto chamava
+  # `@account_user.supervisor?`, um papel que nunca existiu no Chatwoot (o enum só tem agent e
+  # administrator): para quem não fosse administrador a chamada estourava NoMethodError e virava
+  # erro 500 em vez de uma negação limpa. Agora quem libera é a função personalizada.
   def export_conversations?
-    @account_user.administrator? || @account_user.supervisor?
+    @account_user.administrator? || pode_exportar_conversas?
   end
 
   def search_conversations?
-    @account_user.administrator? || @account_user.supervisor?
+    @account_user.administrator? || pode_exportar_conversas?
   end
 
   def search?
@@ -57,6 +61,13 @@ class ContactPolicy < ApplicationPolicy
 
   def destroy?
     @account_user.administrator?
+  end
+
+  private
+
+  def pode_exportar_conversas?
+    funcao = @account_user.custom_role
+    funcao.present? && funcao.permissions.include?('conversation_export')
   end
 end
 

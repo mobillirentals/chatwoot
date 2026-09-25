@@ -25,6 +25,8 @@
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.
 # - 'campaign_manage': Can manage campaigns.
+# - 'conversation_export': Can export conversation transcripts and search a contact's history
+#   (fork Mobilli — nasceu de um papel "supervisor" que nunca existiu no Chatwoot).
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -43,6 +45,7 @@ class CustomRole < ApplicationRecord
     report_manage
     knowledge_base_manage
     campaign_manage
+    conversation_export
   ].freeze
 
   validates :name, presence: true
