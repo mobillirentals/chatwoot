@@ -384,7 +384,15 @@
       "ERROR": "Could not search this conversation. Please try again.",
       "ATTACHMENT": "[attachment]",
       "NO_CONTENT": "[no text]",
-      "TEAM": "Team"
+      "TEAM": "Team",
+      "MODE_TEXT": "Text",
+      "MODE_PERIOD": "Period",
+      "APPLY": "Apply",
+      "PERIOD_HINT": "The conversation will show only this period.",
+      "CLEAR_PERIOD": "Clear",
+      "BANNER_BETWEEN": "Showing {de} to {ate}",
+      "BANNER_FROM": "Showing from {de}",
+      "BANNER_UNTIL": "Showing up to {ate}"
     }
   },
   "EMAIL_TRANSCRIPT": {

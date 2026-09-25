@@ -10,6 +10,8 @@ import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBar
 import { emitter } from 'shared/helpers/mitt';
 import SidepanelSwitch from 'dashboard/components-next/Conversation/SidepanelSwitch.vue';
 import ConversationSidebar from 'dashboard/components/widgets/conversation/ConversationSidebar.vue';
+import MessageFilterPanel from 'dashboard/components/widgets/conversation/MessageFilterPanel.vue';
+import { TOGGLE_MESSAGE_FILTER } from 'dashboard/constants/appEvents';
 
 export default {
   components: {
@@ -18,6 +20,7 @@ export default {
     CmdBarConversationSnooze,
     SidepanelSwitch,
     ConversationSidebar,
+    MessageFilterPanel,
   },
   beforeRouteLeave(to, from, next) {
     // Clear selected state if navigating away from a conversation to a route without a conversationId to prevent stale data issues
@@ -66,6 +69,12 @@ export default {
   data() {
     return {
       showSearchModal: false,
+      // Pesquisa dentro da conversa. Mora aqui, e nao no ConversationBox, para ficar no mesmo
+      // nivel dos paineis nativos (Contato e Copilot): dentro do Box, o comutador flutuante
+      // passava por cima dela.
+      mostrarFiltroDeMensagens: false,
+      periodoDoFiltro: null,
+      lateralAntesDoFiltro: null,
     };
   },
   computed: {
@@ -73,6 +82,13 @@ export default {
       chatList: 'getAllConversations',
       currentChat: 'getSelectedChat',
     }),
+    // Contato e Copilot dividem o mesmo espaco a direita; para a pesquisa tanto faz qual deles
+    lateralDireitaAberta() {
+      return Boolean(
+        this.uiSettings?.is_contact_sidebar_open ||
+          this.uiSettings?.is_copilot_panel_open
+      );
+    },
     showConversationList() {
       return this.isOnExpandedLayout ? !this.conversationId : true;
     },
@@ -100,6 +116,17 @@ export default {
   watch: {
     conversationId() {
       this.fetchConversationIfUnavailable();
+      // trocar de conversa nao leva o filtro da anterior junto
+      this.periodoDoFiltro = null;
+      this.fecharFiltroDeMensagens();
+    },
+    // abrir Contato ou Copilot tira a pesquisa da frente. Aqui NAO se restaura nada: a escolha
+    // acabou de ser do usuario, e devolver o estado anterior a desfaria.
+    lateralDireitaAberta(aberta) {
+      if (!aberta || !this.mostrarFiltroDeMensagens) return;
+
+      this.lateralAntesDoFiltro = null;
+      this.mostrarFiltroDeMensagens = false;
     },
   },
 
@@ -116,6 +143,7 @@ export default {
   mounted() {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('portals/index');
+    emitter.on(TOGGLE_MESSAGE_FILTER, this.alternarFiltroDeMensagens);
     this.initialize();
     this.$watch('$store.state.route', () => this.initialize());
     this.$watch('chatList.length', () => {
@@ -123,7 +151,38 @@ export default {
     });
   },
 
+  beforeUnmount() {
+    emitter.off(TOGGLE_MESSAGE_FILTER, this.alternarFiltroDeMensagens);
+  },
+
   methods: {
+    alternarFiltroDeMensagens() {
+      if (this.mostrarFiltroDeMensagens) {
+        this.fecharFiltroDeMensagens();
+        return;
+      }
+      // Contato e Copilot saem da frente: com a pesquisa aberta seriam tres colunas, e a conversa
+      // — que e o que importa — ficaria espremida. O estado volta quando a pesquisa fecha.
+      this.lateralAntesDoFiltro = {
+        contato: Boolean(this.uiSettings?.is_contact_sidebar_open),
+        copilot: Boolean(this.uiSettings?.is_copilot_panel_open),
+      };
+      this.updateUISettings({
+        is_contact_sidebar_open: false,
+        is_copilot_panel_open: false,
+      });
+      this.mostrarFiltroDeMensagens = true;
+    },
+    fecharFiltroDeMensagens() {
+      this.mostrarFiltroDeMensagens = false;
+      if (!this.lateralAntesDoFiltro) return;
+
+      this.updateUISettings({
+        is_contact_sidebar_open: this.lateralAntesDoFiltro.contato,
+        is_copilot_panel_open: this.lateralAntesDoFiltro.copilot,
+      });
+      this.lateralAntesDoFiltro = null;
+    },
     onConversationLoad() {
       this.fetchConversationIfUnavailable();
     },
@@ -210,9 +269,20 @@ export default {
       v-if="showMessageView"
       :inbox-id="inboxId"
       :is-on-expanded-layout="isOnExpandedLayout"
+      :periodo="periodoDoFiltro"
+      @limpar-periodo="periodoDoFiltro = null"
     >
       <SidepanelSwitch v-if="currentChat.id" />
     </ConversationBox>
+    <!-- irmao dos paineis nativos, e nao filho do ConversationBox: e o que evita o comutador
+         flutuante passar por cima dele -->
+    <MessageFilterPanel
+      v-if="mostrarFiltroDeMensagens && currentChat.id"
+      :conversation-id="currentChat.id"
+      :periodo-ativo="periodoDoFiltro"
+      @aplicar-periodo="periodoDoFiltro = $event"
+      @close="fecharFiltroDeMensagens"
+    />
     <ConversationSidebar v-if="shouldShowSidebar" :current-chat="currentChat" />
     <CmdBarConversationSnooze />
   </section>
