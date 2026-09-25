@@ -370,7 +370,15 @@
       "ERROR": "Não consegui pesquisar nesta conversa. Tente de novo.",
       "ATTACHMENT": "[anexo]",
       "NO_CONTENT": "[sem texto]",
-      "TEAM": "Equipe"
+      "TEAM": "Equipe",
+      "MODE_TEXT": "Texto",
+      "MODE_PERIOD": "Período",
+      "APPLY": "Aplicar",
+      "PERIOD_HINT": "A conversa vai mostrar somente esse período.",
+      "CLEAR_PERIOD": "Limpar",
+      "BANNER_BETWEEN": "Mostrando de {de} até {ate}",
+      "BANNER_FROM": "Mostrando a partir de {de}",
+      "BANNER_UNTIL": "Mostrando até {ate}"
     }
   },
   "EMAIL_TRANSCRIPT": {

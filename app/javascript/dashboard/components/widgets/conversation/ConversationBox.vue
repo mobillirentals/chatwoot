@@ -4,9 +4,6 @@ import ConversationHeader from './ConversationHeader.vue';
 import DashboardAppFrame from '../DashboardApp/Frame.vue';
 import EmptyState from './EmptyState/EmptyState.vue';
 import MessagesView from './MessagesView.vue';
-import MessageFilterPanel from './MessageFilterPanel.vue';
-import { emitter } from 'shared/helpers/mitt';
-import { TOGGLE_MESSAGE_FILTER } from 'dashboard/constants/appEvents';
 
 export default {
   components: {
@@ -14,7 +11,6 @@ export default {
     DashboardAppFrame,
     EmptyState,
     MessagesView,
-    MessageFilterPanel,
   },
   props: {
     inboxId: {
@@ -34,9 +30,17 @@ export default {
       type: Boolean,
       default: true,
     },
+    // periodo ativo da pesquisa: o fio da conversa passa a mostrar so esse intervalo
+    periodo: {
+      type: Object,
+      default: null,
+    },
   },
+  emits: ['limparPeriodo'],
   data() {
-    return { activeIndex: 0, mostrarFiltroDeMensagens: false };
+    return {
+      activeIndex: 0,
+    };
   },
   computed: {
     ...mapGetters({
@@ -81,15 +85,8 @@ export default {
   mounted() {
     this.fetchLabels();
     this.$store.dispatch('dashboardApps/get');
-    emitter.on(TOGGLE_MESSAGE_FILTER, this.alternarFiltroDeMensagens);
-  },
-  beforeUnmount() {
-    emitter.off(TOGGLE_MESSAGE_FILTER, this.alternarFiltroDeMensagens);
   },
   methods: {
-    alternarFiltroDeMensagens() {
-      this.mostrarFiltroDeMensagens = !this.mostrarFiltroDeMensagens;
-    },
     fetchLabels() {
       if (!this.currentChat.id) {
         return;
@@ -138,11 +135,8 @@ export default {
         v-if="currentChat.id"
         :inbox-id="inboxId"
         :is-inbox-view="isInboxView"
-      />
-      <MessageFilterPanel
-        v-if="mostrarFiltroDeMensagens && currentChat.id"
-        :conversation-id="currentChat.id"
-        @close="mostrarFiltroDeMensagens = false"
+        :periodo="periodo"
+        @limpar-periodo="$emit('limparPeriodo')"
       />
       <EmptyState
         v-if="!currentChat.id && !isInboxView"

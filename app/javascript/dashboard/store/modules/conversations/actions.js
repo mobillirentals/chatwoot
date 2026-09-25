@@ -77,6 +77,50 @@ const actions = {
     }
   },
 
+  // Filtro por periodo: o proprio fio passa a mostrar so o intervalo pedido, em vez de abrir uma
+  // lista de resultados ao lado. Sem `before` a lista da conversa e substituida pelo periodo; com
+  // `before` (rolagem para cima) as mais antigas do mesmo periodo entram na frente, na ordem.
+  fetchMessagesByPeriod: async (
+    { commit },
+    { conversationId, since, until, before }
+  ) => {
+    try {
+      const { data } = await MessageApi.filtrar({
+        conversationId,
+        since,
+        until,
+        before,
+      });
+      const mensagens = data.payload || [];
+      commit(
+        before ? types.SET_PREVIOUS_CONVERSATIONS : types.SET_MISSING_MESSAGES,
+        {
+          id: conversationId,
+          data: mensagens,
+        }
+      );
+      if (!mensagens.length)
+        commit(types.SET_ALL_MESSAGES_LOADED, conversationId);
+      return mensagens;
+    } catch (error) {
+      return [];
+    }
+  },
+
+  // Volta a conversa ao estado normal depois de limpar o filtro de periodo
+  reloadLatestMessages: async ({ commit }, { conversationId }) => {
+    try {
+      const { data } = await MessageApi.filtrar({ conversationId });
+      commit(types.SET_MISSING_MESSAGES, {
+        id: conversationId,
+        data: data.payload || [],
+      });
+      commit(types.CLEAR_ALL_MESSAGES_LOADED, conversationId);
+    } catch (error) {
+      // Handle error
+    }
+  },
+
   emptyAllConversations({ commit }) {
     commit(types.EMPTY_ALL_CONVERSATION);
   },

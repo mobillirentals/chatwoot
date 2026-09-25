@@ -47,6 +47,11 @@ export default {
     ResizableEditorWrapper,
   },
   mixins: [inboxMixin],
+  props: {
+    // filtro de periodo: quando ativo, o fio mostra so as mensagens desse intervalo
+    periodo: { type: Object, default: null },
+  },
+  emits: ['limparPeriodo'],
   setup() {
     const conversationPanelRef = ref(null);
     const resizableEditorWrapperRef = ref(null);
@@ -132,10 +137,30 @@ export default {
     },
     getMessages() {
       const messages = this.currentChat.messages || [];
-      if (this.isAWhatsAppChannel) {
-        return filterDuplicateSourceMessages(messages);
+      const lista = this.isAWhatsAppChannel
+        ? filterDuplicateSourceMessages(messages)
+        : messages;
+      return this.filtraPorPeriodo(lista);
+    },
+    // texto do aviso que aparece no topo do fio enquanto o periodo esta ativo
+    rotuloDoPeriodo() {
+      if (!this.periodo) return '';
+      const formata = valor =>
+        valor ? new Date(`${valor}T00:00:00`).toLocaleDateString() : '';
+      const { de, ate } = this.periodo;
+      if (de && ate) {
+        return this.$t('CONVERSATION.MESSAGE_FILTER.BANNER_BETWEEN', {
+          de: formata(de),
+          ate: formata(ate),
+        });
       }
-      return messages;
+      return de
+        ? this.$t('CONVERSATION.MESSAGE_FILTER.BANNER_FROM', {
+            de: formata(de),
+          })
+        : this.$t('CONVERSATION.MESSAGE_FILTER.BANNER_UNTIL', {
+            ate: formata(ate),
+          });
     },
     readMessages() {
       return getReadMessages(
@@ -246,6 +271,15 @@ export default {
   },
 
   watch: {
+    periodo: {
+      handler(novo) {
+        if (novo) {
+          this.carregarPeriodo();
+        } else {
+          this.voltarAoFioCompleto();
+        }
+      },
+    },
     currentChat(newChat, oldChat) {
       if (newChat.id === oldChat.id) {
         return;
@@ -326,16 +360,28 @@ export default {
       emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, this.onScrollToMessage);
     },
     onScrollToMessage({ messageId = '' } = {}) {
-      this.$nextTick(() => {
-        const messageElement = document.getElementById('message' + messageId);
-        if (messageElement) {
-          this.isProgrammaticScroll = true;
-          messageElement.scrollIntoView({ behavior: 'smooth' });
-          this.fetchPreviousMessages();
-        } else {
-          this.scrollToBottom();
-        }
-      });
+      this.$nextTick(() => this.levaAteMensagem(messageId));
+    },
+    async levaAteMensagem(messageId) {
+      const alvo = document.getElementById('message' + messageId);
+      if (!alvo) {
+        this.scrollToBottom();
+        this.makeMessagesRead();
+        return;
+      }
+
+      this.isProgrammaticScroll = true;
+      // Carregar as anteriores ANTES de rolar. Se carregar depois, a insercao de mensagens acima
+      // muda a altura no meio da animacao e o codigo ainda forca o scrollTop com uma posicao lida
+      // pela metade: a mensagem alvo saía do lugar.
+      await this.fetchPreviousMessages();
+
+      // a lista pode ter sido redesenhada pela carga; pega o elemento de novo
+      const elemento = document.getElementById('message' + messageId) || alvo;
+      // 'center' em vez do padrao 'start': colada no topo a mensagem fica sem o que veio antes.
+      // Na primeira ou na ultima mensagem o navegador limita sozinho (topo/rodape), sem quebrar.
+      elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.realcaMensagem(elemento);
       this.makeMessagesRead();
     },
     addScrollListener() {
@@ -386,6 +432,49 @@ export default {
       this.scrollTopBeforeLoad = this.conversationPanel.scrollTop;
     },
 
+    // Pisca a mensagem depois de rolar ate ela: sem isso a tela se mexe e a pessoa nao sabe qual
+    // das mensagens era a procurada. Vale para qualquer origem (pesquisa na conversa, resposta
+    // citada, busca global), porque o realce mora no proprio mecanismo nativo.
+    realcaMensagem(elemento) {
+      elemento.classList.remove('message--realce');
+      // o quadro seguinte reinicia a animacao quando a mesma mensagem e escolhida duas vezes
+      requestAnimationFrame(() => {
+        elemento.classList.add('message--realce');
+        setTimeout(() => elemento.classList.remove('message--realce'), 2000);
+      });
+    },
+
+    // ---- filtro de periodo ----
+    filtraPorPeriodo(lista) {
+      if (!this.periodo) return lista;
+      const { de, ate } = this.periodo;
+      const inicio = de ? new Date(`${de}T00:00:00`).getTime() / 1000 : null;
+      // "ate 31/12" inclui o dia 31 inteiro
+      const fim = ate ? new Date(`${ate}T23:59:59`).getTime() / 1000 : null;
+      return lista.filter(
+        m =>
+          (inicio === null || m.created_at >= inicio) &&
+          (fim === null || m.created_at <= fim)
+      );
+    },
+    async carregarPeriodo() {
+      this.isLoadingPrevious = true;
+      await this.$store.dispatch('fetchMessagesByPeriod', {
+        conversationId: this.currentChat.id,
+        since: this.periodo.de,
+        until: this.periodo.ate,
+      });
+      this.isLoadingPrevious = false;
+      this.$nextTick(() => this.scrollToBottom());
+    },
+    async voltarAoFioCompleto() {
+      this.isLoadingPrevious = true;
+      await this.$store.dispatch('reloadLatestMessages', {
+        conversationId: this.currentChat.id,
+      });
+      this.isLoadingPrevious = false;
+      this.$nextTick(() => this.scrollToBottom());
+    },
     async fetchPreviousMessages(scrollTop = 0) {
       this.setScrollParams();
       const shouldLoadMoreMessages =
@@ -400,10 +489,16 @@ export default {
       ) {
         this.isLoadingPrevious = true;
         try {
-          await this.$store.dispatch('fetchPreviousMessages', {
-            conversationId: this.currentChat.id,
-            before: this.currentChat.messages[0].id,
-          });
+          // com periodo ativo, rolar para cima continua dentro do mesmo intervalo
+          await this.$store.dispatch(
+            this.periodo ? 'fetchMessagesByPeriod' : 'fetchPreviousMessages',
+            {
+              conversationId: this.currentChat.id,
+              before: this.currentChat.messages[0].id,
+              since: this.periodo?.de,
+              until: this.periodo?.ate,
+            }
+          );
           const heightDifference =
             this.conversationPanel.scrollHeight - this.heightBeforeLoad;
           this.conversationPanel.scrollTop =
@@ -467,6 +562,20 @@ export default {
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="$t('CONVERSATION.OLD_INSTAGRAM_INBOX_REPLY_BANNER')"
       />
+    </div>
+    <!-- aviso do filtro de periodo: sem ele a pessoa pode achar que a conversa sumiu -->
+    <div
+      v-if="periodo"
+      class="flex items-center justify-between gap-2 px-3 py-2 mx-2 mt-2 text-sm rounded-lg bg-n-alpha-black2 dark:bg-n-solid-2 text-n-slate-11"
+    >
+      <span class="truncate">{{ rotuloDoPeriodo }}</span>
+      <button
+        type="button"
+        class="font-medium shrink-0 text-n-brand hover:underline"
+        @click="$emit('limparPeriodo')"
+      >
+        {{ $t('CONVERSATION.MESSAGE_FILTER.CLEAR_PERIOD') }}
+      </button>
     </div>
     <MessageList
       ref="conversationPanelRef"
@@ -534,3 +643,38 @@ export default {
     </div>
   </div>
 </template>
+
+<style>
+/*
+  Realce ao "ir até a mensagem": vale para a pesquisa na conversa, o clique numa resposta citada
+  e a busca global, porque o realce mora no mecanismo nativo (onScrollToMessage). Sem escopo de
+  propósito — a classe é aplicada na mensagem, que é renderizada por um componente filho.
+*/
+@keyframes realce-mensagem {
+  0% {
+    background-color: transparent;
+  }
+  25% {
+    background-color: rgb(59 130 246 / 18%);
+  }
+  75% {
+    background-color: rgb(59 130 246 / 18%);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.message--realce {
+  border-radius: 0.5rem;
+  animation: realce-mensagem 1.8s ease-in-out 1;
+}
+
+/* quem pediu menos animação no sistema recebe só um destaque estático */
+@media (prefers-reduced-motion: reduce) {
+  .message--realce {
+    background-color: rgb(59 130 246 / 14%);
+    animation: none;
+  }
+}
+</style>

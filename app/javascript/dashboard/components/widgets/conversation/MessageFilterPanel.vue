@@ -1,11 +1,11 @@
 <script setup>
-// Filtro dentro da conversa: procura por texto e por periodo sem precisar rolar o fio.
-// Nasceu do historico importado, onde uma conversa chega a milhares de mensagens, mas serve
-// para qualquer conversa longa da plataforma.
+// Pesquisa dentro da conversa, em dois modos que nao se misturam:
 //
-// De proposito NAO mexe na lista de mensagens da store: o fio da conversa e a tela que o time
-// usa o dia todo, e filtrar por cima do estado dela traria risco sem necessidade. Aqui e uma
-// consulta propria, que mostra os resultados ao lado.
+// - Texto: lista os resultados e clicar leva ate a mensagem no fio (mesmo mecanismo da busca
+//   global do Chatwoot: carregar a mensagem e pedir o scroll).
+// - Periodo: NAO devolve lista. O proprio fio passa a mostrar so o intervalo pedido, com um
+//   aviso no topo da conversa. Foi pedido assim porque lista lateral para "ver junho" nao parece
+//   nativo: a pessoa quer ler a conversa daquele mes, nao um relatorio dela.
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
@@ -18,26 +18,28 @@ import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 const props = defineProps({
   conversationId: { type: [Number, String], required: true },
+  periodoAtivo: { type: Object, default: null },
 });
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'aplicarPeriodo']);
 
 const { t } = useI18n();
 const store = useStore();
 
-const selecionada = ref(null);
+const modo = ref('texto');
 const texto = ref('');
-const de = ref('');
-const ate = ref('');
+const de = ref(props.periodoAtivo?.de || '');
+const ate = ref(props.periodoAtivo?.ate || '');
+const selecionada = ref(null);
 const resultados = ref([]);
 const carregando = ref(false);
 const buscou = ref(false);
 const temMais = ref(false);
 const erro = ref('');
 
-const podeBuscar = computed(
-  () =>
-    Boolean(texto.value.trim() || de.value || ate.value) && !carregando.value
+const podePesquisar = computed(
+  () => Boolean(texto.value.trim()) && !carregando.value
 );
+const podeAplicar = computed(() => Boolean(de.value || ate.value));
 
 function corpo(mensagem) {
   if (mensagem.content) return mensagem.content;
@@ -60,7 +62,7 @@ function quando(mensagem) {
   return messageTimestamp(mensagem.created_at, 'LLL d yyyy, h:mm a') || '';
 }
 
-async function buscar({ continuando = false } = {}) {
+async function pesquisar({ continuando = false } = {}) {
   if (carregando.value) return;
   carregando.value = true;
   erro.value = '';
@@ -68,12 +70,10 @@ async function buscar({ continuando = false } = {}) {
     const { data } = await MessageApi.filtrar({
       conversationId: props.conversationId,
       q: texto.value.trim(),
-      since: de.value,
-      until: ate.value,
       before: continuando ? resultados.value[0]?.id : undefined,
     });
     const novos = data.payload || [];
-    // a API devolve em ordem cronologica; "carregar mais" traz o que vem antes
+    // a API devolve em ordem cronologica; "mais antigos" entra na frente
     resultados.value = continuando ? [...novos, ...resultados.value] : novos;
     temMais.value = novos.length >= 50;
     buscou.value = true;
@@ -84,9 +84,8 @@ async function buscar({ continuando = false } = {}) {
   }
 }
 
-// Levar o resultado ate o fio usa o mecanismo que a busca global do Chatwoot ja usa: primeiro
-// carregar a mensagem na conversa (fetchPreviousMessages com `after`), depois pedir o scroll.
-// Sem a carga, a mensagem de 2023 nem existe no DOM e a tela pularia para o fim.
+// Levar o resultado ate o fio: primeiro carregar a mensagem na conversa, depois pedir o scroll.
+// Sem a carga, uma mensagem de 2023 nem existe no DOM e a tela pularia para o fim.
 async function irPara(mensagem) {
   selecionada.value = mensagem.id;
   const carregadas = store.getters.getSelectedChat?.messages || [];
@@ -100,24 +99,40 @@ async function irPara(mensagem) {
         before: primeiraNaTela,
       });
     } catch (e) {
-      // se a carga falhar, o scroll abaixo cai no comportamento padrao do Chatwoot
+      // se a carga falhar, o scroll cai no comportamento padrao do Chatwoot
     }
   }
   emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE, { messageId: mensagem.id });
 
-  // em tela estreita o painel cobre a conversa: manter aberto esconderia justamente a mensagem
-  // que a pessoa acabou de escolher
-  if (window.innerWidth < 1024) emit('close');
+  // em tela estreita (abaixo de md, como o painel nativo) o painel cobre a conversa: manter
+  // aberto esconderia justamente a mensagem escolhida
+  if (window.innerWidth < 768) emit('close');
+}
+
+function aplicarPeriodo() {
+  if (!podeAplicar.value) return;
+  // o fio assume o filtro e mostra o aviso; o painel sai da frente
+  emit('aplicarPeriodo', { de: de.value, ate: ate.value });
+  emit('close');
 }
 
 function limpar() {
-  texto.value = '';
+  if (modo.value === 'texto') {
+    texto.value = '';
+    resultados.value = [];
+    selecionada.value = null;
+    buscou.value = false;
+    temMais.value = false;
+    return;
+  }
   de.value = '';
   ate.value = '';
-  selecionada.value = null;
-  resultados.value = [];
-  buscou.value = false;
-  temMais.value = false;
+  emit('aplicarPeriodo', null);
+}
+
+function trocarModo(novo) {
+  modo.value = novo;
+  erro.value = '';
 }
 
 onMounted(() => {
@@ -127,11 +142,12 @@ onMounted(() => {
 
 <template>
   <!--
-    Responsividade: em tela estreita o painel cobre a conversa (o contato tambem pode estar
-    aberto, e tres colunas espremeriam tudo); a partir de lg ele vira coluna ao lado.
+    Mesmas classes de layout do painel de Contato (ConversationSidebar): em tela estreita cobre a
+    conversa, de `md` para cima vira coluna ao lado, com a mesma largura. Copiar o nativo em vez
+    de inventar medida e o que faz o painel nao parecer enxertado.
   -->
   <div
-    class="absolute inset-y-0 z-20 flex flex-col w-full h-full min-w-0 border-l shadow-lg ltr:right-0 rtl:left-0 sm:max-w-sm lg:static lg:z-auto lg:w-80 lg:max-w-none lg:shadow-none xl:w-96 border-n-weak bg-n-solid-1"
+    class="fixed top-0 z-40 flex flex-col w-full h-full max-w-sm overflow-hidden shadow-lg bg-n-surface-2 ltr:right-0 rtl:left-0 ltr:border-l rtl:border-r border-n-weak md:static md:w-[320px] md:min-w-[320px] md:shadow-none 2xl:w-[360px] 2xl:min-w-[360px]"
   >
     <div
       class="flex items-center justify-between px-4 py-3 border-b border-n-weak"
@@ -148,36 +164,40 @@ onMounted(() => {
       />
     </div>
 
-    <form class="flex flex-col gap-3 px-4 py-3" @submit.prevent="buscar()">
+    <div class="flex gap-1 px-4 pt-3">
+      <Button
+        size="xs"
+        :variant="modo === 'texto' ? 'solid' : 'ghost'"
+        :color="modo === 'texto' ? 'blue' : 'slate'"
+        :label="t('CONVERSATION.MESSAGE_FILTER.MODE_TEXT')"
+        @click="trocarModo('texto')"
+      />
+      <Button
+        size="xs"
+        :variant="modo === 'periodo' ? 'solid' : 'ghost'"
+        :color="modo === 'periodo' ? 'blue' : 'slate'"
+        :label="t('CONVERSATION.MESSAGE_FILTER.MODE_PERIOD')"
+        @click="trocarModo('periodo')"
+      />
+    </div>
+
+    <form
+      v-if="modo === 'texto'"
+      class="flex flex-col gap-3 px-4 py-3"
+      @submit.prevent="pesquisar()"
+    >
       <Input
         id="filtro-mensagens-texto"
         v-model="texto"
         size="sm"
-        :label="t('CONVERSATION.MESSAGE_FILTER.TEXT')"
         :placeholder="t('CONVERSATION.MESSAGE_FILTER.TEXT_PLACEHOLDER')"
       />
-      <div class="flex gap-2">
-        <Input
-          v-model="de"
-          type="date"
-          size="sm"
-          class="flex-1"
-          :label="t('CONVERSATION.MESSAGE_FILTER.FROM')"
-        />
-        <Input
-          v-model="ate"
-          type="date"
-          size="sm"
-          class="flex-1"
-          :label="t('CONVERSATION.MESSAGE_FILTER.TO')"
-        />
-      </div>
       <div class="flex gap-2">
         <Button
           type="submit"
           size="sm"
           :label="t('CONVERSATION.MESSAGE_FILTER.SEARCH')"
-          :disabled="!podeBuscar"
+          :disabled="!podePesquisar"
           :is-loading="carregando"
         />
         <Button
@@ -191,7 +211,52 @@ onMounted(() => {
       </div>
     </form>
 
-    <div class="flex-1 min-h-0 px-4 pb-4 overflow-y-auto">
+    <form
+      v-else
+      class="flex flex-col gap-3 px-4 py-3"
+      @submit.prevent="aplicarPeriodo"
+    >
+      <p class="text-xs text-n-slate-11">
+        {{ t('CONVERSATION.MESSAGE_FILTER.PERIOD_HINT') }}
+      </p>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <Input
+          v-model="de"
+          type="date"
+          size="sm"
+          class="flex-1 min-w-0"
+          :label="t('CONVERSATION.MESSAGE_FILTER.FROM')"
+        />
+        <Input
+          v-model="ate"
+          type="date"
+          size="sm"
+          class="flex-1 min-w-0"
+          :label="t('CONVERSATION.MESSAGE_FILTER.TO')"
+        />
+      </div>
+      <div class="flex gap-2">
+        <Button
+          type="submit"
+          size="sm"
+          :label="t('CONVERSATION.MESSAGE_FILTER.APPLY')"
+          :disabled="!podeAplicar"
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          color="slate"
+          :label="t('CONVERSATION.MESSAGE_FILTER.CLEAR')"
+          @click="limpar"
+        />
+      </div>
+    </form>
+
+    <div
+      v-if="modo === 'texto'"
+      class="flex-1 min-h-0 px-4 pb-4 overflow-y-auto"
+    >
       <p v-if="erro" class="py-2 text-sm text-n-ruby-11">{{ erro }}</p>
 
       <p
@@ -215,9 +280,10 @@ onMounted(() => {
           class="w-full mb-2"
           :is-loading="carregando"
           :label="t('CONVERSATION.MESSAGE_FILTER.LOAD_MORE')"
-          @click="buscar({ continuando: true })"
+          @click="pesquisar({ continuando: true })"
         />
-        <ul class="flex flex-col gap-2">
+        <!-- list-none: sem isso o estilo base do projeto desenha a bolinha do marcador -->
+        <ul class="flex flex-col gap-2 list-none">
           <li v-for="mensagem in resultados" :key="mensagem.id">
             <button
               type="button"
