@@ -368,6 +368,23 @@
       "UNMUTE": "Unmute mic",
       "VIEW_CHAT_HISTORY": "View chat history",
       "GO_TO_CONVERSATION": "Go to conversation thread"
+    },
+    "MESSAGE_FILTER": {
+      "MENU_ITEM": "Search in conversation",
+      "TITLE": "Search in conversation",
+      "TEXT": "Text",
+      "TEXT_PLACEHOLDER": "Word or phrase",
+      "FROM": "From",
+      "TO": "To",
+      "SEARCH": "Search",
+      "CLEAR": "Clear",
+      "EMPTY": "No message matches this filter.",
+      "COUNT": "{count} message(s) found",
+      "LOAD_MORE": "Load older results",
+      "ERROR": "Could not search this conversation. Please try again.",
+      "ATTACHMENT": "[attachment]",
+      "NO_CONTENT": "[no text]",
+      "TEAM": "Team"
     }
   },
   "EMAIL_TRANSCRIPT": {

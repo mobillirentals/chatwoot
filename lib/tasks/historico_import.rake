@@ -30,7 +30,17 @@ namespace :historico do
     inbox = account.inboxes.find_by!(name: args[:inbox].to_s)
     HistoricoJuncao.new(account: account, inbox: inbox,
                         janela: ENV.fetch('JANELA_HORAS', '6').to_f.hours,
+                        por_contato: ENV['POR_CONTATO'] == '1',
                         simular: ENV['SIMULAR'] == '1').perform
+  end
+
+  desc 'Move conversas de uma caixa de historico para outra (para consolidar as origens)'
+  task :mover, %i[origem destino] => :environment do |_t, args|
+    account = Account.find(ENV.fetch('ACCOUNT_ID', '1'))
+    origem = account.inboxes.find_by!(name: args[:origem].to_s)
+    destino = account.inboxes.find_by!(name: args[:destino].to_s)
+    HistoricoMudanca.new(account: account, origem: origem, destino: destino,
+                         simular: ENV['SIMULAR'] == '1').perform
   end
 
   desc 'Liga a midia ja enviada ao Blob nas mensagens do historico (ver manifesto do prepara_midia.py)'
@@ -74,13 +84,87 @@ end
 # Regra: mesmo contato, menos de JANELA_HORAS entre o fim de uma e o inicio da outra, e filas que
 # nao se contradizem (uma das duas sem fila conta como compativel — o fragmento costuma vir sem).
 # Disparo automatico de cobranca fica de fora: nao e conversa de gente.
+# Consolida o historico numa caixa so: fonte nova que aparecer no futuro entra nela, em vez de
+# criar mais uma caixa. Move conversas, mensagens e o elo com o contato.
+class HistoricoMudanca
+  def initialize(account:, origem:, destino:, simular: false)
+    @account = account
+    @origem = origem
+    @destino = destino
+    @simular = simular
+  end
+
+  def perform
+    conversas = Conversation.where(inbox_id: @origem.id).count
+    mensagens = Message.where(inbox_id: @origem.id).count
+    puts "de '#{@origem.name}' (##{@origem.id}) para '#{@destino.name}' (##{@destino.id})"
+    puts "conversas: #{conversas} | mensagens: #{mensagens}"
+    return puts('SIMULACAO: nada foi alterado.') if @simular
+    return puts('nada a mover.') if conversas.zero? && mensagens.zero?
+
+    if conversas.positive?
+      criar_elos_no_destino
+      # o elo contato-caixa tem que acompanhar: conversa apontando para contact_inbox de outra
+      # caixa confunde a tela e o envio
+      ActiveRecord::Base.connection.execute(<<~SQL.squish)
+        update conversations c set inbox_id = #{@destino.id}, contact_inbox_id = ci.id
+        from contact_inboxes ci
+        where ci.inbox_id = #{@destino.id} and ci.contact_id = c.contact_id
+          and c.inbox_id = #{@origem.id}
+      SQL
+    end
+
+    movidas = move_mensagens_em_lotes
+    puts "movidas: #{conversas} conversas e #{movidas} mensagens"
+    puts "sobrou na origem: #{Conversation.where(inbox_id: @origem.id).count} conversas, " \
+         "#{Message.where(inbox_id: @origem.id).count} mensagens"
+  end
+
+  private
+
+  # Um UPDATE em 700 mil linhas estoura o statement_timeout da conexao do app (o banco em si nao
+  # tem limite). Em lotes de 20 mil cada passada termina com folga.
+  def move_mensagens_em_lotes
+    total = 0
+    loop do
+      movidas = ActiveRecord::Base.connection.update(<<~SQL.squish)
+        update messages set inbox_id = #{@destino.id}
+        where id in (select id from messages where inbox_id = #{@origem.id} limit 20000)
+      SQL
+      break if movidas.zero?
+
+      total += movidas
+      print '.'
+    end
+    puts if total.positive?
+    total
+  end
+
+  def criar_elos_no_destino
+    contatos = Conversation.where(inbox_id: @origem.id).distinct.pluck(:contact_id).compact
+    ja_tem = ContactInbox.where(inbox_id: @destino.id, contact_id: contatos).pluck(:contact_id)
+    faltando = ContactInbox.where(inbox_id: @origem.id, contact_id: contatos - ja_tem)
+                           .pluck(:contact_id, :source_id).uniq { |contact_id, _| contact_id }
+    return if faltando.empty?
+
+    agora = Time.current
+    ContactInbox.insert_all(faltando.map do |contact_id, source_id|
+      { contact_id: contact_id, inbox_id: @destino.id, source_id: source_id,
+        pubsub_token: SecureRandom.hex(16), created_at: agora, updated_at: agora }
+    end)
+    puts "elos contato-caixa criados no destino: #{faltando.size}"
+  end
+end
+
 class HistoricoJuncao
   FORA = 'aviso-de-cobranca'
 
-  def initialize(account:, inbox:, janela:, simular: false)
+  def initialize(account:, inbox:, janela:, por_contato: false, simular: false)
     @account = account
     @inbox = inbox
     @janela = janela
+    # por_contato: uma conversa por pessoa, com tudo dentro — sem olhar intervalo, fila ou origem
+    @por_contato = por_contato
     @simular = simular
     @resumo = Hash.new(0)
   end
@@ -104,21 +188,27 @@ class HistoricoJuncao
   private
 
   def monta_grupos
-    linhas = Conversation.where(inbox_id: @inbox.id)
-                         .where("coalesce(cached_label_list, '') not like ?", "%#{FORA}%")
-                         .order(:contact_id, :created_at)
-                         .pluck(:id, :contact_id, :created_at, :last_activity_at,
-                                Arel.sql("additional_attributes->>'fila'"))
+    escopo = Conversation.where(inbox_id: @inbox.id)
+    # no modo por contato entra tudo, inclusive o disparo automatico de cobranca: a decisao foi
+    # ter um fio unico por pessoa, com a historia inteira dela em ordem
+    escopo = escopo.where("coalesce(cached_label_list, '') not like ?", "%#{FORA}%") unless @por_contato
+    linhas = escopo.order(:contact_id, :created_at)
+                   .pluck(:id, :contact_id, :created_at, :last_activity_at,
+                          Arel.sql("additional_attributes->>'fila'"))
     @total = linhas.size
     grupos = []
     atual = []
     anterior = nil
 
     linhas.each do |id, contact_id, created_at, last_activity_at, fila|
-      comeca_grupo = anterior.nil? ||
-                     anterior[:contact_id] != contact_id ||
-                     (created_at - anterior[:fim]) > @janela ||
-                     (fila.present? && anterior[:fila].present? && fila != anterior[:fila])
+      mudou_de_pessoa = anterior.nil? || anterior[:contact_id] != contact_id
+      comeca_grupo = if @por_contato
+                       mudou_de_pessoa
+                     else
+                       mudou_de_pessoa ||
+                         (created_at - anterior[:fim]) > @janela ||
+                         (fila.present? && anterior[:fila].present? && fila != anterior[:fila])
+                     end
       if comeca_grupo && atual.any?
         grupos << atual
         atual = []

@@ -106,6 +106,17 @@ class MessageApi extends ApiClient {
     return axios.get(`${this.url}/${conversationId}/messages`, { params });
   }
 
+  // Filtro dentro da conversa: mesma rota das mensagens, com texto e periodo. Conversa longa
+  // (o historico importado chega a milhares de mensagens) nao se navega rolando.
+  filtrar({ conversationId, q, since, until, before }) {
+    const params = {};
+    if (q) params.q = q;
+    if (since) params.since = since;
+    if (until) params.until = until;
+    if (before) params.before = before;
+    return axios.get(`${this.url}/${conversationId}/messages`, { params });
+  }
+
   translateMessage(conversationId, messageId, targetLanguage) {
     return axios.post(
       `${this.url}/${conversationId}/messages/${messageId}/translate`,

@@ -354,6 +354,23 @@
       "UNMUTE": "Desilenciar microfone",
       "VIEW_CHAT_HISTORY": "Ver histórico da conversa",
       "GO_TO_CONVERSATION": "Ir para a conversa"
+    },
+    "MESSAGE_FILTER": {
+      "MENU_ITEM": "Pesquisar na conversa",
+      "TITLE": "Pesquisar na conversa",
+      "TEXT": "Texto",
+      "TEXT_PLACEHOLDER": "Palavra ou frase",
+      "FROM": "De",
+      "TO": "Até",
+      "SEARCH": "Pesquisar",
+      "CLEAR": "Limpar",
+      "EMPTY": "Nenhuma mensagem corresponde a esse filtro.",
+      "COUNT": "{count} mensagem(ns) encontrada(s)",
+      "LOAD_MORE": "Carregar resultados mais antigos",
+      "ERROR": "Não consegui pesquisar nesta conversa. Tente de novo.",
+      "ATTACHMENT": "[anexo]",
+      "NO_CONTENT": "[sem texto]",
+      "TEAM": "Equipe"
     }
   },
   "EMAIL_TRANSCRIPT": {
