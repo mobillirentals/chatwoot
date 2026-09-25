@@ -11,6 +11,9 @@ const state = {
     me: false,
     unassigned: false,
     all: false,
+    // sem esta chave, getHasEndReached('appliedFilters') devolve undefined e a lista filtrada
+    // nunca para de pedir a proxima pagina
+    appliedFilters: false,
   },
 };
 

@@ -378,10 +378,24 @@ const uniqueInboxes = computed(() => {
 });
 
 // ---------------------- Methods -----------------------
+// Caixa de historico importado nasce inteira resolvida: abrir com "Abertas" mostra uma lista
+// vazia e parece que a importacao falhou. Nela o padrao passa a ser "Todos".
+function isHistoricoInbox(inboxId) {
+  if (!inboxId) return false;
+  // a marca fica no proprio canal (additional_attributes), nao num id fixo no codigo: assim
+  // sobrevive a caixa ser recriada, como ja aconteceu duas vezes na importacao
+  return Boolean(
+    store.getters['inboxes/getInbox'](inboxId)?.additional_attributes
+      ?.historico_importado
+  );
+}
+
 function setFiltersFromUISettings() {
   const { conversations_filter_by: filterBy = {} } = uiSettings.value;
   const { status, order_by: orderBy } = filterBy;
-  activeStatus.value = status || wootConstants.STATUS_TYPE.OPEN;
+  activeStatus.value = isHistoricoInbox(props.conversationInbox)
+    ? wootConstants.STATUS_TYPE.ALL
+    : status || wootConstants.STATUS_TYPE.OPEN;
   activeSortBy.value = Object.values(wootConstants.SORT_BY_TYPE).includes(
     orderBy
   )
@@ -853,7 +867,12 @@ watch(activeTeam, () => resetAndFetchData());
 
 watch(
   computed(() => props.conversationInbox),
-  () => resetAndFetchData()
+  () => {
+    // reaplica o padrao antes de buscar: trocar para uma caixa de historico precisa mudar o
+    // status para "Todos" ANTES da consulta, senao a primeira busca volta vazia
+    setFiltersFromUISettings();
+    resetAndFetchData();
+  }
 );
 watch(
   computed(() => props.label),
