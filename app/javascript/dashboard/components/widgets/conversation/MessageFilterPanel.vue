@@ -8,10 +8,13 @@
 // consulta propria, que mostra os resultados ao lado.
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useStore } from 'vuex';
 import MessageApi from 'dashboard/api/inbox/message';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { messageTimestamp } from 'shared/helpers/timeHelper';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 const props = defineProps({
   conversationId: { type: [Number, String], required: true },
@@ -19,7 +22,9 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const { t } = useI18n();
+const store = useStore();
 
+const selecionada = ref(null);
 const texto = ref('');
 const de = ref('');
 const ate = ref('');
@@ -79,10 +84,37 @@ async function buscar({ continuando = false } = {}) {
   }
 }
 
+// Levar o resultado ate o fio usa o mecanismo que a busca global do Chatwoot ja usa: primeiro
+// carregar a mensagem na conversa (fetchPreviousMessages com `after`), depois pedir o scroll.
+// Sem a carga, a mensagem de 2023 nem existe no DOM e a tela pularia para o fim.
+async function irPara(mensagem) {
+  selecionada.value = mensagem.id;
+  const carregadas = store.getters.getSelectedChat?.messages || [];
+  const primeiraNaTela = carregadas[0]?.id;
+
+  if (primeiraNaTela && mensagem.id < primeiraNaTela) {
+    try {
+      await store.dispatch('fetchPreviousMessages', {
+        conversationId: props.conversationId,
+        after: mensagem.id,
+        before: primeiraNaTela,
+      });
+    } catch (e) {
+      // se a carga falhar, o scroll abaixo cai no comportamento padrao do Chatwoot
+    }
+  }
+  emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE, { messageId: mensagem.id });
+
+  // em tela estreita o painel cobre a conversa: manter aberto esconderia justamente a mensagem
+  // que a pessoa acabou de escolher
+  if (window.innerWidth < 1024) emit('close');
+}
+
 function limpar() {
   texto.value = '';
   de.value = '';
   ate.value = '';
+  selecionada.value = null;
   resultados.value = [];
   buscou.value = false;
   temMais.value = false;
@@ -94,8 +126,12 @@ onMounted(() => {
 </script>
 
 <template>
+  <!--
+    Responsividade: em tela estreita o painel cobre a conversa (o contato tambem pode estar
+    aberto, e tres colunas espremeriam tudo); a partir de lg ele vira coluna ao lado.
+  -->
   <div
-    class="flex flex-col h-full min-w-0 border-l w-80 xl:w-96 border-n-weak bg-n-solid-1"
+    class="absolute inset-y-0 z-20 flex flex-col w-full h-full min-w-0 border-l shadow-lg ltr:right-0 rtl:left-0 sm:max-w-sm lg:static lg:z-auto lg:w-80 lg:max-w-none lg:shadow-none xl:w-96 border-n-weak bg-n-solid-1"
   >
     <div
       class="flex items-center justify-between px-4 py-3 border-b border-n-weak"
@@ -182,24 +218,30 @@ onMounted(() => {
           @click="buscar({ continuando: true })"
         />
         <ul class="flex flex-col gap-2">
-          <li
-            v-for="mensagem in resultados"
-            :key="mensagem.id"
-            class="p-2 rounded-lg bg-n-alpha-black2 dark:bg-n-solid-2"
-          >
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="text-xs font-medium truncate text-n-slate-12">
-                {{ quem(mensagem) }}
-              </span>
-              <span class="text-xs shrink-0 text-n-slate-10">
-                {{ quando(mensagem) }}
-              </span>
-            </div>
-            <p
-              class="mt-1 text-sm break-words whitespace-pre-line text-n-slate-11"
+          <li v-for="mensagem in resultados" :key="mensagem.id">
+            <button
+              type="button"
+              class="w-full p-2 text-left rounded-lg bg-n-alpha-black2 dark:bg-n-solid-2 hover:bg-n-alpha-2 dark:hover:bg-n-solid-3"
+              :class="{
+                'outline outline-1 outline-n-brand':
+                  selecionada === mensagem.id,
+              }"
+              @click="irPara(mensagem)"
             >
-              {{ corpo(mensagem) }}
-            </p>
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-xs font-medium truncate text-n-slate-12">
+                  {{ quem(mensagem) }}
+                </span>
+                <span class="text-xs shrink-0 text-n-slate-10">
+                  {{ quando(mensagem) }}
+                </span>
+              </div>
+              <p
+                class="mt-1 text-sm break-words whitespace-pre-line text-n-slate-11"
+              >
+                {{ corpo(mensagem) }}
+              </p>
+            </button>
           </li>
         </ul>
       </template>
