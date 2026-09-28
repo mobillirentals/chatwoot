@@ -20,10 +20,12 @@ import ConfirmDeleteCampaignDialog from 'dashboard/components-next/Campaigns/Pag
 import WhatsAppCampaignEmptyState from 'dashboard/components-next/Campaigns/EmptyState/WhatsAppCampaignEmptyState.vue';
 import BulkDispatchWizard from 'dashboard/components-next/Campaigns/Pages/CampaignPage/WhatsAppCampaign/BulkDispatch/BulkDispatchWizard.vue';
 import BulkDispatchDetailsDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/WhatsAppCampaign/BulkDispatch/BulkDispatchDetailsDialog.vue';
+import { useRouter } from 'vue-router';
 
 const { t } = useI18n();
 const store = useStore();
 const getters = useStoreGetters();
+const router = useRouter();
 
 const selectedCampaign = ref(null);
 const whatsAppCampaignDialogRef = ref(null);
@@ -228,6 +230,13 @@ const handleShowDetails = item => {
   bulkDispatchDetailsDialogRef.value?.open(item.record.id);
 };
 
+const handleAnalytics = campaign => {
+  router.push({
+    name: 'campaigns_whatsapp_analytics',
+    params: { campaignId: campaign.id },
+  });
+};
+
 const handleDeleteConfirmed = async item => {
   if (item.kind === 'bulk_dispatch') {
     await whatsappBulkDispatchAPI.delete(item.record.id);
@@ -304,6 +313,7 @@ const handleDeleteConfirmed = async item => {
       :campaigns="filteredCampaignItems"
       @delete="handleDelete"
       @details="handleShowDetails"
+      @analytics="handleAnalytics"
     />
     <p
       v-else-if="hasNoFilteredResults"

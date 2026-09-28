@@ -165,7 +165,7 @@ const prepareCampaignDetails = () => {
 
 const handleSubmit = async () => {
   const isFormValid = await v$.value.$validate();
-  if (!isFormValid) return;
+  if (!isFormValid || !hasRequiredTemplateParams.value) return;
 
   emit('submit', prepareCampaignDetails());
   resetState();

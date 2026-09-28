@@ -12,6 +12,14 @@ module Enterprise::Message
       after_create_commit :schedule_captain_sentiment_analysis
       after_create_commit :schedule_captain_crm_warmup
       after_create_commit :complete_captain_team_handoff
+      # Scheduling and freshness checks must share this scope so an email auto reply cannot cancel a pending response.
+      scope :captain_response_triggering, lambda {
+        incoming.joins(:inbox).where(
+          "((messages.content_attributes #>> '{}')::jsonb -> 'email' ->> 'auto_reply') IS DISTINCT FROM 'true' OR " \
+          "(messages.content_type != :incoming_email AND inboxes.channel_type != 'Channel::Email')",
+          incoming_email: content_types[:incoming_email]
+        )
+      }
     end
   end
 
@@ -19,6 +27,12 @@ module Enterprise::Message
     data = super
     data[:call] = call.push_event_data if content_type == 'voice_call' && call.present?
     data
+  end
+
+  def captain_response_triggering?
+    return incoming? && !auto_reply_email? unless persisted?
+
+    self.class.captain_response_triggering.exists?(id: id)
   end
 
   private
@@ -75,6 +89,15 @@ module Enterprise::Message
     conversation.messages.where(message_type: :incoming, private: false).limit(2).count == 1
   end
 
+  def reopen_resolved_conversation
+    assistant = conversation.inbox.captain_assistant
+
+    return super if assistant.blank? || conversation.inbox.external_bot_active?
+    return conversation.open! unless assistant.engages?(conversation.contact, conversation)
+
+    super
+  end
+
   def mark_pending_conversation_as_open_for_human_response
     return unless captain_pending_conversation?
     return unless human_response?
@@ -87,6 +110,7 @@ module Enterprise::Message
     Current.executed_by = nil
 
     begin
+      conversation.ai_assignee = nil if conversation.ai_assignee_type == 'Captain::Assistant'
       conversation.open!
       return unless conversation.saved_change_to_status?
 

@@ -76,9 +76,15 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  // Campanha nativa com entrega rastreada abre o painel de analytics do upstream; disparo em
+  // massa tem a própria tela de detalhes (showDetailsButton acima).
+  showAnalytics: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['edit', 'delete', 'details']);
+const emit = defineEmits(['edit', 'delete', 'details', 'analytics']);
 
 const { t } = useI18n();
 
@@ -196,6 +202,16 @@ const inboxIcon = computed(() => {
       </div>
     </div>
     <div class="flex items-center justify-end gap-2 w-fit">
+      <Button
+        v-if="showAnalytics"
+        v-tooltip.top="t('CAMPAIGN.WHATSAPP.CARD.ANALYTICS')"
+        variant="faded"
+        size="sm"
+        color="slate"
+        icon="i-lucide-chart-no-axes-column"
+        :title="t('CAMPAIGN.WHATSAPP.CARD.ANALYTICS')"
+        @click="emit('analytics')"
+      />
       <Button
         v-if="isLiveChatType"
         variant="faded"

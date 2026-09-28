@@ -34,10 +34,34 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
       end
     end
 
+    context 'when the message is a call recording on an inbox with transcription turned off' do
+      let(:channel) do
+        create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+      end
+      let(:conversation) { create(:conversation, account: account, inbox: channel.inbox) }
+      let(:message) { create(:message, account: account, conversation: conversation, inbox: channel.inbox, content_type: 'voice_call') }
+
+      before do
+        channel.update!(provider_config: channel.provider_config.merge('transcription_enabled' => false))
+        allow(Llm::SpeechToTextService).to receive(:new)
+      end
+
+      it 'skips transcription' do
+        expect(service.perform).to eq({ error: 'Transcription disabled for this inbox' })
+        expect(Llm::SpeechToTextService).not_to have_received(:new)
+      end
+
+      # The setting is about call recordings; an ordinary voice note on the same inbox is untouched.
+      it 'still transcribes a voice note sent by the contact' do
+        message.update!(content_type: 'text')
+
+        expect(service.perform).not_to eq({ error: 'Transcription disabled for this inbox' })
+      end
+    end
+
     context 'when transcription is successful' do
       before do
-        # Mock can_transcribe? to return true and transcribe_audio method
-        allow(service).to receive(:can_transcribe?).and_return(true)
+        allow(Llm::SpeechToTextService).to receive(:available_for?).and_return(true)
         allow(service).to receive(:transcribe_audio).and_return('Hello world transcription')
       end
 
@@ -61,7 +85,7 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
     context 'when attachment already has transcribed text' do
       before do
         attachment.update!(meta: { transcribed_text: 'Existing transcription' })
-        allow(service).to receive(:can_transcribe?).and_return(true)
+        allow(Llm::SpeechToTextService).to receive(:available_for?).and_return(true)
       end
 
       it 'returns existing transcription without calling API' do
@@ -70,103 +94,20 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
       end
     end
 
-    context 'when the audio exceeds Whisper byte limit' do
+    context 'when the audio exceeds the transcription byte limit' do
       before do
         attachment.file.attach(
           io: File.open(Rails.public_path.join('audio/widget/ding.mp3')),
           filename: 'large.mp3',
           content_type: 'audio/mpeg'
         )
-        allow(service).to receive(:can_transcribe?).and_return(true)
-        allow(attachment.file.blob).to receive(:byte_size).and_return(described_class::TRANSCRIPTION_BYTE_LIMIT + 1)
+        allow(Llm::SpeechToTextService).to receive(:available_for?).and_return(true)
+        allow(attachment.file.blob).to receive(:byte_size).and_return(Llm::SpeechToTextService::BYTE_LIMIT + 1)
       end
 
-      it 'returns an error without calling Whisper' do
+      it 'returns an error without transcribing' do
         expect(service).not_to receive(:transcribe_audio)
-        expect(service.perform).to eq({ error: 'Audio too large for Whisper' })
-      end
-    end
-  end
-
-  describe '#fetch_audio_file' do
-    let(:service) { described_class.new(attachment) }
-
-    before do
-      attachment.file.attach(
-        io: File.open(Rails.public_path.join('audio/widget/ding.mp3')),
-        filename: 'speech',
-        content_type: 'audio/mpeg'
-      )
-    end
-
-    it 'adds extension from content type when filename has no extension' do
-      temp_file_path = service.send(:fetch_audio_file)
-
-      expect(File.extname(temp_file_path)).to eq('.mpeg')
-    ensure
-      FileUtils.rm_f(temp_file_path) if temp_file_path.present?
-    end
-  end
-
-  describe '#transcribe_audio' do
-    let(:service) { described_class.new(attachment) }
-    let(:audio_api) { double('audio_api') } # rubocop:disable RSpec/VerifiedDoubles
-    let(:audio_file_path) { Rails.root.join('tmp/audio_transcription_service_spec.mp3').to_s }
-
-    before do
-      File.binwrite(audio_file_path, 'audio')
-      allow(service).to receive(:fetch_audio_file).and_return(audio_file_path)
-      allow(service).to receive(:update_transcription)
-      allow(service.client).to receive(:audio).and_return(audio_api)
-    end
-
-    after do
-      FileUtils.rm_f(audio_file_path)
-    end
-
-    it 'uses the audio transcription feature model' do
-      expect(audio_api).to receive(:transcribe).with(
-        parameters: hash_including(model: 'gpt-4o-mini-transcribe', temperature: 0.0)
-      ).and_return({ 'text' => 'Audio transcript' })
-
-      expect(service.send(:transcribe_audio)).to eq('Audio transcript')
-    end
-  end
-
-  # O Azure só serve transcrição na rota clássica /openai/deployments/{deployment}/audio/...;
-  # a rota OpenAI-compatível (/openai/v1/audio/transcriptions) devolve 404 lá.
-  describe 'client selection by endpoint' do
-    let(:service) { described_class.new(attachment) }
-
-    context 'when the endpoint is an Azure resource' do
-      before do
-        config = InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')
-        config.value = 'https://example.cognitiveservices.azure.com/openai'
-        config.save!
-      end
-
-      it 'builds an azure client with the deployment in the uri base' do
-        expect(service.client.uri_base).to eq(
-          'https://example.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini-transcribe'
-        )
-      end
-
-      it 'switches the gem to azure mode so it appends the api-version and uses the api-key header' do
-        expect(service.client.api_type.to_sym).to eq(:azure)
-        expect(service.client.api_version).to eq(described_class::AZURE_API_VERSION)
-      end
-    end
-
-    context 'when the endpoint is not Azure' do
-      before do
-        config = InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')
-        config.value = 'https://api.openai.com'
-        config.save!
-      end
-
-      it 'keeps the shared client untouched' do
-        expect(service.client.uri_base).to eq('https://api.openai.com')
-        expect(service.client.api_type).to be_nil
+        expect(service.perform).to eq({ error: 'Audio too large for transcription' })
       end
     end
   end
