@@ -60,6 +60,18 @@ export default {
   },
   data() {
     return {
+      // Os dois vivem em public/ e são servidos pelo Rails, não pelo build do front. Por isso
+      // entram como valor, não como atributo fixo: atributo fixo o Vite tenta resolver como
+      // import e o módulo quebra.
+      fotoLogin: '/brand/login-foto.jpg',
+      fotoLoginMobile: '/brand/login-foto-mobile.jpg',
+      marcaMobilli: '/brand/mobilli.svg',
+      // nome próprio não se traduz, então a assinatura vive aqui em vez de virar chave de i18n
+      assinatura: {
+        empresa: 'by Mobílli Rentals',
+        autor: 'Egnner Bruno',
+        github: 'https://github.com/egnnerbruno',
+      },
       // We need to initialize the component with any
       // properties that will be used in it
       credentials: {
@@ -110,6 +122,15 @@ export default {
     },
     showEmailLogin() {
       return window.chatwootConfig.emailLoginEnabled !== 'false';
+    },
+    // O logo vem da configuração da instalação; quando ela está vazia (instalação nova, banco
+    // local recém-criado), cai pros arquivos de marca que já vivem em public/brand-assets —
+    // tela de entrada sem logo é pior do que tela com o logo padrão da casa.
+    logoClaro() {
+      return this.globalConfig.logo || '/brand-assets/logo.svg';
+    },
+    logoEscuro() {
+      return this.globalConfig.logoDark || '/brand-assets/logo_dark.svg';
     },
     showSignupLink() {
       return window.chatwootConfig.signupEnabled === 'true';
@@ -306,141 +327,286 @@ export default {
 </script>
 
 <template>
-  <main
-    class="flex flex-col w-full min-h-screen py-20 bg-n-brand/5 dark:bg-n-background sm:px-6 lg:px-8"
-  >
-    <section class="max-w-5xl mx-auto">
-      <img
-        :src="globalConfig.logo"
-        :alt="globalConfig.installationName"
-        class="block w-auto h-8 mx-auto dark:hidden"
-      />
-      <img
-        v-if="globalConfig.logoDark"
-        :src="globalConfig.logoDark"
-        :alt="globalConfig.installationName"
-        class="hidden w-auto h-8 mx-auto dark:block"
-      />
-      <h2 class="mt-6 text-3xl font-medium text-center text-n-slate-12">
-        {{ replaceInstallationName($t('LOGIN.TITLE')) }}
-      </h2>
-      <p v-if="showSignupLink" class="mt-3 text-sm text-center text-n-slate-11">
-        {{ $t('COMMON.OR') }}
-        <router-link to="auth/signup" class="lowercase text-link text-n-brand">
-          {{ $t('LOGIN.CREATE_NEW_ACCOUNT') }}
-        </router-link>
-      </p>
-    </section>
+  <main class="entrada">
+    <!-- a foto é a tela: quem está do outro lado da conversa -->
+    <div class="entrada__foto">
+      <picture>
+        <source media="(max-width: 1023px)" :srcset="fotoLoginMobile" />
+        <img :src="fotoLogin" alt="" />
+      </picture>
+    </div>
+    <div class="entrada__sombra" aria-hidden="true" />
 
-    <!-- Session Limit Section -->
-    <section v-if="sessionsLimitReached" class="mt-11">
-      <SessionLimitOverlay
-        :sessions="limitedSessions"
-        @revoke="handleSessionRevoke"
-        @revoke-all="handleSessionRevokeAll"
-        @cancel="handleSessionLimitCancel"
-      />
-    </section>
-
-    <!-- MFA Verification Section -->
-    <section v-else-if="mfaRequired" class="mt-11">
-      <MfaVerification
-        :mfa-token="mfaToken"
-        @verified="handleMfaVerified"
-        @cancel="handleMfaCancel"
-      />
-    </section>
-
-    <!-- Regular Login Section -->
-    <section
-      v-else
-      class="bg-white shadow sm:mx-auto mt-11 sm:w-full sm:max-w-lg dark:bg-n-solid-2 p-11 sm:shadow-lg sm:rounded-lg"
-      :class="{
-        'mb-8 mt-15': !showGoogleOAuth,
-        'animate-wiggle': loginApi.hasErrored,
-      }"
-    >
-      <div v-if="!email">
-        <form
-          v-if="showEmailLogin"
-          class="space-y-5"
-          @submit.prevent="submitFormLogin"
-        >
-          <FormInput
-            v-model="credentials.email"
-            name="email_address"
-            type="text"
-            data-testid="email_input"
-            :tabindex="1"
-            required
-            :label="$t('LOGIN.EMAIL.LABEL')"
-            :placeholder="$t('LOGIN.EMAIL.PLACEHOLDER')"
-            :has-error="v$.credentials.email.$error"
-            @input="v$.credentials.email.$touch"
-          />
-          <FormInput
-            v-model="credentials.password"
-            type="password"
-            name="password"
-            data-testid="password_input"
-            required
-            :tabindex="2"
-            :label="$t('LOGIN.PASSWORD.LABEL')"
-            :placeholder="$t('LOGIN.PASSWORD.PLACEHOLDER')"
-            :has-error="v$.credentials.password.$error"
-            @input="v$.credentials.password.$touch"
+    <!-- o bloco de entrar flutua por cima dela -->
+    <div class="entrada__painel">
+      <div
+        class="entrada__cartao"
+        :class="{ 'animate-wiggle': loginApi.hasErrored }"
+      >
+        <img
+          :src="logoClaro"
+          :alt="globalConfig.installationName"
+          class="block w-auto h-8 dark:hidden"
+        />
+        <img
+          :src="logoEscuro"
+          :alt="globalConfig.installationName"
+          class="hidden w-auto h-8 dark:block"
+        />
+        <h2 class="mt-8 text-2xl font-medium text-n-slate-12">
+          {{ replaceInstallationName($t('LOGIN.TITLE')) }}
+        </h2>
+        <p v-if="showSignupLink" class="mt-2 text-sm text-n-slate-11">
+          {{ $t('COMMON.OR') }}
+          <router-link
+            to="auth/signup"
+            class="lowercase text-link text-n-brand"
           >
-            <p v-if="!globalConfig.disableUserProfileUpdate">
-              <router-link
-                to="auth/reset/password"
-                class="text-sm text-link"
-                tabindex="4"
-              >
-                {{ $t('LOGIN.FORGOT_PASSWORD') }}
-              </router-link>
-            </p>
-          </FormInput>
-          <NextButton
-            lg
-            type="submit"
-            data-testid="submit_button"
-            class="w-full"
-            :tabindex="3"
-            :label="$t('LOGIN.SUBMIT')"
-            :disabled="loginApi.showLoading"
-            :is-loading="loginApi.showLoading"
+            {{ $t('LOGIN.CREATE_NEW_ACCOUNT') }}
+          </router-link>
+        </p>
+
+        <!-- Session Limit Section -->
+        <section v-if="sessionsLimitReached" class="mt-8">
+          <SessionLimitOverlay
+            :sessions="limitedSessions"
+            @revoke="handleSessionRevoke"
+            @revoke-all="handleSessionRevokeAll"
+            @cancel="handleSessionLimitCancel"
           />
-        </form>
-        <div class="flex flex-col gap-4" :class="{ 'mt-4': showEmailLogin }">
-          <SimpleDivider
-            v-if="
-              (showGoogleOAuth || showMicrosoftOAuth || showSamlLogin) &&
-              showEmailLogin
-            "
-            :label="$t('COMMON.OR')"
-            class="uppercase"
+        </section>
+
+        <!-- MFA Verification Section -->
+        <section v-else-if="mfaRequired" class="mt-8">
+          <MfaVerification
+            :mfa-token="mfaToken"
+            @verified="handleMfaVerified"
+            @cancel="handleMfaCancel"
           />
-          <GoogleOAuthButton v-if="showGoogleOAuth" />
-          <MicrosoftOAuthButton v-if="showMicrosoftOAuth" />
-          <div v-if="showSamlLogin" class="text-center">
-            <router-link
-              to="/app/login/sso"
-              class="inline-flex justify-center w-full px-4 py-3 items-center bg-n-background dark:bg-n-solid-3 rounded-md shadow-sm ring-1 ring-inset ring-n-container dark:ring-n-container focus:outline-offset-0 hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
+        </section>
+
+        <!-- Regular Login Section -->
+        <section v-else class="mt-8">
+          <div v-if="!email">
+            <form
+              v-if="showEmailLogin"
+              class="space-y-5"
+              @submit.prevent="submitFormLogin"
             >
-              <Icon
-                icon="i-lucide-lock-keyhole"
-                class="size-5 text-n-slate-11"
+              <FormInput
+                v-model="credentials.email"
+                name="email_address"
+                type="text"
+                data-testid="email_input"
+                :tabindex="1"
+                required
+                :label="$t('LOGIN.EMAIL.LABEL')"
+                :placeholder="$t('LOGIN.EMAIL.PLACEHOLDER')"
+                :has-error="v$.credentials.email.$error"
+                @input="v$.credentials.email.$touch"
               />
-              <span class="ml-2 text-base font-medium text-n-slate-12">
-                {{ $t('LOGIN.SAML.LABEL') }}
-              </span>
-            </router-link>
+              <FormInput
+                v-model="credentials.password"
+                type="password"
+                name="password"
+                data-testid="password_input"
+                required
+                :tabindex="2"
+                :label="$t('LOGIN.PASSWORD.LABEL')"
+                :placeholder="$t('LOGIN.PASSWORD.PLACEHOLDER')"
+                :has-error="v$.credentials.password.$error"
+                @input="v$.credentials.password.$touch"
+              >
+                <p v-if="!globalConfig.disableUserProfileUpdate">
+                  <router-link
+                    to="auth/reset/password"
+                    class="text-sm text-link"
+                    tabindex="4"
+                  >
+                    {{ $t('LOGIN.FORGOT_PASSWORD') }}
+                  </router-link>
+                </p>
+              </FormInput>
+              <NextButton
+                lg
+                type="submit"
+                data-testid="submit_button"
+                class="w-full"
+                :tabindex="3"
+                :label="$t('LOGIN.SUBMIT')"
+                :disabled="loginApi.showLoading"
+                :is-loading="loginApi.showLoading"
+              />
+            </form>
+            <div
+              class="flex flex-col gap-4"
+              :class="{ 'mt-4': showEmailLogin }"
+            >
+              <SimpleDivider
+                v-if="
+                  (showGoogleOAuth || showMicrosoftOAuth || showSamlLogin) &&
+                  showEmailLogin
+                "
+                :label="$t('COMMON.OR')"
+                class="uppercase"
+              />
+              <GoogleOAuthButton v-if="showGoogleOAuth" />
+              <MicrosoftOAuthButton v-if="showMicrosoftOAuth" />
+              <div v-if="showSamlLogin" class="text-center">
+                <router-link
+                  to="/app/login/sso"
+                  class="inline-flex justify-center w-full px-4 py-3 items-center bg-n-background dark:bg-n-solid-3 rounded-md shadow-sm ring-1 ring-inset ring-n-container dark:ring-n-container focus:outline-offset-0 hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
+                >
+                  <Icon
+                    icon="i-lucide-lock-keyhole"
+                    class="size-5 text-n-slate-11"
+                  />
+                  <span class="ml-2 text-base font-medium text-n-slate-12">
+                    {{ $t('LOGIN.SAML.LABEL') }}
+                  </span>
+                </router-link>
+              </div>
+            </div>
           </div>
-        </div>
+          <div v-else class="flex items-center justify-center">
+            <Spinner color-scheme="primary" size="" />
+          </div>
+        </section>
+        <footer class="entrada__rodape">
+          <img :src="marcaMobilli" alt="" class="entrada__marca" />
+          {{ assinatura.empresa }}
+          <span class="entrada__barra">|</span>
+          <a
+            :href="assinatura.github"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ assinatura.autor }}
+          </a>
+        </footer>
       </div>
-      <div v-else class="flex items-center justify-center">
-        <Spinner color-scheme="primary" size="" />
-      </div>
-    </section>
+    </div>
   </main>
 </template>
+
+<style scoped>
+/* A foto ocupa a tela inteira e o bloco de entrar flutua por cima dela, encostado à esquerda.
+   As cores do bloco saem dos tokens do design system (--slate-*), que já trocam sozinhos entre
+   o tema claro e o escuro. */
+.entrada {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: rgb(var(--slate-2));
+}
+
+.entrada__foto {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.entrada__foto picture,
+.entrada__foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.entrada__foto img {
+  object-fit: cover;
+  object-position: 62% 45%;
+}
+
+/* escurece o lado onde o bloco fica, pra ele assentar na foto em vez de boiar */
+.entrada__sombra {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    rgb(0 0 0 / 0.55) 0%,
+    rgb(0 0 0 / 0.3) 45%,
+    rgb(0 0 0 / 0) 78%
+  );
+}
+
+.entrada__painel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 2.5rem 1.5rem;
+}
+
+.entrada__cartao {
+  width: 100%;
+  max-width: 25rem;
+  padding: 2.5rem;
+  background: rgb(var(--slate-1) / 0.97);
+  border-radius: 24px;
+  box-shadow: 0 30px 60px rgb(0 0 0 / 0.35);
+}
+
+.entrada__rodape {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  font-size: 12px;
+  color: rgb(var(--slate-11));
+  text-align: center;
+  border-top: 1px solid rgb(var(--slate-4));
+}
+
+.entrada__rodape a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(var(--slate-8) / 0.6);
+}
+
+.entrada__rodape a:hover {
+  color: rgb(var(--blue-11));
+  border-bottom-color: rgb(var(--blue-9) / 0.7);
+}
+
+.entrada__barra {
+  margin-inline: 6px;
+  opacity: 0.5;
+}
+
+.entrada__marca {
+  display: inline-block;
+  height: 15px;
+  margin-right: 7px;
+  vertical-align: -3px;
+}
+
+/* na tela estreita o bloco fica no meio da foto, então o véu escurece por igual em vez de
+   puxar pro lado, e o corte segue o retrato: rosto acima do cartão */
+@media (max-width: 1023px) {
+  .entrada__foto img {
+    object-position: 50% 35%;
+  }
+
+  .entrada__sombra {
+    background: linear-gradient(
+      180deg,
+      rgb(0 0 0 / 0.3) 0%,
+      rgb(0 0 0 / 0.55) 55%,
+      rgb(0 0 0 / 0.7) 100%
+    );
+  }
+}
+
+/* na tela larga o bloco sai do meio e encosta à esquerda, como na referência */
+@media (min-width: 1024px) {
+  .entrada__painel {
+    justify-content: flex-start;
+    padding: 3rem clamp(3rem, 8vw, 9rem);
+  }
+}
+</style>
