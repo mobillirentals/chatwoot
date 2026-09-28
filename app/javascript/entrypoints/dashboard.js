@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import { createI18n } from 'vue-i18n';
+import { comMarcaDaInstalacao } from 'shared/helpers/marcaDaInstalacao';
 
 import axios from 'axios';
 // Global Components
@@ -37,6 +38,8 @@ const i18n = createI18n({
   legacy: false, // https://github.com/intlify/vue-i18n/issues/1902
   locale: 'en',
   messages: i18nMessages,
+  // todo texto sai com o nome desta instalação no lugar de "Chatwoot"
+  postTranslation: comMarcaDaInstalacao,
 });
 
 sync(store, router);
