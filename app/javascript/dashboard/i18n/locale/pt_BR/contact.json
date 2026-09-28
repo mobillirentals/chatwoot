@@ -7,6 +7,7 @@
       "CONFIRMED": "Tem WhatsApp",
       "NOT_FOUND": "WhatsApp não encontrado"
     },
+    "WHATSAPP_USERNAME": "Nome de usuário do WhatsApp",
     "IDENTIFIER": "Identificador",
     "COPY_SUCCESSFUL": "Copiado para área de transferência com sucesso",
     "COMPANY": "Empresa",
@@ -467,6 +468,9 @@
           "INSTAGRAM": {
             "PLACEHOLDER": "Adicionar Instagram"
           },
+          "WHATSAPP": {
+            "PLACEHOLDER": "Adicionar WhatsApp"
+          },
           "TELEGRAM": {
             "PLACEHOLDER": "Adicionar Telegram"
           },
@@ -656,6 +660,9 @@
   "COMPOSE_NEW_CONVERSATION": {
     "CONTACT_SEARCH": {
       "ERROR_MESSAGE": "Não foi possível completar a pesquisa. Por favor, tente novamente."
+    },
+    "CONTACT_CREATE": {
+      "ERROR_MESSAGE": "Não foi possível criar o contato. Por favor, tente novamente."
     },
     "FORM": {
       "GO_TO_CONVERSATION": "Visualizar",

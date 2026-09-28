@@ -1,8 +1,5 @@
 {
   "CAMPAIGN": {
-    "CARD": {
-      "DELETE_DISABLED_TOOLTIP": "Completed campaigns can't be deleted — the record is the only proof of what was sent."
-    },
     "LIVE_CHAT": {
       "HEADER_TITLE": "Live chat campaigns",
       "NEW_CAMPAIGN": "Create campaign",
@@ -97,9 +94,9 @@
           "FAILED": "Failed"
         },
         "CAMPAIGN_DETAILS": {
-          "CREATED_BY": "Created by",
           "SENT_FROM": "Sent from",
-          "ON": "on"
+          "ON": "on",
+          "CREATED_BY": "Created by"
         }
       },
       "CREATE": {
@@ -147,19 +144,12 @@
     "WHATSAPP": {
       "HEADER_TITLE": "WhatsApp campaigns",
       "NEW_CAMPAIGN": "Create campaign",
-      "CREATE_MENU": {
-        "LABEL_BASED": "Campaign by label"
-      },
-      "SEARCH_PLACEHOLDER": "Search by title",
-      "FILTER": {
-        "ALL": "All",
-        "NO_RESULTS": "No results for this filter."
-      },
       "EMPTY_STATE": {
         "TITLE": "No WhatsApp campaigns are available",
         "SUBTITLE": "Launch a WhatsApp campaign to reach your customers directly. Send offers or make announcements with ease. Click 'Create campaign' to get started."
       },
       "CARD": {
+        "ANALYTICS": "View analytics",
         "STATUS": {
           "PROCESSING": "Processing",
           "COMPLETED": "Completed",
@@ -215,6 +205,108 @@
             "ERROR_MESSAGE": "There was an error. Please try again."
           }
         }
+      },
+      "ANALYTICS": {
+        "LOADING": "Loading analytics...",
+        "EMPTY": "No delivery records found.",
+        "EMPTY_FILTER": "No {status} delivery records found.",
+        "DELIVERIES_ERROR": "Delivery records couldn't be loaded. Refresh the page to try again.",
+        "EMPTY_STATE": {
+          "ERROR": {
+            "TITLE": "Analytics couldn't be loaded",
+            "DESCRIPTION": "Refresh the page to try again."
+          },
+          "PENDING": {
+            "TITLE": "Delivery data will appear once sending begins",
+            "DESCRIPTION": "There are no delivery records for this campaign yet."
+          },
+          "UNAVAILABLE": {
+            "TITLE": "Analytics aren't available for this campaign",
+            "DESCRIPTION": "No delivery data was recorded for this campaign. This can happen for campaigns sent before campaign analytics were introduced."
+          }
+        },
+        "PROCESSING_BANNER": {
+          "DEFAULT": "This campaign is still processing. Analytics will update automatically.",
+          "BOTH": "This campaign is still processing. {queued} messages are queued, and {awaitingUpdate} are awaiting a delivery update from WhatsApp.",
+          "BOTH_SINGLE": "This campaign is still processing. {queued} message is queued, and {awaitingUpdate} is awaiting a delivery update from WhatsApp.",
+          "BOTH_QUEUED_SINGLE": "This campaign is still processing. {queued} message is queued, and {awaitingUpdate} are awaiting a delivery update from WhatsApp.",
+          "BOTH_AWAITING_SINGLE": "This campaign is still processing. {queued} messages are queued, and {awaitingUpdate} is awaiting a delivery update from WhatsApp.",
+          "QUEUED": "This campaign is still processing. {count} message is queued. | This campaign is still processing. {count} messages are queued.",
+          "AWAITING_UPDATE": "This campaign is still processing. {count} message is awaiting a delivery update from WhatsApp. | This campaign is still processing. {count} messages are awaiting a delivery update from WhatsApp.",
+          "COMPLETING": "This campaign is completing. Analytics will update automatically."
+        },
+        "RATE": "{value}% of audience",
+        "SENT_ON": "Sent on {date}",
+        "PAGE_INFO": "Showing {startItem} - {endItem} of {totalItems} contact | Showing {startItem} - {endItem} of {totalItems} contacts",
+        "BREADCRUMB": {
+          "CAMPAIGNS": "Campaigns",
+          "WHATSAPP": "WhatsApp"
+        },
+        "FILTERS": {
+          "ALL": "All"
+        },
+        "METRICS": {
+          "AUDIENCE": {
+            "LABEL": "Audience",
+            "HINT": "Contacts included in this campaign."
+          },
+          "SENT": {
+            "LABEL": "Submitted to WhatsApp",
+            "HINT": "Messages accepted by WhatsApp for delivery."
+          },
+          "DELIVERED": {
+            "LABEL": "Delivered",
+            "HINT": "Messages that reached the contact's device. Read messages are included."
+          },
+          "READ": {
+            "LABEL": "Read",
+            "HINT": "Messages opened by the contact."
+          },
+          "FAILED": {
+            "LABEL": "Failed",
+            "HINT": "Messages WhatsApp could not deliver."
+          },
+          "SKIPPED": {
+            "LABEL": "Skipped",
+            "HINT": "Contacts skipped before sending, usually because of a missing or invalid phone number."
+          }
+        },
+        "STATUS": {
+          "QUEUED": "Queued",
+          "SENT": "Awaiting delivery update",
+          "DELIVERED": "Delivered",
+          "READ": "Read",
+          "FAILED": "Failed",
+          "SKIPPED": "Skipped"
+        },
+        "BREAKDOWN": {
+          "TITLE": "Delivery breakdown",
+          "DELIVERY_RATE": "{value}% delivered",
+          "LEGEND": {
+            "READ": "Read",
+            "DELIVERED": "Delivered",
+            "FAILED": "Failed",
+            "SKIPPED": "Skipped",
+            "PENDING": "Queued or awaiting update"
+          }
+        },
+        "TABLE": {
+          "TITLE": "Deliveries",
+          "CONTACT": "Contact",
+          "STATUS": "Status",
+          "MESSAGE": "Message",
+          "MESSAGE_NOT_GENERATED": "Not generated",
+          "REASON": "Reason",
+          "ERROR_CODE": "Code {code}"
+        }
+      },
+      "CREATE_MENU": {
+        "LABEL_BASED": "Campaign by label"
+      },
+      "SEARCH_PLACEHOLDER": "Search by title",
+      "FILTER": {
+        "ALL": "All",
+        "NO_RESULTS": "No results for this filter."
       },
       "BULK_DISPATCH": {
         "BUTTON_LABEL": "Bulk dispatch",
@@ -305,6 +397,9 @@
         "SUCCESS_MESSAGE": "Campaign deleted successfully",
         "ERROR_MESSAGE": "There was an error. Please try again."
       }
+    },
+    "CARD": {
+      "DELETE_DISABLED_TOOLTIP": "Completed campaigns can't be deleted — the record is the only proof of what was sent."
     }
   }
 }

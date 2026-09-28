@@ -27,12 +27,21 @@ module Whatsapp::IncomingMessageServiceHelpers
   end
 
   def message_content(message)
+    return I18n.t('conversations.messages.whatsapp.flow_response') if message.dig(:interactive, :nfm_reply).present?
+
     # TODO: map interactive messages back to button messages in chatwoot
     message.dig(:text, :body) ||
       message.dig(:button, :text) ||
       message.dig(:interactive, :button_reply, :title) ||
       message.dig(:interactive, :list_reply, :title) ||
       message.dig(:name, :formatted_name)
+  end
+
+  def parse_flow_response_json(response_json)
+    parsed_response = JSON.parse(response_json)
+    parsed_response.is_a?(Hash) ? parsed_response : response_json
+  rescue JSON::ParserError, TypeError
+    response_json
   end
 
   def file_content_type(file_type)
@@ -53,6 +62,10 @@ module Whatsapp::IncomingMessageServiceHelpers
     Whatsapp::PhoneNumberNormalizationService.new(inbox).normalize_and_find_contact_by_provider(waid, :cloud)
   end
 
+  def phone_number_candidates(phone_number)
+    Whatsapp::PhoneNumberNormalizationService.new(inbox).phone_number_candidates(phone_number)
+  end
+
   def whatsapp_phone_number(identifier)
     identifier = identifier.to_s
     return if identifier.blank?
@@ -71,37 +84,12 @@ module Whatsapp::IncomingMessageServiceHelpers
 
   def process_in_reply_to(message)
     @in_reply_to_external_id = message['context']&.[]('id')
-    @in_reply_to_external_id = resolve_reply_source_id(@in_reply_to_external_id) if @in_reply_to_external_id.present?
-  end
+    return if @in_reply_to_external_id.blank?
 
-  # Quando o cliente responde à PRÓPRIA mensagem, o WhatsApp manda o `context.id`
-  # referenciando a mensagem pela identidade de usuário (user_id `BR.xxx`), enquanto
-  # guardamos o wamid baseado no telefone. O match exato do `source_id` falha, mas o
-  # id-da-mensagem (bloco final do wamid) é o mesmo. Aqui, se o exato não bater,
-  # casamos por esse id-da-mensagem e devolvemos o `source_id` realmente armazenado.
-  def resolve_reply_source_id(external_id)
-    return external_id if @conversation.nil?
-    return external_id if @conversation.messages.where(source_id: external_id).exists?
-
-    target_hex = wamid_message_hex(external_id)
-    return external_id if target_hex.blank?
-
-    stored = @conversation.messages
-                          .where.not(source_id: nil)
-                          .reorder(created_at: :desc)
-                          .limit(100)
-                          .pluck(:source_id)
-                          .find { |sid| wamid_message_hex(sid) == target_hex }
-    stored || external_id
-  end
-
-  # Extrai o id-da-mensagem (último bloco hex) de um wamid, que é estável
-  # independente da identidade (telefone x user_id) embutida no id.
-  def wamid_message_hex(source_id)
-    return nil if source_id.blank? || !source_id.to_s.start_with?('wamid.')
-
-    decoded = Base64.decode64(source_id.to_s.delete_prefix('wamid.'))
-    decoded.scan(/[0-9A-Fa-f]{16,}/).last
+    @in_reply_to_message_id = Whatsapp::InReplyToMessageFinder.new(
+      conversation: @conversation,
+      source_id: @in_reply_to_external_id
+    ).perform&.id
   end
 
   def referral_attributes(message)

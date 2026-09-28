@@ -3,6 +3,7 @@ module Enterprise::AsyncDispatcher
     super + [
       CaptainListener.instance,
       CaptainLearningListener.instance
+      Captain::ReportingEventListener.instance
     ]
   end
 end

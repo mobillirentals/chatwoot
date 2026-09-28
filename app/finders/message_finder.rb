@@ -1,6 +1,7 @@
 class MessageFinder
   # quantos resultados o filtro devolve por vez (a tela pede mais conforme o usuario rola)
   RESULTADOS_POR_VEZ = 50
+  MESSAGE_ID_MAX = 2_147_483_647
 
   def initialize(conversation, params)
     @conversation = conversation
@@ -56,16 +57,19 @@ class MessageFinder
   end
 
   def current_messages
+    # id maior que o limite do banco nao existe: o guard vem antes de qualquer consulta
+    return messages.none if oversized_message_id?(@params[:after])
+
     # com filtro ativo a tela mostra uma lista de resultados, nao a janela deslizante da conversa:
     # os 20 ultimos nao servem de nada quando se procura algo de 2023
     return resultados_do_filtro if filtrando?
 
     if @params[:after].present? && @params[:before].present?
-      messages_between(@params[:after].to_i, @params[:before].to_i)
+      messages_between(normalized_message_id(@params[:after]), @params[:before].to_i)
     elsif @params[:before].present?
       messages_before(@params[:before].to_i)
     elsif @params[:after].present?
-      messages_after(@params[:after].to_i)
+      messages_after(normalized_message_id(@params[:after]))
     else
       messages_latest
     end
@@ -76,11 +80,16 @@ class MessageFinder
   end
 
   def messages_before(before_id)
+    return messages_latest if oversized_message_id?(before_id)
+
+    before_id = normalized_message_id(before_id)
     messages.reorder('created_at desc').where('id < ?', before_id).limit(20).reverse
   end
 
   def messages_between(after_id, before_id)
-    messages.reorder('created_at asc').where('id >= ? AND id < ?', after_id, before_id).limit(1000)
+    message_scope = messages.reorder('created_at asc').where('id >= ?', after_id)
+    message_scope = message_scope.where('id < ?', normalized_message_id(before_id)) unless oversized_message_id?(before_id)
+    message_scope.limit(1000)
   end
 
   def messages_latest
@@ -91,6 +100,14 @@ class MessageFinder
     lista = messages.reorder('created_at desc')
     lista = lista.where('messages.id < ?', @params[:before].to_i) if @params[:before].present?
     lista.limit(RESULTADOS_POR_VEZ).reverse
+  end
+
+  def normalized_message_id(value)
+    value.to_i.clamp(0, MESSAGE_ID_MAX)
+  end
+
+  def oversized_message_id?(value)
+    value.to_i > MESSAGE_ID_MAX
   end
 end
 

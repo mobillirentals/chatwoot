@@ -44,6 +44,7 @@ const translationKeys = {
   'agentbot:create': `AUDIT_LOGS.AGENT_BOT.ADD`,
   'agentbot:update': `AUDIT_LOGS.AGENT_BOT.EDIT`,
   'agentbot:destroy': `AUDIT_LOGS.AGENT_BOT.DELETE`,
+  'message:destroy': `AUDIT_LOGS.MESSAGE.DELETE`,
 };
 
 function extractAttrChange(attrChange) {
@@ -192,6 +193,11 @@ export function generateTranslationPayload(auditLogItem, agentList) {
       auditLogItem.audited_changes?.contact_name || auditLogItem.auditable_id;
   }
 
+  if (auditableType === 'message' && action === 'destroy') {
+    translationPayload.conversationId =
+      auditLogItem.audited_changes?.display_id;
+  }
+
   if (auditableType === 'accountuser') {
     translationPayload = handleAccountUser(
       auditLogItem,
@@ -235,3 +241,62 @@ export const generateLogActionKey = auditLogItem => {
 
   return translationKeys[logActionKey] || '';
 };
+
+export const EVENT_TYPE_GROUPS = [
+  { key: 'ACCESS', types: [{ value: 'User', key: 'SIGN_IN_OUT' }] },
+  {
+    key: 'AGENTS_TEAMS',
+    types: [
+      { value: 'AccountUser', key: 'AGENTS' },
+      { value: 'Team', key: 'TEAMS' },
+      { value: 'TeamMember', key: 'TEAM_MEMBERS' },
+      { value: 'InboxMember', key: 'INBOX_MEMBERS' },
+    ],
+  },
+  {
+    key: 'CONFIGURATION',
+    types: [
+      { value: 'Account', key: 'ACCOUNT' },
+      { value: 'Inbox', key: 'INBOXES' },
+      { value: 'Webhook', key: 'WEBHOOKS' },
+      { value: 'AutomationRule', key: 'AUTOMATION_RULES' },
+      { value: 'Macro', key: 'MACROS' },
+    ],
+  },
+  {
+    key: 'CONVERSATIONS',
+    types: [
+      { value: 'Conversation', key: 'CONVERSATION_DELETIONS' },
+      { value: 'Message', key: 'MESSAGE_DELETIONS' },
+    ],
+  },
+];
+
+const SUPPORTED_TYPES = EVENT_TYPE_GROUPS.flatMap(({ types }) =>
+  types.map(({ value }) => value)
+);
+const SORT_ORDERS = ['asc', 'desc'];
+
+export const auditLogFiltersFromQuery = (query = {}) => {
+  const filters = { page: Number(query.page) || 1 };
+
+  if (query.q) filters.q = query.q;
+  if (SUPPORTED_TYPES.includes(query.type)) filters.types = [query.type];
+  if (SORT_ORDERS.includes(query.sort)) filters.sort = query.sort;
+
+  const since = Number(query.since);
+  const until = Number(query.until);
+  if (since > 0 && until > 0) {
+    filters.since = since;
+    filters.until = until;
+  }
+
+  return filters;
+};
+
+export const buildAuditLogRouteQuery = (query = {}) =>
+  Object.fromEntries(
+    Object.entries(query).filter(
+      ([, value]) => value !== undefined && value !== ''
+    )
+  );

@@ -1,5 +1,7 @@
 <script setup>
 import CampaignCard from 'dashboard/components-next/Campaigns/CampaignCard/CampaignCard.vue';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { useConfig } from 'dashboard/composables/useConfig';
 
 defineProps({
   campaigns: {
@@ -12,11 +14,14 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['edit', 'delete', 'details']);
+const emit = defineEmits(['edit', 'delete', 'details', 'analytics']);
+const ANALYTICS_CAMPAIGN_STATUSES = ['processing', 'completed'];
+const { isEnterprise } = useConfig();
 
 const handleEdit = campaign => emit('edit', campaign);
 const handleDelete = campaign => emit('delete', campaign);
 const handleDetails = campaign => emit('details', campaign);
+const handleAnalytics = campaign => emit('analytics', campaign);
 </script>
 
 <template>
@@ -37,9 +42,15 @@ const handleDetails = campaign => emit('details', campaign);
       :type-color="campaign.type_color"
       :show-details-button="campaign.kind === 'bulk_dispatch'"
       :can-delete="campaign.can_delete"
+      :show-analytics="
+        isEnterprise &&
+        campaign.inbox?.channel_type === INBOX_TYPES.WHATSAPP &&
+        ANALYTICS_CAMPAIGN_STATUSES.includes(campaign.campaign_status)
+      "
       @edit="handleEdit(campaign)"
       @delete="handleDelete(campaign)"
       @details="handleDetails(campaign)"
+      @analytics="handleAnalytics(campaign)"
     />
   </div>
 </template>
