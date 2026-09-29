@@ -22,7 +22,10 @@ class Conversations::UnattendedConversationAlertJob < ApplicationJob
 
       Conversations::UnattendedAlertService.new(
         conversation: conversation,
-        agent_status: agent_status_by_id[conversation.assignee_id.to_s] || 'offline'
+        agent_status: agent_status_by_id[conversation.assignee_id.to_s] || 'offline',
+        # o mapa inteiro vai junto: a camada 2 precisa saber quem, entre os administradores,
+        # esta disponivel agora pra nao notificar quem esta com o computador desligado
+        available_users: agent_status_by_id
       ).perform
     end
   end
