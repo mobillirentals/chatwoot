@@ -35,7 +35,11 @@ class Conversations::UnattendedAlertService
   LAYER1_MESSAGE = 'Ainda estamos com você! Nossa equipe já viu sua mensagem e vai responder ' \
                    'em breve. 🙏'.freeze
 
-  pattr_initialize [:conversation!, :agent_status!]
+  # O enum real de disponibilidade e online/busy/offline (account_user.rb). Quem esta busy
+  # continua na frente do computador, entao recebe; offline, nao.
+  AVAILABLE_STATUSES = %w[online busy].freeze
+
+  pattr_initialize [:conversation!, :agent_status!, :available_users]
 
   def perform
     return if waited_minutes.nil?
@@ -129,8 +133,19 @@ class Conversations::UnattendedAlertService
     end
   end
 
+  # Administrador com o computador desligado nao precisa ser avisado de algo que ja passou: a
+  # notificacao fica acumulada e chega em lote quando ele volta (foi exatamente o que aconteceu —
+  # dezenas de avisos de uma vez ao ligar a maquina). Quem nao esta disponivel agora fica de fora;
+  # o alerta continua registrado como nota privada na conversa, e a conversa segue na lista de nao
+  # atendidas pra quem chegar depois.
+  #
+  # `available_users` nil = chamada sem informacao de presenca (comportamento antigo, avisa todos);
+  # hash vazio = ninguem disponivel neste minuto, e entao ninguem e notificado.
   def notify_users
-    (conversation.account.administrators.to_a + [conversation.assignee].compact).uniq
+    candidates = (conversation.account.administrators.to_a + [conversation.assignee].compact).uniq
+    return candidates if available_users.nil?
+
+    candidates.select { |user| AVAILABLE_STATUSES.include?(available_users[user.id.to_s]) }
   end
 
   def layer2_note
