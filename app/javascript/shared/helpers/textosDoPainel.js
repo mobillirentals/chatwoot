@@ -30,6 +30,8 @@ const CORRECOES = {
   // painel. Este item do menu é outra coisa — são as notificações de quem está usando, e o texto
   // original diz "My Inbox". Com o mesmo nome dos canais, a tela parece uma lista de conversas.
   'SIDEBAR.INBOX': { de: 'Caixa de Entrada', para: 'Notificações' },
+  // o título acima da lista, que é a mesma tela: também era "My Inbox" no original
+  'INBOX.LIST.TITLE': { de: 'Caixa de Entrada', para: 'Notificações' },
 };
 
 export const nomeDaInstalacao = () =>
