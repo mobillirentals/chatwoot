@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import { createI18n } from 'vue-i18n';
-import { comMarcaDaInstalacao } from 'shared/helpers/marcaDaInstalacao';
+import { comAjustesDeTexto } from 'shared/helpers/textosDoPainel';
 
 import axios from 'axios';
 // Global Components
@@ -40,7 +40,7 @@ const i18n = createI18n({
   locale: 'en',
   messages: i18nMessages,
   // todo texto sai com o nome desta instalação no lugar de "Chatwoot"
-  postTranslation: comMarcaDaInstalacao,
+  postTranslation: comAjustesDeTexto,
 });
 
 sync(store, router);
