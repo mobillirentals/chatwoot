@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import { createI18n } from 'vue-i18n';
-import { comMarcaDaInstalacao } from 'shared/helpers/marcaDaInstalacao';
+import { comAjustesDeTexto } from 'shared/helpers/textosDoPainel';
 
 import i18nMessages from 'dashboard/i18n';
 import * as Sentry from '@sentry/vue';
@@ -23,7 +23,7 @@ const i18n = createI18n({
   locale: 'en',
   messages: i18nMessages,
   // todo texto sai com o nome desta instalação no lugar de "Chatwoot"
-  postTranslation: comMarcaDaInstalacao,
+  postTranslation: comAjustesDeTexto,
 });
 
 const app = createApp(App);
