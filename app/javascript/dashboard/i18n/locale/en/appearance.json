@@ -1,0 +1,45 @@
+{
+  "APPEARANCE": {
+    "TITLE": "Appearance",
+    "DESCRIPTION": "Your choice is saved to your profile and follows you on any computer.",
+    "THEME": {
+      "TITLE": "Theme",
+      "LIGHT": "Light",
+      "DARK": "Dark",
+      "AUTO": "System",
+      "CUSTOM_TITLE": "Colours",
+      "CUSTOM_HINT": "click again to go back to the default"
+    },
+    "BACKGROUND": {
+      "TITLE": "Conversation background",
+      "HINT": "recommended {width}×{height}; larger images are resized on upload",
+      "NONE": "None",
+      "YOURS": "Yours",
+      "UPLOAD": "Upload image",
+      "UPLOAD_FAILED": "Could not upload the image. Please try again.",
+      "PRESETS": {
+        "GRADIENTE": "Gradient",
+        "RIO-CREPUSCULO": "Rio at dusk",
+        "ESTRELAS": "Stars",
+        "COPACABANA": "Copacabana",
+        "PREDIOS": "Buildings",
+        "FACHADAS": "Colourful facades",
+        "MONTANHAS": "Mountains",
+        "COLINA": "Hillside",
+        "NOVA-YORK": "New York",
+        "TRILHA": "Trail",
+        "POSTES": "Street lamps",
+        "CEU-NOTURNO": "Night sky",
+        "PAO-DE-ACUCAR": "Sugarloaf"
+      },
+      "BRIGHTNESS": "Brightness",
+      "FORMATS": "JPG, PNG or WebP",
+      "SENDING": "Uploading…"
+    },
+    "SAVE_FAILED": "Could not save the preference. Please try again.",
+    "SAVE": "Save",
+    "CANCEL": "Cancel",
+    "SAVED": "Appearance saved.",
+    "PEEK": "Peek"
+  }
+}

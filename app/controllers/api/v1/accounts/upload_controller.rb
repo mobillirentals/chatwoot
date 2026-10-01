@@ -11,7 +11,26 @@ class Api::V1::Accounts::UploadController < Api::V1::Accounts::BaseController
     render_success(result) if result.is_a?(ActiveStorage::Blob)
   end
 
+  # Remove um arquivo que o próprio usuário enviou e não usa mais (hoje: fundo de conversa).
+  #
+  # O upload cria um blob solto, sem vínculo com nenhum registro, então não dá para descobrir o
+  # dono pelo banco: a prova de posse é a lista no perfil de quem está pedindo. Sem essa
+  # checagem, qualquer pessoa poderia apagar anexo de conversa alheia passando o id.
+  def destroy
+    blob = ActiveStorage::Blob.find_by(id: params[:id])
+    return head :not_found if blob.blank?
+    return head :forbidden unless meu_envio?(blob.id)
+
+    blob.purge_later
+    head :ok
+  end
+
   private
+
+  def meu_envio?(blob_id)
+    enviados = Current.user.ui_settings&.dig('chat_background_uploads') || []
+    enviados.any? { |envio| envio.is_a?(Hash) && envio['blobId'].to_i == blob_id.to_i }
+  end
 
   def create_from_file
     attachment = params[:attachment]

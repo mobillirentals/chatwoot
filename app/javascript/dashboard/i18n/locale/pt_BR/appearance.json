@@ -1,0 +1,45 @@
+{
+  "APPEARANCE": {
+    "TITLE": "Aparência",
+    "DESCRIPTION": "A escolha fica no seu perfil e acompanha você em qualquer computador.",
+    "THEME": {
+      "TITLE": "Tema",
+      "LIGHT": "Claro",
+      "DARK": "Escuro",
+      "AUTO": "Sistema",
+      "CUSTOM_TITLE": "Cores",
+      "CUSTOM_HINT": "clique de novo para voltar ao padrão"
+    },
+    "BACKGROUND": {
+      "TITLE": "Fundo da conversa",
+      "HINT": "recomendado {width}×{height}; imagem maior é reduzida no envio",
+      "NONE": "Nenhum",
+      "YOURS": "Sua",
+      "UPLOAD": "Enviar imagem",
+      "UPLOAD_FAILED": "Não foi possível enviar a imagem. Tente novamente.",
+      "PRESETS": {
+        "GRADIENTE": "Gradiente",
+        "RIO-CREPUSCULO": "Rio ao entardecer",
+        "ESTRELAS": "Estrelas",
+        "COPACABANA": "Copacabana",
+        "PREDIOS": "Prédios",
+        "FACHADAS": "Fachadas coloridas",
+        "MONTANHAS": "Montanhas",
+        "COLINA": "Colina",
+        "NOVA-YORK": "Nova York",
+        "TRILHA": "Trilha",
+        "POSTES": "Postes",
+        "CEU-NOTURNO": "Céu noturno",
+        "PAO-DE-ACUCAR": "Pão de Açúcar"
+      },
+      "BRIGHTNESS": "Claridade",
+      "FORMATS": "JPG, PNG ou WebP",
+      "SENDING": "Enviando…"
+    },
+    "SAVE_FAILED": "Não foi possível salvar a preferência. Tente de novo.",
+    "SAVE": "Salvar",
+    "CANCEL": "Cancelar",
+    "SAVED": "Aparência salva.",
+    "PEEK": "Espiar"
+  }
+}

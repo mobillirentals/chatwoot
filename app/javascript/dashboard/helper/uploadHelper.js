@@ -55,6 +55,19 @@ export async function uploadFile(file, accountId, onProgress, signal) {
 }
 
 /**
+ * Apaga um arquivo que o próprio usuário enviou (o servidor confere se é dele).
+ *
+ * @param {number} blobId id devolvido no envio
+ * @param {string} accountId conta atual
+ */
+export async function removerArquivoEnviado(blobId, accountId) {
+  if (!blobId) return;
+  await axios.delete(
+    `/api/${API_VERSION}/accounts/${accountId}/upload/${blobId}`
+  );
+}
+
+/**
  * Uploads an image from an external URL.
  *
  * @param {string} url - The external URL of the image.

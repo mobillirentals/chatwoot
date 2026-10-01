@@ -1,3 +1,4 @@
+import appearance from './appearance.json';
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
 import agentMgmt from './agentMgmt.json';
@@ -94,4 +95,5 @@ export default {
   ...sessionLimit,
   ...yearInReview,
   ...trash,
+  ...appearance,
 };
