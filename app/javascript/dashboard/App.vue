@@ -21,6 +21,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useAparencia } from 'dashboard/composables/useAparencia';
 
 export default {
   name: 'App',
@@ -42,6 +43,10 @@ export default {
     // Use the font size composable (it automatically sets up the watcher)
     const { currentFontSize } = useFontSize();
     const { uiSettings } = useUISettings();
+    // tema próprio e fundo da conversa vivem nas ui_settings, que chegam junto com o perfil:
+    // o composable acompanha esse valor e aplica assim que ele existir
+    const { acompanharPreferencias } = useAparencia();
+    acompanharPreferencias();
 
     return {
       router,

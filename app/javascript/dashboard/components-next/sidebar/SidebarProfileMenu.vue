@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Auth from 'dashboard/api/auth';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useI18n } from 'vue-i18n';
@@ -14,6 +14,7 @@ import {
   DropdownItem,
 } from 'next/dropdown-menu/base';
 import CustomBrandPolicyWrapper from '../../components/CustomBrandPolicyWrapper.vue';
+import DialogoAparencia from 'dashboard/components-next/aparencia/DialogoAparencia.vue';
 
 defineProps({
   isCollapsed: { type: Boolean, default: false },
@@ -26,6 +27,8 @@ defineOptions({
 });
 
 const { t } = useI18n();
+
+const dialogoAparenciaRef = ref(null);
 
 const currentUser = useMapGetter('getCurrentUser');
 const currentUserAvailability = useMapGetter('getCurrentUserAvailability');
@@ -80,10 +83,9 @@ const menuItems = computed(() => {
       showOnCustomBrandedInstance: true,
       label: t('SIDEBAR_ITEMS.APPEARANCE'),
       icon: 'i-lucide-palette',
-      click: () => {
-        const ninja = document.querySelector('ninja-keys');
-        ninja.open({ parent: 'appearance_settings' });
-      },
+      // antes isto abria a barra de comandos, que só lista tema claro/escuro/sistema; o diálogo
+      // acrescenta os temas próprios e a imagem de fundo da conversa, que precisam de miniatura
+      click: () => dialogoAparenciaRef.value?.abrir(),
     },
     {
       show: true,
@@ -128,6 +130,7 @@ const allowedMenuItems = computed(() => {
 </script>
 
 <template>
+  <DialogoAparencia ref="dialogoAparenciaRef" />
   <DropdownContainer
     class="relative min-w-0"
     :class="isCollapsed ? 'w-auto' : 'w-full'"

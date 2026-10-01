@@ -568,7 +568,7 @@ export default {
 <template>
   <div
     ref="messagesViewRef"
-    class="flex flex-col justify-between flex-grow h-full min-w-0 m-0"
+    class="fundo-da-conversa flex flex-col justify-between flex-grow h-full min-w-0 m-0"
   >
     <div ref="topBannerRef">
       <Banner
@@ -689,6 +689,77 @@ export default {
 </template>
 
 <style>
+/* Imagem de fundo escolhida em Aparência (perfil). A imagem entra aqui, no container que NÃO
+   rola, e não no painel de mensagens: preso ao painel ela subiria junto com a conversa. O véu por
+   cima usa a cor do próprio tema, então funciona no claro e no escuro.
+
+   Tudo isto só vale com imagem escolhida (`data-fundo-na-conversa` no body). Quem não usa a
+   feature — que é a maioria — não ganha nem a camada do véu nem a mudança na caixa de resposta:
+   a conversa fica exatamente como era. */
+body[data-fundo-na-conversa] .fundo-da-conversa {
+  position: relative;
+  isolation: isolate;
+}
+
+body[data-fundo-na-conversa] .fundo-da-conversa::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+      to bottom,
+      rgb(var(--slate-1) / var(--veu-da-conversa-topo, 0.72)),
+      rgb(var(--slate-1) / var(--veu-da-conversa-base, 0.82))
+    ),
+    var(--fundo-da-conversa, none);
+  background-size: cover;
+  background-position: center;
+}
+
+body[data-fundo-na-conversa] .fundo-da-conversa > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* o painel precisa ficar transparente, senão o fundo dele tapa a imagem */
+body[data-fundo-na-conversa] .fundo-da-conversa .conversation-panel {
+  background-color: transparent;
+}
+
+/* A caixa de resposta tem fundo próprio e cortava a imagem numa linha reta. Com imagem
+   escolhida ela passa a ser translúcida com desfoque: a imagem segue por baixo e o texto que
+   está sendo digitado continua legível. */
+body[data-fundo-na-conversa] .fundo-da-conversa .reply-box {
+  background-color: rgb(var(--slate-1) / 0.76);
+  backdrop-filter: blur(10px);
+}
+
+body[data-fundo-na-conversa] .fundo-da-conversa .reply-box.is-private {
+  background-color: rgb(var(--amber-3) / 0.82);
+}
+
+/* A alça de redimensionar o editor desenha um degradê opaco logo acima da caixa — é a faixa que
+   aparecia cortando a imagem. Com fundo escolhido ela fica só com a marca de arrastar. */
+body[data-fundo-na-conversa] .resizable-editor-wrapper > div:first-child {
+  background-image: none;
+  backdrop-filter: none;
+}
+
+/* O rodapé que abriga o editor tem fundo próprio (bg-n-surface-1) e é ele que terminava a
+   imagem numa linha reta acima da caixa. Com fundo escolhido, ele deixa a imagem passar. */
+body[data-fundo-na-conversa] .fundo-da-conversa > .flex.relative.flex-col {
+  background-color: transparent;
+}
+
+/* A caixa passa a flutuar sobre a imagem: respiro em volta pra a foto aparecer nas bordas, e
+   sombra pra ela não grudar no fundo. */
+body[data-fundo-na-conversa] .fundo-da-conversa .reply-box {
+  margin: 0.75rem 1rem 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.22);
+}
+
 /*
   Realce ao "ir até a mensagem": vale para a pesquisa na conversa, o clique numa resposta citada
   e a busca global, porque o realce mora no mecanismo nativo (onScrollToMessage). Sem escopo de

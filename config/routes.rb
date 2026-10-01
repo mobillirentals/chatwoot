@@ -479,7 +479,7 @@ Rails.application.routes.draw do
             end
           end
 
-          resources :upload, only: [:create]
+          resources :upload, only: [:create, :destroy]
         end
       end
       # end of account scoped api routes
