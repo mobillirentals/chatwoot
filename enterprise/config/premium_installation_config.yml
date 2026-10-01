@@ -1,22 +1,13 @@
-# ------- Branding Related Config ------- #
-- name: INSTALLATION_NAME
-  value: 'Chatwoot'
-- name: LOGO_THUMBNAIL
-  value: '/brand-assets/logo_thumbnail.svg'
-- name: LOGO
-  value: '/brand-assets/logo.svg'
-- name: LOGO_DARK
-  value: '/brand-assets/logo_dark.svg'
-- name: BRAND_URL
-  value: 'https://www.chatwoot.com'
-- name: WIDGET_BRAND_URL
-  value: 'https://www.chatwoot.com'
-- name: BRAND_NAME
-  value: 'Chatwoot'
-- name: TERMS_URL
-  value: 'https://www.chatwoot.com/terms-of-service'
-- name: PRIVACY_URL
-  value: 'https://www.chatwoot.com/privacy-policy'
-- name: DISPLAY_MANIFEST
-  value: true
-# ------- End of Branding Related Config ------- #
+# Branding config that the EE edition resets on the community plan.
+#
+# NOTE (Mobílli): intentionally EMPTY, same reasoning as premium_features.yml.
+# The nightly Internal::CheckNewVersionsJob runs Internal::ReconcilePlanConfigService,
+# which rewrote every key listed here back to the Chatwoot defaults whenever
+# INSTALLATION_PRICING_PLAN is 'community' — which it always is on a self-hosted
+# install. That is what kept undoing our branding: INSTALLATION_NAME, BRAND_NAME,
+# BRAND_URL and WIDGET_BRAND_URL were silently reverted at 03:39 UTC, hours after
+# being set, with no trace in any log (seen on 2026-09-30).
+#
+# With the list empty the job has nothing to reconcile, so Super Admin → Settings
+# is the single source of truth for branding again.
+[]
