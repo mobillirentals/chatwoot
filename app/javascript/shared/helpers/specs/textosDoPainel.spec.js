@@ -52,8 +52,11 @@ describe('comAjustesDeTexto', () => {
     );
   });
 
-  it('corrige o item de menu que colidia com o nome dos canais', () => {
+  it('corrige o menu e o título da lista, que colidiam com o nome dos canais', () => {
     expect(comAjustesDeTexto('Caixa de Entrada', 'SIDEBAR.INBOX')).toBe(
+      'Notificações'
+    );
+    expect(comAjustesDeTexto('Caixa de Entrada', 'INBOX.LIST.TITLE')).toBe(
       'Notificações'
     );
   });
