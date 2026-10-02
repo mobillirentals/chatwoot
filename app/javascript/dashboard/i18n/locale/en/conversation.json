@@ -166,6 +166,12 @@
       }
     },
     "RESOLVE_DROPDOWN": {
+      "WITHOUT_SURVEY": "Close",
+      "WITHOUT_SURVEY_HINT": "Resolves the conversation without sending the satisfaction survey to the customer.",
+      "SNOOZE_HINT": "Takes the conversation out of the queue until the chosen time, then brings it back.",
+      "MARK_PENDING_HINT": "Puts the conversation back in the queue as not yet handled.",
+      "RESOLVED_WITHOUT_SURVEY": "Conversation resolved without sending the survey.",
+      "WITHOUT_SURVEY_FAILED": "Could not resolve without the survey. Please try again.",
       "MARK_PENDING": "Mark as pending",
       "SNOOZE_UNTIL": "Snooze",
       "SNOOZE": {

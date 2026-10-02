@@ -7,6 +7,7 @@ import { useStore, useStoreGetters } from 'dashboard/composables/store';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
+import { etiquetaQueSilenciaOCsat as etiquetaQueSilenciaOCsatDaCaixa } from 'dashboard/helper/encerrarSemAvaliacao';
 
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
@@ -50,6 +51,30 @@ const isSnoozed = computed(
 
 const showAdditionalActions = computed(
   () => !isPending.value && !isSnoozed.value
+);
+
+// Encerrar sem mandar a pesquisa de satisfação.
+//
+// Quem manda nisso é a regra nativa da caixa (Caixas → CSAT → regras): com o operador
+// `does_not_contain` apontando para uma etiqueta, o Chatwoot deixa de enviar a pesquisa nas
+// conversas que a tiverem. Então a opção não inventa comportamento novo — ela põe a etiqueta
+// combinada e resolve.
+//
+// Por isso também só aparece quando a regra existe de verdade: sem ela, o clique resolveria a
+// conversa mandando a pesquisa assim mesmo, que é justamente o que se queria evitar.
+const inboxDaConversa = computed(() =>
+  getters['inboxes/getInbox'].value(currentChat.value?.inbox_id)
+);
+
+const etiquetaQueSilenciaOCsat = computed(() =>
+  etiquetaQueSilenciaOCsatDaCaixa(inboxDaConversa.value)
+);
+
+const podeResolverSemAvaliacao = computed(
+  () =>
+    getters.getCurrentRole.value === 'administrator' &&
+    Boolean(etiquetaQueSilenciaOCsat.value) &&
+    !isResolved.value
 );
 
 const showOpenButton = computed(() => {
@@ -99,6 +124,35 @@ const toggleStatus = (status, snoozedUntil, customAttributes = null) => {
     useAlert(t('CONVERSATION.CHANGE_STATUS'));
     isLoading.value = false;
   });
+};
+
+// A etiqueta tem de estar gravada ANTES da mudança de status: o envio da pesquisa é decidido no
+// evento de conversa resolvida, e quem chega depois já não é consultado. Daí o await.
+const resolverSemAvaliacao = async () => {
+  closeDropdown();
+  isLoading.value = true;
+
+  try {
+    const jaTem = getters['conversationLabels/getConversationLabels'].value(
+      currentChat.value.id
+    );
+    if (!jaTem.includes(etiquetaQueSilenciaOCsat.value)) {
+      await store.dispatch('conversationLabels/update', {
+        conversationId: currentChat.value.id,
+        labels: [...jaTem, etiquetaQueSilenciaOCsat.value],
+      });
+    }
+
+    await store.dispatch('toggleStatus', {
+      conversationId: currentChat.value.id,
+      status: wootConstants.STATUS_TYPE.RESOLVED,
+    });
+    useAlert(t('CONVERSATION.RESOLVE_DROPDOWN.RESOLVED_WITHOUT_SURVEY'));
+  } catch (error) {
+    useAlert(t('CONVERSATION.RESOLVE_DROPDOWN.WITHOUT_SURVEY_FAILED'));
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const handleResolveWithAttributes = ({ attributes, context }) => {
@@ -229,8 +283,11 @@ useEmitter(CMD_RESOLVE_CONVERSATION, onCmdResolveConversation);
       class="border rounded-lg shadow-lg border-n-strong dark:border-n-strong box-content p-2 w-fit z-10 bg-n-alpha-3 backdrop-blur-[100px] absolute block left-auto top-full mt-0.5 start-0 xl:start-auto xl:end-0 max-w-[12.5rem] min-w-[9.75rem] [&_ul>li]:mb-0"
     >
       <WootDropdownMenu class="mb-0">
+        <!-- os textos de ajuda explicam o que cada opção faz com a conversa: os nomes sozinhos
+             ("Adiar", "Encerrar") não dizem se ela volta, se sai da fila ou se o cliente recebe algo -->
         <WootDropdownItem v-if="!isPending">
           <Button
+            v-tooltip.left="t('CONVERSATION.RESOLVE_DROPDOWN.SNOOZE_HINT')"
             :label="t('CONVERSATION.RESOLVE_DROPDOWN.SNOOZE_UNTIL')"
             ghost
             slate
@@ -243,6 +300,9 @@ useEmitter(CMD_RESOLVE_CONVERSATION, onCmdResolveConversation);
         </WootDropdownItem>
         <WootDropdownItem v-if="!isPending">
           <Button
+            v-tooltip.left="
+              t('CONVERSATION.RESOLVE_DROPDOWN.MARK_PENDING_HINT')
+            "
             :label="t('CONVERSATION.RESOLVE_DROPDOWN.MARK_PENDING')"
             ghost
             slate
@@ -251,6 +311,21 @@ useEmitter(CMD_RESOLVE_CONVERSATION, onCmdResolveConversation);
             icon="i-lucide-circle-dot-dashed"
             class="w-full"
             @click="() => toggleStatus(wootConstants.STATUS_TYPE.PENDING)"
+          />
+        </WootDropdownItem>
+        <WootDropdownItem v-if="podeResolverSemAvaliacao">
+          <Button
+            v-tooltip.left="
+              t('CONVERSATION.RESOLVE_DROPDOWN.WITHOUT_SURVEY_HINT')
+            "
+            :label="t('CONVERSATION.RESOLVE_DROPDOWN.WITHOUT_SURVEY')"
+            ghost
+            slate
+            sm
+            start
+            icon="i-lucide-message-square-off"
+            class="w-full"
+            @click="resolverSemAvaliacao"
           />
         </WootDropdownItem>
       </WootDropdownMenu>
