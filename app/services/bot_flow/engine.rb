@@ -318,6 +318,13 @@ class BotFlow::Engine
 
     updates = { status: :open }
     updates[:team_id] = team.id if team
+    # O bot larga a conversa aqui, no mesmo save. Enquanto ele constar como responsável
+    # (`ai_assignee`), o Chatwoot PULA a escolha de agente do time nos dois caminhos:
+    # `AssignmentHandler#ensure_assignee_is_from_team` sai logo no `return if
+    # ai_assignee_type.present?`, e o auto-assignment no `return false if
+    # assignee_agent_bot_id.present?`. A conversa ia parar na fila do time com o bot ainda como
+    # responsável e ninguém era acionado — mesmo com agente do time online.
+    updates[:ai_assignee] = nil
     # update! (não update_columns) para disparar os callbacks de atribuição do Chatwoot:
     # round-robin de agente, atividade de mudança de time e broadcast pro dashboard.
     @conversation.update!(updates)
