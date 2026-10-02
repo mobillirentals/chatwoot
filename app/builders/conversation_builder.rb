@@ -8,9 +8,24 @@ class ConversationBuilder
   private
 
   def look_up_exising_conversation
-    return unless @contact_inbox.inbox.lock_to_single_conversation?
+    return @contact_inbox.conversations.last if @contact_inbox.inbox.lock_to_single_conversation?
 
-    @contact_inbox.conversations.last
+    conversa_em_andamento_no_whatsapp
+  end
+
+  # No WhatsApp o cliente enxerga um fio só: duas conversas ao vivo para o mesmo número são duas
+  # pessoas atendendo o mesmo diálogo sem saber uma da outra. Era o que acontecia ao disparar um
+  # template pelo painel para quem já estava em atendimento — o envio abria conversa nova, o
+  # cliente respondia nela e a anterior ficava órfã com outro atendente dentro.
+  #
+  # Mensagem RECEBIDA já se comporta assim (`Whatsapp::IncomingMessageBaseService` reaproveita a
+  # última não resolvida); aqui o envio passa a usar o mesmo critério, e não o `lock_to_single_conversation`,
+  # que amarraria o contato a uma thread eterna — reabrindo até conversa resolvida meses atrás e
+  # levando junto as métricas por atendimento.
+  def conversa_em_andamento_no_whatsapp
+    return unless @contact_inbox.inbox.channel_type == 'Channel::Whatsapp'
+
+    @contact_inbox.conversations.where.not(status: :resolved).last
   end
 
   def create_new_conversation

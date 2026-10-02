@@ -80,5 +80,39 @@ describe ConversationBuilder do
         expect(conversation.id).to eq(existing_conversation.id)
       end
     end
+
+    # Nosso: no WhatsApp o cliente ve um fio so, entao disparar um template pelo painel para quem
+    # ja esta em atendimento tem que cair na conversa existente, e nao abrir uma segunda ao vivo.
+    describe 'numa caixa de WhatsApp' do
+      let!(:whatsapp_channel) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false) }
+      let!(:whatsapp_inbox) { create(:inbox, channel: whatsapp_channel, account: account) }
+      let(:contact_whatsapp_inbox) { create(:contact_inbox, contact: contact, inbox: whatsapp_inbox) }
+
+      def construir
+        described_class.new(contact_inbox: contact_whatsapp_inbox, params: {}).perform
+      end
+
+      it 'usa a conversa que ja esta em atendimento' do
+        em_andamento = create(:conversation, contact_inbox: contact_whatsapp_inbox, status: :open)
+
+        expect(construir.id).to eq(em_andamento.id)
+      end
+
+      it 'usa tambem a conversa que esta com o bot' do
+        com_bot = create(:conversation, contact_inbox: contact_whatsapp_inbox, status: :pending)
+
+        expect(construir.id).to eq(com_bot.id)
+      end
+
+      it 'abre conversa nova quando a anterior ja foi resolvida' do
+        resolvida = create(:conversation, contact_inbox: contact_whatsapp_inbox, status: :resolved)
+
+        expect(construir.id).not_to eq(resolvida.id)
+      end
+
+      it 'abre conversa nova quando nao ha nenhuma' do
+        expect(construir.contact_inbox_id).to eq(contact_whatsapp_inbox.id)
+      end
+    end
   end
 end
