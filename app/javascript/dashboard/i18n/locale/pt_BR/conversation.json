@@ -153,6 +153,12 @@
       }
     },
     "RESOLVE_DROPDOWN": {
+      "WITHOUT_SURVEY": "Encerrar",
+      "WITHOUT_SURVEY_HINT": "Resolve a conversa sem mandar a pesquisa de satisfação para o cliente.",
+      "SNOOZE_HINT": "Tira a conversa da fila até o momento escolhido, e ela volta sozinha.",
+      "MARK_PENDING_HINT": "Devolve a conversa para a fila como ainda não atendida.",
+      "RESOLVED_WITHOUT_SURVEY": "Conversa resolvida sem enviar a pesquisa.",
+      "WITHOUT_SURVEY_FAILED": "Não foi possível resolver sem a pesquisa. Tente de novo.",
       "MARK_PENDING": "Deixar pendente",
       "SNOOZE_UNTIL": "Adiar",
       "SNOOZE": {
