@@ -204,6 +204,16 @@ const onPopoverShow = () => {
   // Cache-aware refetch, so newly synced WhatsApp templates show up here
   // even if the account-cache-invalidated websocket event was missed.
   store.dispatch('inboxes/get');
+  // Aberto pela tela do contato, a lista de caixas vem do registro no store — e ela some de lá a
+  // cada evento `contact.updated` do websocket, porque a mutação EDIT_CONTACT troca o registro
+  // inteiro pelo payload do evento, que não carrega `contact_inboxes`. Como o evento dispara a
+  // cada UPDATE no contato (até o `last_activity_at` de uma mensagem nova), a tela ficava sem as
+  // caixas sem ninguém ter feito nada, e o envio virava "não há caixas de entrada disponíveis".
+  // Buscar aqui, na hora de usar, resolve todos os caminhos e ainda garante dado fresco: a lista
+  // guardada traria o source_id antigo se o telefone do contato tivesse mudado.
+  if (props.contactId) {
+    store.dispatch('contacts/fetchContactableInbox', props.contactId);
+  }
 };
 
 const onPopoverHide = () => {
