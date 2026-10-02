@@ -45,6 +45,8 @@ const selectedContact = ref(null);
 const targetInbox = ref(null);
 const isCreatingContact = ref(false);
 const isFetchingInboxes = ref(false);
+// enquanto o compose está aberto a lista precisa resistir aos eventos do websocket; ver o watch
+const composeAberto = ref(false);
 const isSearching = ref(false);
 
 const formState = reactive({
@@ -212,11 +214,13 @@ const onPopoverShow = () => {
   // Buscar aqui, na hora de usar, resolve todos os caminhos e ainda garante dado fresco: a lista
   // guardada traria o source_id antigo se o telefone do contato tivesse mudado.
   if (props.contactId) {
+    composeAberto.value = true;
     store.dispatch('contacts/fetchContactableInbox', props.contactId);
   }
 };
 
 const onPopoverHide = () => {
+  composeAberto.value = false;
   emitter.emit(BUS_EVENTS.NEW_CONVERSATION_MODAL, false);
   emit('close');
 };
@@ -230,6 +234,20 @@ watch(
         clearSelectedContact();
         clearFormState();
         formState.message = '';
+      }
+
+      // Um `contact.updated` do websocket troca o registro inteiro no store pelo payload do
+      // evento, que não carrega `contact_inboxes`. Com o compose aberto, a lista sumia debaixo da
+      // pessoa e o aviso de "não há caixas" voltava sozinho, segundos depois de ela ter escolhido
+      // a caixa. Aqui a diferença importa: campo AUSENTE quer dizer que o evento apagou, e vale
+      // rebuscar; array VAZIO é resposta do servidor ("não há caixa mesmo") e rebuscar viraria
+      // laço. A lista em uso fica de pé até a busca voltar.
+      if (
+        composeAberto.value &&
+        !Array.isArray(currentContact.contactInboxes)
+      ) {
+        store.dispatch('contacts/fetchContactableInbox', props.contactId);
+        return;
       }
 
       // First process the contactable inboxes to get the right structure
