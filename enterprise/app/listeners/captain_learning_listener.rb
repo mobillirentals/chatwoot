@@ -9,6 +9,10 @@
 # This steps aside the moment an assistant IS linked to the inbox: native CaptainListener takes
 # over for it, so the two never generate FAQs for the same conversation. That is the path to
 # Captain actually answering customers later — no code to undo, just link it in the UI.
+#
+# The work itself goes to a job: this listener is dispatched inside EventDispatcherJob on the
+# `critical` queue, where raising would take down the listeners after it and fail the whole event.
+# Learning is optional — it must never cost us an event.
 class CaptainLearningListener < BaseListener
   def conversation_resolved(event)
     conversation = extract_conversation_and_account(event)[0]
@@ -17,7 +21,7 @@ class CaptainLearningListener < BaseListener
     assistant = learning_assistant(conversation.account)
     return if assistant.blank?
 
-    Captain::Llm::ReusableConversationFaqService.new(assistant, conversation).generate_and_deduplicate
+    Captain::Llm::ReusableConversationFaqJob.perform_later(conversation, assistant)
   end
 
   private
