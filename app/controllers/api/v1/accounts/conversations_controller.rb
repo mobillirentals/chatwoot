@@ -159,6 +159,9 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
     ::Conversations::UnreadCounts::Notifier.new(@conversation).perform
     ::Conversations::UnreadCounts::FilteredCountInvalidator.new(Current.account).conversation_changed!
+    # Nas caixas da ponte Baileys, abrir a conversa devolve o visto-azul ao cliente — o que a API
+    # oficial não permite. Quem decide se aquela caixa é dessas é o próprio job.
+    Whatsapp::MarkAsReadJob.perform_later(@conversation.id)
   end
 
   def should_update_last_seen?

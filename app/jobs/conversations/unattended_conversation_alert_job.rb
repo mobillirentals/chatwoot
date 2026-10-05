@@ -35,9 +35,23 @@ class Conversations::UnattendedConversationAlertJob < ApplicationJob
   def candidate_conversations(account)
     # where.not(a: nil, b: nil) geraria "NOT (a IS NULL AND b IS NULL)" (De Morgan), nao o que
     # eu quero — encadear dois where.not separados nega cada condicao individualmente.
-    account.conversations.open
-           .where.not(waiting_since: nil)
-           .where.not(assignee_id: nil)
-           .limit(Limits::BULK_ACTIONS_LIMIT)
+    escopo = account.conversations.open
+                    .where.not(waiting_since: nil)
+                    .where.not(assignee_id: nil)
+
+    isentas = caixas_isentas
+    escopo = escopo.where.not(inbox_id: isentas) if isentas.present?
+
+    escopo.limit(Limits::BULK_ACTIONS_LIMIT)
+  end
+
+  # Nem toda caixa quer o aviso. Numa caixa de vendas, por exemplo, "seu atendente se ausentou"
+  # soa como atendimento falhando onde ainda nem comecou. A lista vive em InstallationConfig
+  # (mesmo padrao de INACTIVE_WHATSAPP_NUMBERS), entao mudar nao exige deploy.
+  def caixas_isentas
+    ids = GlobalConfig.get_value('UNATTENDED_ALERT_EXCLUDED_INBOX_IDS').to_s
+    return [] if ids.blank?
+
+    ids.split(',').filter_map { |id| id.strip.presence&.to_i }
   end
 end

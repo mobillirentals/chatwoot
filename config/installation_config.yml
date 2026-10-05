@@ -347,6 +347,26 @@
   display_title: 'Inactive WhatsApp Numbers'
   description: 'Comma-separated list of WhatsApp numbers that should be rejected with a 422 error'
   type: code
+- name: BAILEYS_BRIDGE_URL
+  value: ''
+  display_title: 'Ponte WhatsApp nao oficial: endereco'
+  description: 'Onde a ponte Baileys responde, ex: http://whatsapp-baileys:3400. Necessario para a tela de conexao por QR code, que precisa falar com a ponte ANTES de a caixa existir.'
+  type: code
+- name: BAILEYS_BRIDGE_TOKEN
+  value: ''
+  display_title: 'Ponte WhatsApp nao oficial: segredo'
+  description: 'Segredo que o Chatwoot apresenta a ponte (header X-Bridge-Token). Precisa ser igual ao BRIDGE_TOKEN do .env da ponte.'
+  type: code
+- name: BAILEYS_BRIDGE_WEBHOOK_TOKEN
+  value: ''
+  display_title: 'Ponte WhatsApp nao oficial: segredo do webhook'
+  description: 'Segredo que a PONTE apresenta ao Chatwoot ao entregar mensagem recebida. Precisa ser igual ao CHATWOOT_WEBHOOK_TOKEN do .env da ponte. Sem ele a rota de webhook recusa tudo, porque fora da API oficial nao ha assinatura da Meta para conferir.'
+  type: code
+- name: UNATTENDED_ALERT_EXCLUDED_INBOX_IDS
+  value: ''
+  display_title: 'Caixas sem alerta de conversa nao respondida'
+  description: 'Lista de ids de caixa, separados por virgula, que NAO recebem os avisos automaticos de conversa sem resposta. Util em caixa de vendas, onde "seu atendente se ausentou" soa como atendimento falhando antes de comecar.'
+  type: code
 # ------- End of Chatwoot Internal Config for Cloud ----#
 
 # ------- Chatwoot Internal Config for Self Hosted ----#

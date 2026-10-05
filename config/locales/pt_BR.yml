@@ -142,6 +142,11 @@ pt_BR:
       phone_info_fetch_failed: 'Falha ao obter a informação do número de telefone. Por favor, tente novamente.'
       phone_number_already_exists: 'Já existe um canal para este número de telefone: %{phone_number}. Entre em contato com o suporte se o erro persistir'
       message_outside_messaging_window: 'A mensagem não foi enviada porque a janela de atendimento de 24 horas do WhatsApp foi encerrada e nenhum parâmetro de modelo foi fornecido. Envie uma mensagem de modelo aprovada.'
+      baileys:
+        bridge_unreachable: 'A mensagem não foi enviada: a ponte do WhatsApp deste número não respondeu. Verifique se a ponte está no ar e se o número continua pareado.'
+        attachment_unsupported: 'Esta caixa ainda não envia anexos. Mande a mensagem como texto.'
+        template_unsupported: 'Esta caixa não está na API oficial, então não tem modelos aprovados. Mande a mensagem como texto.'
+        bridge_not_configured: 'A ponte do WhatsApp não está configurada. Informe o endereço e os segredos dela nas configurações da instalação antes de conectar um número.'
       reauthorization:
         generic: 'Falha ao reautenticar o WhatsApp. Por favor, tente novamente.'
         not_supported: 'Reautenticação não é suportado por este tipo de canal WhatsApp.'

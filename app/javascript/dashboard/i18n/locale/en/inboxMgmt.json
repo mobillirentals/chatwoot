@@ -253,7 +253,9 @@
           "WHATSAPP_CLOUD_DESC": "Quick setup through Meta",
           "WHATSAPP_CLOUD_MANUAL_SETUP_DESC": "Manual setup with Cloud API credentials",
           "TWILIO_DESC": "Connect via Twilio credentials",
-          "360_DIALOG": "360Dialog"
+          "360_DIALOG": "360Dialog",
+          "BAILEYS": "WhatsApp by QR code",
+          "BAILEYS_DESC": "Connect a number outside the official API"
         },
         "SELECT_PROVIDER": {
           "TITLE": "Select your API provider",
@@ -441,6 +443,19 @@
           "ERROR_MESSAGE": "We were not able to save the WhatsApp channel",
           "MANUAL_RESTRICTION_WARNING": "WhatsApp Embedded Signup is temporarily unavailable due to an API-level issue on Meta’s side, not a problem with Chatwoot. Manual setup works only for numbers already connected to WhatsApp Cloud API. Numbers using WhatsApp Business app coexistence are not supported in this flow yet. We’re working closely with Meta to resolve the issue as quickly as possible. Thanks for your patience.",
           "STATUS_LINK": "View status updates"
+        },
+        "BAILEYS": {
+          "WARNING": "This connects a number outside the official WhatsApp API, which goes against Meta’s terms: the number may be banned, with no appeal. Use a secondary number, never your main one.",
+          "START": "Show QR code",
+          "BACK": "Back",
+          "SCAN_INSTRUCTIONS": "On the phone for this number, open WhatsApp → Settings → Linked devices → Link a device, and scan the code below.",
+          "QR_ALT": "QR code to pair the number",
+          "WAITING_QR": "Generating the QR code…",
+          "WAITING_SCAN": "Waiting for the scan. The code refreshes on its own every few seconds.",
+          "CHANGE_NUMBER": "Use another number",
+          "CONNECTED": "Number {number} is paired.",
+          "CREATE_INBOX": "Create inbox",
+          "BRIDGE_ERROR": "Could not reach the WhatsApp bridge. Check that it is running and configured."
         }
       },
       "VOICE": {

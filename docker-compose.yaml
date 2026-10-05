@@ -57,6 +57,11 @@ services:
     environment:
       - NODE_ENV=development
       - RAILS_ENV=development
+    # Mesmo entrypoint do rails: a imagem base e compilada para producao e o entrypoint e quem
+    # roda o `bundle install` das gems de desenvolvimento. Sem ele o sidekiq subia em loop de
+    # "Could not find rails-7.2.3.1 ... Run `bundle install`", e a fila ficava parada em silencio
+    # -- o webhook respondia 200, o job era enfileirado e nada acontecia.
+    entrypoint: docker/entrypoints/rails.sh
     command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
 
   vite:

@@ -2,6 +2,7 @@ class Webhooks::WhatsappController < ActionController::API
   include MetaTokenVerifyConcern
 
   before_action :verify_meta_signature!, only: :process_payload
+  before_action :verify_bridge_token!, only: :process_payload
 
   def process_payload
     if inactive_whatsapp_number?
@@ -17,6 +18,25 @@ class Webhooks::WhatsappController < ActionController::API
   end
 
   private
+
+  # Caixa atendida pela ponte Baileys nao tem assinatura da Meta para conferir
+  # (meta_signature_verification_required? ja devolve false fora do whatsapp_cloud), e esta rota e
+  # publica: sem isso, qualquer um poderia injetar mensagem de qualquer cliente na conversa. Entao
+  # a ponte apresenta o segredo da propria caixa.
+  def verify_bridge_token!
+    return unless whatsapp_channel&.provider == 'baileys'
+
+    esperado = whatsapp_channel.provider_config['webhook_verify_token'].to_s
+    if esperado.blank?
+      Rails.logger.error("[BAILEYS] caixa #{whatsapp_channel.phone_number} sem webhook_verify_token — webhook recusado")
+      return head :unauthorized
+    end
+
+    return if ActiveSupport::SecurityUtils.secure_compare(esperado, request.headers['X-Bridge-Token'].to_s)
+
+    Rails.logger.warn("[BAILEYS] token invalido no webhook de #{params[:phone_number]}")
+    head :unauthorized
+  end
 
   def tracking_events_only?
     return false unless params[:object] == 'whatsapp_business_account'
