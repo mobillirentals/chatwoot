@@ -14,7 +14,9 @@ import ContentTemplateSelector from './ContentTemplateSelector.vue';
 
 const props = defineProps({
   attachedFiles: { type: Array, default: () => [] },
-  isWhatsappInbox: { type: Boolean, default: false },
+  // Não é "é WhatsApp?", é "precisa de modelo aprovado?" — um número pareado por QR code é
+  // WhatsApp e NÃO precisa, então usar o tipo do canal aqui barraria o acionamento nele.
+  requiresWhatsappTemplate: { type: Boolean, default: false },
   isEmailOrWebWidgetInbox: { type: Boolean, default: false },
   isTwilioSmsInbox: { type: Boolean, default: false },
   isTwilioWhatsAppInbox: { type: Boolean, default: false },
@@ -74,12 +76,14 @@ const showTwilioContentTemplates = computed(() => {
 
 const shouldShowEmojiButton = computed(() => {
   return (
-    !props.isWhatsappInbox && !props.isTwilioWhatsAppInbox && !props.hasNoInbox
+    !props.requiresWhatsappTemplate &&
+    !props.isTwilioWhatsAppInbox &&
+    !props.hasNoInbox
   );
 });
 
 const isRegularMessageMode = computed(() => {
-  return !props.isWhatsappInbox && !props.isTwilioWhatsAppInbox;
+  return !props.requiresWhatsappTemplate && !props.isTwilioWhatsAppInbox;
 });
 
 const shouldShowSignatureButton = computed(() => {
@@ -195,7 +199,7 @@ useEventListener(document, 'paste', onPaste);
   >
     <div class="flex gap-2 items-center">
       <WhatsAppOptions
-        v-if="isWhatsappInbox"
+        v-if="requiresWhatsappTemplate"
         :inbox-id="inboxId"
         @send-message="emit('sendWhatsappMessage', $event)"
       />
