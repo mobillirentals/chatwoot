@@ -30,6 +30,13 @@ propósito:
 Duas conexões sobre a **mesma** credencial se derrubam em loop — nunca compartilhe `AUTH_DIR`. E uma
 falha aqui não pode levar embora a verificação de números, que já roda em produção.
 
+> 🔴 **Nunca pareie aqui um número que já tenha sessão Baileys em produção**, nem para teste rápido.
+> Em 05/10/2026 o número do verificador foi pareado nesta ponte para testar a tela de conexão; o
+> `logout` do teste de "Reconectar" fez o WhatsApp invalidar o device do verificador
+> (`conflict: device_removed`), e ele saiu do ar em produção até ser pareado de novo no celular. O
+> cuidado não é só "números diferentes entre si" — é **o mesmo número em dois serviços**. Para
+> testar, use um número que não tenha outra sessão viva.
+
 ## Subir
 
 ```bash
