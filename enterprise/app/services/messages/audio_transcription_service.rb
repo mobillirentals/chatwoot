@@ -42,9 +42,21 @@ class Messages::AudioTranscriptionService
 
     attachment.update!(meta: { transcribed_text: transcribed_text })
     message.reload.send_update_event
+    copy_to_call
 
     return unless ChatwootApp.advanced_search_allowed?
 
     message.reindex
+  end
+
+  # A gravacao de uma chamada do WhatsApp chega aqui como anexo de audio como qualquer outro, e ja
+  # era transcrita — o texto so nunca chegava em `call.transcript`, que e o campo que a tela da
+  # chamada mostra. Enfileirar daqui garante a ordem: quando o job da chamada roda, o texto ja
+  # existe no anexo e ele so copia, sem transcrever de novo.
+  def copy_to_call
+    return unless message.voice_call?
+    return if message.call.blank?
+
+    Voice::CallTranscriptionJob.perform_later(message.call.id)
   end
 end

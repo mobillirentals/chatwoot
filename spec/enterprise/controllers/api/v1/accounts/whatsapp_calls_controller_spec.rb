@@ -325,24 +325,16 @@ RSpec.describe 'WhatsApp Calls API', type: :request do
         ActiveJob::Base.queue_adapter = adapter
       end
 
-      it 'enfileira a transcricao quando a gravacao e de fato armazenada' do
+      # Quem transcreve e o `after_create_commit` do proprio anexo de audio. Enfileirar o job da
+      # chamada daqui tambem faria o mesmo audio ser transcrito duas vezes, e transcricao e cobrada.
+      it 'deixa a transcricao a cargo do anexo, sem enfileirar o job da chamada' do
         expect do
           post "/api/v1/accounts/#{account.id}/whatsapp_calls/#{call.id}/upload_recording",
                params: { recording: fixture_file_upload(Rails.root.join('spec/assets/sample.mp3'), 'audio/mpeg') },
                headers: agent.create_new_auth_token
-        end.to have_enqueued_job(Voice::CallTranscriptionJob).with(call.id)
-      end
+        end.to have_enqueued_job(Messages::AudioTranscriptionJob)
 
-      # Reenvio do navegador nao pode pagar a transcricao duas vezes.
-      it 'nao enfileira de novo quando o audio ja estava la' do
-        call.message.attachments.create!(account_id: account.id, file_type: :audio,
-                                         file: fixture_file_upload(Rails.root.join('spec/assets/sample.mp3'), 'audio/mpeg'))
-
-        expect do
-          post "/api/v1/accounts/#{account.id}/whatsapp_calls/#{call.id}/upload_recording",
-               params: { recording: fixture_file_upload(Rails.root.join('spec/assets/sample.mp3'), 'audio/mpeg') },
-               headers: agent.create_new_auth_token
-        end.not_to have_enqueued_job(Voice::CallTranscriptionJob)
+        expect(Voice::CallTranscriptionJob).not_to have_been_enqueued
       end
     end
 
