@@ -74,6 +74,39 @@ RSpec.describe Voice::CallTranscriptionService, type: :service do
       expect(call.reload.transcript).to be_nil
     end
 
+    # A chamada do WhatsApp e gravada no navegador do atendente e sobe como anexo de audio da
+    # mensagem; `call.recording` fica vazio. Sem enxergar esse anexo, a transcricao so existia nas
+    # chamadas do Twilio.
+    describe 'gravacao que veio como anexo da mensagem (WhatsApp)' do
+      before do
+        call.recording.purge
+        message.attachments.create!(
+          account_id: account.id, file_type: :audio,
+          file: Rack::Test::UploadedFile.new(Rails.public_path.join('audio/widget/ding.mp3'), 'audio/mpeg')
+        )
+      end
+
+      it 'transcreve a partir do anexo' do
+        allow(Llm::SpeechToTextService).to receive(:new).and_return(
+          instance_double(Llm::SpeechToTextService, perform: 'Alo, pode falar?')
+        )
+
+        described_class.new(call: call).perform
+
+        expect(call.reload.transcript).to eq('Alo, pode falar?')
+      end
+
+      it 'ainda respeita a transcricao desligada na caixa' do
+        channel.update!(provider_config: channel.provider_config.merge('transcription_enabled' => false))
+
+        expect(Llm::SpeechToTextService).not_to receive(:new)
+
+        described_class.new(call: call).perform
+
+        expect(call.reload.transcript).to be_nil
+      end
+    end
+
     it 'reindexes before broadcasting so a retry after a reindex failure does not resend the update event' do
       call.update!(transcript: 'Existing transcript')
       allow(ChatwootApp).to receive(:advanced_search_allowed?).and_return(true)
