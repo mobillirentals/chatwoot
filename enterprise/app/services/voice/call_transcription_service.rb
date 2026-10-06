@@ -15,8 +15,18 @@ class Voice::CallTranscriptionService
     return unless Llm::SpeechToTextService.available_for?(call.account)
     return if Llm::SpeechToTextService.too_large?(recording_blob)
 
-    transcript = Llm::SpeechToTextService.new(blob: recording_blob, account: call.account).perform
+    transcript = transcribed_text
     call.update!(transcript: transcript) if transcript.present?
+  end
+
+  # A gravacao que sobe como anexo ja foi transcrita pelo `after_create_commit` do Attachment, e o
+  # texto fica em `meta['transcribed_text']`. Reaproveitar e o que impede pagar o Whisper duas vezes
+  # pelo mesmo audio — `Messages::AudioTranscriptionService` devolve o que ja existe e so chama a
+  # API quando ainda nao ha nada. O Twilio nao tem anexo: cai no caminho de sempre.
+  def transcribed_text
+    return Llm::SpeechToTextService.new(blob: recording_blob, account: call.account).perform if recording_attachment.blank?
+
+    Messages::AudioTranscriptionService.new(recording_attachment).perform[:transcriptions]
   end
 
   def publish(message)
@@ -42,6 +52,13 @@ class Voice::CallTranscriptionService
   end
 
   def message_recording_blob
-    call.message&.attachments&.find_by(file_type: :audio)&.file&.blob
+    recording_attachment&.file&.blob
+  end
+
+  def recording_attachment
+    return @recording_attachment if defined?(@recording_attachment)
+    return @recording_attachment = nil if call.recording.attached?
+
+    @recording_attachment = call.message&.attachments&.find_by(file_type: :audio)
   end
 end

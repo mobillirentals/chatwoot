@@ -29,12 +29,10 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
   end
 
   def upload_recording
+    # Quem dispara a transcricao e o `after_create_commit` do proprio anexo de audio
+    # (Messages::AudioTranscriptionJob), que ao terminar enfileira o job da chamada. Enfileirar
+    # daqui tambem faria o mesmo audio ser transcrito duas vezes, e transcricao e cobrada.
     @upload_status = @call.message.with_lock { attach_recording_idempotently }
-
-    # So a chamada que de fato gravou o blob paga a transcricao: um reenvio do navegador devolve
-    # 'already_uploaded' e nao enfileira de novo. Mesmo criterio do caminho do Twilio, que era o
-    # unico lugar que enfileirava este job — por isso chamada do WhatsApp nunca era transcrita.
-    Voice::CallTranscriptionJob.perform_later(@call.id) if @upload_status == 'uploaded'
   end
 
   def initiate

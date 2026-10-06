@@ -96,6 +96,19 @@ RSpec.describe Voice::CallTranscriptionService, type: :service do
         expect(call.reload.transcript).to eq('Alo, pode falar?')
       end
 
+      # O anexo ja foi transcrito pelo seu proprio callback; chamar o Whisper de novo seria pagar
+      # duas vezes pelo mesmo audio.
+      it 'reaproveita o texto ja transcrito do anexo, sem chamar o motor de novo' do
+        anexo = message.attachments.first
+        anexo.update!(meta: { transcribed_text: 'Bom dia, e sobre a minha parcela.' })
+
+        expect(Llm::SpeechToTextService).not_to receive(:new)
+
+        described_class.new(call: call).perform
+
+        expect(call.reload.transcript).to eq('Bom dia, e sobre a minha parcela.')
+      end
+
       it 'ainda respeita a transcricao desligada na caixa' do
         channel.update!(provider_config: channel.provider_config.merge('transcription_enabled' => false))
 

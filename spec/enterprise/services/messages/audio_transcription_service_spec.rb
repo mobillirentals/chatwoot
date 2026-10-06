@@ -110,5 +110,52 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
         expect(service.perform).to eq({ error: 'Audio too large for transcription' })
       end
     end
+
+    # A gravacao de uma chamada chega aqui como anexo de audio como qualquer outro, e ja era
+    # transcrita — o texto so nunca chegava em `call.transcript`, que e o campo que a tela da
+    # chamada mostra.
+    describe 'gravacao de chamada' do
+      # Mensagem de chamada so existe em caixa de voz; a do spec, por padrao, e um widget.
+      let(:channel) do
+        create(:channel_whatsapp, provider: 'whatsapp_cloud', account: account,
+                                  validate_provider_config: false, sync_templates: false)
+      end
+      let(:conversation) { create(:conversation, account: account, inbox: channel.inbox) }
+      let(:message) { create(:message, account: account, conversation: conversation, content_type: :voice_call) }
+      let!(:call) do
+        create(:call, account: account, inbox: conversation.inbox, conversation: conversation,
+                      contact: conversation.contact, status: 'completed', message: message)
+      end
+
+      # `require sidekiq/testing` no rails_helper troca o adapter do ActiveJob, e os matchers de job
+      # exigem o :test. Restaurado no fim para nao vazar para os outros exemplos do arquivo.
+      around do |exemplo|
+        adapter = ActiveJob::Base.queue_adapter
+        ActiveJob::Base.queue_adapter = :test
+        exemplo.run
+        ActiveJob::Base.queue_adapter = adapter
+      end
+
+      before do
+        attachment.file.attach(
+          io: File.open(Rails.public_path.join('audio/widget/ding.mp3')),
+          filename: 'call-recording.mp3', content_type: 'audio/mpeg'
+        )
+        allow(Llm::SpeechToTextService).to receive(:available_for?).and_return(true)
+        allow(Llm::SpeechToTextService).to receive(:new).and_return(
+          instance_double(Llm::SpeechToTextService, perform: 'Alo, e sobre a minha parcela.')
+        )
+      end
+
+      it 'enfileira o job que leva o texto para a chamada' do
+        expect { service.perform }.to have_enqueued_job(Voice::CallTranscriptionJob).with(call.id)
+      end
+
+      it 'nao enfileira nada para um audio comum de cliente' do
+        message.update!(content_type: :text)
+
+        expect { service.perform }.not_to have_enqueued_job(Voice::CallTranscriptionJob)
+      end
+    end
   end
 end
