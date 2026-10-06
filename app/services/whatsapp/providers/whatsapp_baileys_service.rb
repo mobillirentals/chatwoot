@@ -15,15 +15,18 @@
 class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseService
   # A ponte é local; se ela não respondeu nesse tempo, não vai responder.
   TIMEOUT_SEGUNDOS = 15
+  # Mídia precisa de mais fôlego: a ponte ainda baixa o arquivo do storage antes de enviar.
+  TIMEOUT_DE_MIDIA = 90
 
-  # A ponte atende varios numeros, um por sessao, e a sessao e o proprio numero da caixa -- entao
-  # nao ha id separado para guardar no provider_config.
+  # A ponte atende vários números, um por sessão. O id da sessão não é o número: quem pareia só
+  # descobre o número depois de ler o QR, então a sessão nasce antes dele existir. Caixas criadas
+  # antes dessa separação não têm session_id e continuam valendo pelo número.
   def sessao_url(caminho)
     "#{bridge_url}/sessions/#{id_da_sessao}/#{caminho}"
   end
 
   def id_da_sessao
-    whatsapp_channel.phone_number.to_s.gsub(/\D/, '')
+    whatsapp_channel.provider_config['session_id'].presence || whatsapp_channel.phone_number.to_s.gsub(/\D/, '')
   end
 
   # Devolve o visto-azul ao cliente. Chamado quando o agente abre a conversa no painel.
@@ -47,9 +50,7 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
   end
 
   def send_message(phone_number, message)
-    # Anexo fica para a rodada seguinte. Falhar explicitamente é melhor que mandar só o texto e
-    # deixar o agente achar que a imagem foi entregue.
-    return anexo_ainda_nao_suportado(message) if message.attachments.present?
+    return enviar_anexo(phone_number, message) if message.attachments.present?
 
     enviar_texto(phone_number, message)
   end
@@ -122,6 +123,46 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
     nil
   end
 
+  # A ponte baixa o arquivo da URL em vez de receber o binário: o anexo já está no storage com URL
+  # assinada, e trafegar megabytes em JSON entre dois serviços da mesma rede não melhora nada.
+  def enviar_anexo(phone_number, message)
+    corpo = corpo_do_anexo(phone_number, message)
+    resposta = HTTParty.post(sessao_url('send_media'), headers: api_headers, body: corpo.to_json,
+                                                       timeout: TIMEOUT_DE_MIDIA)
+    processar_resposta(resposta, message)
+  rescue StandardError => e
+    Rails.logger.error "[BAILEYS] falha ao enviar anexo pela ponte: #{e.message}"
+    registrar_falha(message, I18n.t('errors.whatsapp.baileys.bridge_unreachable'))
+    nil
+  end
+
+  def corpo_do_anexo(phone_number, message)
+    anexo = message.attachments.first
+    tipo = tipo_de_midia(anexo)
+    corpo = {
+      to: phone_number,
+      media_url: anexo.download_url,
+      media_type: tipo,
+      mime_type: anexo.file.content_type,
+      filename: anexo.file.filename.to_s
+    }
+    # Áudio no WhatsApp não tem legenda — o texto viraria uma mensagem perdida.
+    corpo[:caption] = message.outgoing_content if message.outgoing_content.present? && tipo != 'audio'
+
+    citado = message.content_attributes[:in_reply_to_external_id]
+    corpo[:quoted_id] = citado if citado.present?
+    corpo
+  end
+
+  # O WhatsApp trata cada tipo de forma diferente (áudio vira mensagem de voz, imagem ganha
+  # miniatura); o que não é imagem, áudio ou vídeo vai como documento.
+  def tipo_de_midia(anexo)
+    tipo = anexo.file_type.to_s
+    return tipo if %w[image audio video].include?(tipo)
+
+    'document'
+  end
+
   # O `process_response` do BaseService espera o envelope da Meta (`messages[0].id`); a ponte
   # devolve o id direto, então a leitura é própria.
   def processar_resposta(resposta, message)
@@ -131,11 +172,6 @@ class Whatsapp::Providers::WhatsappBaileysService < Whatsapp::Providers::BaseSer
       handle_error(resposta, message)
       nil
     end
-  end
-
-  def anexo_ainda_nao_suportado(message)
-    registrar_falha(message, I18n.t('errors.whatsapp.baileys.attachment_unsupported'))
-    nil
   end
 
   def registrar_falha(message, texto)

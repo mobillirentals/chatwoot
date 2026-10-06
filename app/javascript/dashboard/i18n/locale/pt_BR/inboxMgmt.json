@@ -1160,7 +1160,17 @@
         "LABEL": "Ativar chamadas de voz",
         "DESCRIPTION": "Permita que os atendentes iniciem e recebam chamadas de voz do WhatsApp nesta caixa de entrada. Disponível apenas para canais do WhatsApp Cloud com cadastro incorporado e permissão de chamadas concedida pela Meta."
       },
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat",
+      "BAILEYS": {
+        "TITLE": "Conexão do WhatsApp",
+        "SUBTITLE": "Este número é pareado por QR code. Se o aparelho for desconectado, a caixa para de receber e enviar até ser pareada de novo.",
+        "CONNECTED": "Conectado como {number}",
+        "DISCONNECTED": "Sem conexão",
+        "RECONNECT": "Reconectar",
+        "RECONNECT_HELP": "Derruba o pareamento atual e mostra um QR code novo. Só o número desta caixa é aceito.",
+        "SCAN_INSTRUCTIONS": "No aparelho desse número, abra o WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho, e escaneie o código abaixo.",
+        "WRONG_NUMBER": "O número lido ({scanned}) não é o desta caixa ({expected}), então o pareamento foi desfeito. Escaneie com o aparelho certo — outro número continuaria com o histórico e os contatos desta caixa, mas enviando de outro lugar."
+      }
     },
     "HELP_CENTER": {
       "LABEL": "Centro de Ajuda",

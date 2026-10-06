@@ -147,6 +147,8 @@ pt_BR:
         attachment_unsupported: 'Esta caixa ainda não envia anexos. Mande a mensagem como texto.'
         template_unsupported: 'Esta caixa não está na API oficial, então não tem modelos aprovados. Mande a mensagem como texto.'
         bridge_not_configured: 'A ponte do WhatsApp não está configurada. Informe o endereço e os segredos dela nas configurações da instalação antes de conectar um número.'
+        not_paired: 'O número ainda não está pareado. Leia o QR code antes de criar a caixa.'
+        not_a_bridge_inbox: 'Esta caixa não é uma caixa de WhatsApp pareada por QR code.'
       reauthorization:
         generic: 'Falha ao reautenticar o WhatsApp. Por favor, tente novamente.'
         not_supported: 'Reautenticação não é suportado por este tipo de canal WhatsApp.'

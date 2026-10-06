@@ -1269,7 +1269,17 @@
         "LABEL": "Enable voice calling",
         "DESCRIPTION": "Allow agents to start and receive WhatsApp voice calls on this inbox. Available only on embedded-signup WhatsApp Cloud channels with calling permission granted by Meta."
       },
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Update Pre Chat Form Settings"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Update Pre Chat Form Settings",
+      "BAILEYS": {
+        "TITLE": "WhatsApp connection",
+        "SUBTITLE": "This number is paired by QR code. If the device is logged out, the inbox stops receiving and sending until it is paired again.",
+        "CONNECTED": "Connected as {number}",
+        "DISCONNECTED": "Not connected",
+        "RECONNECT": "Reconnect",
+        "RECONNECT_HELP": "Drops the current pairing and shows a new QR code. Only this inbox’s number is accepted.",
+        "SCAN_INSTRUCTIONS": "On the phone for this number, open WhatsApp → Settings → Linked devices → Link a device, and scan the code below.",
+        "WRONG_NUMBER": "The scanned number ({scanned}) is not this inbox’s ({expected}), so the pairing was undone. Scan with the right phone — another number would keep this inbox’s history and contacts while sending from somewhere else."
+      }
     },
     "HELP_CENTER": {
       "LABEL": "Help Center",

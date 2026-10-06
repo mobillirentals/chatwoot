@@ -16,10 +16,26 @@ const WEBHOOK_TOKEN = process.env.CHATWOOT_WEBHOOK_TOKEN || '';
 //   message_echoes -> mensagem que saiu por fora do painel (atendente no celular)
 //   statuses       -> recibo de entrega e leitura
 //
-// A sessao e o proprio numero da caixa, entao ela diz sozinha para qual caixa entregar.
+// A caixa de destino vem do NUMERO pareado na sessao (o webhook do Chatwoot e por numero), nao do
+// id dela — foi justamente separar os dois que permitiu parear sem digitar o numero antes.
 
-function payloadDeRecebida({ from, id, timestamp, name, text, citou }) {
+function payloadDeRecebida({ from, id, timestamp, name, text, citou, midia }) {
   const mensagem = { from, id, timestamp, type: 'text', text: { body: text } };
+
+  // Mídia: o Chatwoot le `messages[0][<tipo>]` e baixa pelo `id` usando o media_url do provider —
+  // mesmo formato do 360dialog, entao nao ha nada a traduzir do lado do Rails.
+  if (midia) {
+    // Audio gravado no WhatsApp e mensagem de voz; o Chatwoot distingue os dois tipos.
+    mensagem.type = midia.voice ? 'voice' : midia.type;
+    delete mensagem.text;
+    mensagem[mensagem.type] = {
+      id,
+      caption: midia.caption || undefined,
+      mime_type: midia.mime_type || undefined,
+      filename: midia.filename || undefined,
+    };
+    if (text) mensagem[mensagem.type].caption = text;
+  }
   // `context.id` e exatamente o que o Chatwoot le para ligar a resposta a mensagem citada
   // (process_in_reply_to) — mesmo campo que a Meta manda.
   if (citou) mensagem.context = { id: citou };

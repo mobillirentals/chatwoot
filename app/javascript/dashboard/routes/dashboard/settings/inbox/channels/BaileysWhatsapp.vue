@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useVuelidate } from '@vuelidate/core';
@@ -7,6 +7,11 @@ import { required } from '@vuelidate/validators';
 import QRCode from 'qrcode';
 import { useAlert } from 'dashboard/composables';
 import BaileysAPI from 'dashboard/api/channel/baileys';
+// Só `woot-wizard` é componente global; o resto se importa. Usar `woot-button` aqui fazia o botão
+// de enviar sumir da tela, com "Failed to resolve component" no console.
+import NextButton from 'dashboard/components-next/button/Button.vue';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
+import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -24,25 +29,16 @@ const ETAPAS = {
 
 const etapa = ref(ETAPAS.NUMERO);
 const inboxName = ref('');
-const phoneNumber = ref('');
+const sessionId = ref('');
 const qrDataUrl = ref('');
 const numeroPareado = ref('');
 const erro = ref('');
 const salvando = ref(false);
 let consulta = null;
 
-const regras = {
-  inboxName: { required },
-  // O número precisa do DDI porque é ele que identifica a sessão na ponte.
-  phoneNumber: {
-    required,
-    comDdi: valor =>
-      /^\+?[1-9]\d{10,14}$/.test(String(valor).replace(/[\s()-]/g, '')),
-  },
-};
-const v$ = useVuelidate(regras, { inboxName, phoneNumber });
-
-const soDigitos = computed(() => phoneNumber.value.replace(/\D/g, ''));
+// Só o nome: o número vem do próprio pareamento, então pedi-lo antes seria pedir ao usuário uma
+// informação que a sessão já traz.
+const v$ = useVuelidate({ inboxName: { required } }, { inboxName });
 
 const pararConsulta = () => {
   if (consulta) clearInterval(consulta);
@@ -57,7 +53,7 @@ const desenharQr = async texto => {
 
 const consultarSessao = async () => {
   try {
-    const { data } = await BaileysAPI.obterSessao(soDigitos.value);
+    const { data } = await BaileysAPI.obterSessao(sessionId.value);
 
     if (data.whatsapp_connection === 'connected') {
       pararConsulta();
@@ -66,7 +62,7 @@ const consultarSessao = async () => {
       return;
     }
 
-    const { data: qr } = await BaileysAPI.obterQr(soDigitos.value);
+    const { data: qr } = await BaileysAPI.obterQr(sessionId.value);
     if (qr.qr) await desenharQr(qr.qr);
   } catch (e) {
     // Um tropeço isolado (a ponte ainda gerando o QR, uma consulta perdida) não deve derrubar a
@@ -75,7 +71,7 @@ const consultarSessao = async () => {
   }
 };
 
-const começarPareamento = async () => {
+const comecarPareamento = async () => {
   v$.value.$touch();
   if (v$.value.$invalid) return;
 
@@ -83,7 +79,8 @@ const começarPareamento = async () => {
   salvando.value = true;
 
   try {
-    await BaileysAPI.abrirSessao(soDigitos.value);
+    const { data } = await BaileysAPI.abrirSessao();
+    sessionId.value = data.id;
     etapa.value = ETAPAS.PAREANDO;
     await consultarSessao();
     consulta = setInterval(consultarSessao, INTERVALO_DE_CONSULTA);
@@ -101,7 +98,7 @@ const criarCaixa = async () => {
 
   try {
     const { data } = await BaileysAPI.criarCaixa({
-      phone_number: soDigitos.value,
+      session_id: sessionId.value,
       name: inboxName.value.trim(),
     });
 
@@ -118,7 +115,7 @@ const criarCaixa = async () => {
   }
 };
 
-const recomeçar = () => {
+const recomecar = () => {
   pararConsulta();
   qrDataUrl.value = '';
   etapa.value = ETAPAS.NUMERO;
@@ -131,16 +128,14 @@ const voltarParaProvedores = () => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <woot-banner
-      color-scheme="alert"
-      :banner-message="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.WARNING')"
-      class="rounded-lg"
-    />
+    <Banner color="amber">
+      {{ t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.WARNING') }}
+    </Banner>
 
     <form
       v-if="etapa === ETAPAS.NUMERO"
       class="flex flex-col gap-4"
-      @submit.prevent="começarPareamento;"
+      @submit.prevent="comecarPareamento"
     >
       <label :class="{ error: v$.inboxName.$error }">
         {{ t('INBOX_MGMT.ADD.WHATSAPP.INBOX_NAME.LABEL') }}
@@ -155,29 +150,20 @@ const voltarParaProvedores = () => {
         </span>
       </label>
 
-      <label :class="{ error: v$.phoneNumber.$error }">
-        {{ t('INBOX_MGMT.ADD.WHATSAPP.PHONE_NUMBER.LABEL') }}
-        <input
-          v-model="phoneNumber"
-          type="text"
-          :placeholder="t('INBOX_MGMT.ADD.WHATSAPP.PHONE_NUMBER.PLACEHOLDER')"
-          @blur="v$.phoneNumber.$touch"
-        />
-        <span v-if="v$.phoneNumber.$error" class="message">
-          {{ t('INBOX_MGMT.ADD.WHATSAPP.PHONE_NUMBER.ERROR') }}
-        </span>
-      </label>
-
       <p v-if="erro" class="text-sm text-n-ruby-11">{{ erro }}</p>
 
       <div class="flex gap-2">
-        <woot-submit-button
-          :loading="salvando"
-          :button-text="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.START')"
+        <NextButton
+          type="submit"
+          :label="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.START')"
+          :is-loading="salvando"
         />
-        <woot-button variant="clear" @click.prevent="voltarParaProvedores">
-          {{ t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.BACK') }}
-        </woot-button>
+        <NextButton
+          type="button"
+          variant="ghost"
+          :label="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.BACK')"
+          @click="voltarParaProvedores"
+        />
       </div>
     </form>
 
@@ -199,21 +185,26 @@ const voltarParaProvedores = () => {
           height="320"
         />
       </div>
-      <woot-loading-state
-        v-else
-        :message="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.WAITING_QR')"
-      />
+      <div v-else class="flex flex-col items-center gap-2 py-8">
+        <Spinner />
+        <span class="text-sm text-n-slate-11">
+          {{ t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.WAITING_QR') }}
+        </span>
+      </div>
 
       <p class="text-sm text-n-slate-11">
         {{ t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.WAITING_SCAN') }}
       </p>
-      <woot-button variant="clear" @click="recomeçar;">
-        {{ t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.CHANGE_NUMBER') }}
-      </woot-button>
+      <NextButton
+        type="button"
+        variant="ghost"
+        :label="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.CHANGE_NUMBER')"
+        @click="recomecar"
+      />
     </div>
 
     <div v-else class="flex flex-col items-center gap-4 py-4">
-      <fluent-icon icon="checkmark-circle" size="48" class="text-n-teal-11" />
+      <span class="i-lucide-circle-check-big size-12 text-n-teal-11" />
       <p class="text-sm text-center text-n-slate-12">
         {{
           t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.CONNECTED', {
@@ -221,9 +212,10 @@ const voltarParaProvedores = () => {
           })
         }}
       </p>
-      <woot-submit-button
-        :loading="salvando"
-        :button-text="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.CREATE_INBOX')"
+      <NextButton
+        type="button"
+        :label="t('INBOX_MGMT.ADD.WHATSAPP.BAILEYS.CREATE_INBOX')"
+        :is-loading="salvando"
         @click="criarCaixa"
       />
     </div>

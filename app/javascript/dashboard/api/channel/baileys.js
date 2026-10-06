@@ -8,28 +8,44 @@ class BaileysAPI extends ApiClient {
     super('whatsapp', { accountScoped: true });
   }
 
-  // Abre (ou reaproveita) a sessão daquele número na ponte.
-  abrirSessao(phoneNumber) {
-    return axios.post(`${this.baseUrl()}/whatsapp/baileys/sessions`, {
-      phone_number: phoneNumber,
-    });
+  // Abre uma sessão nova e devolve o id dela. Sem número: quem pareia só descobre o número ao ler
+  // o QR, e a sessão o informa de volta assim que conecta.
+  abrirSessao() {
+    return axios.post(`${this.baseUrl()}/whatsapp/baileys/sessions`, {});
   }
 
-  obterSessao(phoneNumber) {
+  obterSessao(sessionId) {
     return axios.get(
-      `${this.baseUrl()}/whatsapp/baileys/sessions/${phoneNumber}`
+      `${this.baseUrl()}/whatsapp/baileys/sessions/${sessionId}`
     );
   }
 
-  obterQr(phoneNumber) {
+  obterQr(sessionId) {
     return axios.get(
-      `${this.baseUrl()}/whatsapp/baileys/sessions/${phoneNumber}/qr`
+      `${this.baseUrl()}/whatsapp/baileys/sessions/${sessionId}/qr`
     );
   }
 
   // Só depois do pareamento: a validação do canal confere na ponte se o número bate.
   criarCaixa(params) {
     return axios.post(`${this.baseUrl()}/whatsapp/baileys/connect`, params);
+  }
+
+  // Caixa que já existe: acompanhar a conexão e reparear quando ela cair.
+  estadoDaCaixa(inboxId) {
+    return axios.get(`${this.baseUrl()}/whatsapp/baileys/inboxes/${inboxId}`);
+  }
+
+  qrDaCaixa(inboxId) {
+    return axios.get(
+      `${this.baseUrl()}/whatsapp/baileys/inboxes/${inboxId}/qr`
+    );
+  }
+
+  reconectarCaixa(inboxId) {
+    return axios.post(
+      `${this.baseUrl()}/whatsapp/baileys/inboxes/${inboxId}/reconnect`
+    );
   }
 }
 

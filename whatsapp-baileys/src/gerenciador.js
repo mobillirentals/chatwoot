@@ -1,4 +1,5 @@
 const fs = require('fs/promises');
+const { randomUUID } = require('crypto');
 const pino = require('pino');
 const { Sessao } = require('./sessao');
 
@@ -13,21 +14,26 @@ function definirGanchos(novos) {
   ganchos = { ...ganchos, ...novos };
 }
 
-// O id da sessao e o numero da caixa, so digitos. Usar o proprio numero evita um campo a mais no
-// provider_config e torna obvio, olhando a pasta, de quem e cada credencial.
+// O id da sessao NAO e o numero: quem pareia so descobre o numero depois de ler o QR, e exigir que
+// o usuario digitasse antes era pedir uma informacao que a propria sessao traz. A sessao tem id
+// proprio, e o numero sai de sock.user.id quando conecta.
 function normalizarId(id) {
-  return String(id || '').replace(/\D/g, '');
+  return String(id || '').trim().replace(/[^a-zA-Z0-9-]/g, '');
 }
 
-async function abrir(idBruto) {
-  const id = normalizarId(idBruto);
-  if (!id) throw new Error('id de sessao invalido');
+async function abrir(idBruto, { numeroEsperado = null } = {}) {
+  const id = normalizarId(idBruto) || `s-${randomUUID()}`;
 
   const existente = sessoes.get(id);
-  if (existente) return existente;
+  if (existente) {
+    // Reparear uma caixa que ja existe: o numero dela passa a ser o unico aceito.
+    if (numeroEsperado) existente.numeroEsperado = numeroEsperado;
+    return existente;
+  }
 
   const sessao = new Sessao(id, {
     raizDeAuth: RAIZ_DE_AUTH,
+    numeroEsperado,
     aoReceber: (...args) => ganchos.aoReceber(...args),
     aoEcoar: (...args) => ganchos.aoEcoar(...args),
     aoMudarStatus: (...args) => ganchos.aoMudarStatus(...args),
@@ -48,6 +54,27 @@ async function fechar(idBruto) {
   if (!sessao) return false;
 
   await sessao.desconectar();
+  return true;
+}
+
+// Diferente de `fechar`, que desloga e reconecta para oferecer QR novo (reparear), aqui a sessao
+// e descartada de vez: sai do mapa e a pasta de credenciais vai junto. A tela de conexao cria
+// sessao antes de o numero parear, entao quem desiste no meio deixaria lixo conectando pra sempre.
+async function remover(idBruto) {
+  const id = normalizarId(idBruto);
+  const sessao = sessoes.get(id);
+  if (!sessao) return false;
+
+  try {
+    await sessao.sock?.logout();
+  } catch (err) {
+    logger.warn({ err: err.message, sessao: id }, 'erro no logout — descartando mesmo assim');
+  }
+
+  sessao.sock?.end?.();
+  sessoes.delete(id);
+  await fs.rm(sessao.pasta, { recursive: true, force: true }).catch(() => {});
+  logger.info({ sessao: id }, 'sessao removida');
   return true;
 }
 
@@ -73,4 +100,4 @@ async function retomarSessoesSalvas() {
   return pastas.length;
 }
 
-module.exports = { abrir, obter, fechar, listar, retomarSessoesSalvas, definirGanchos, normalizarId };
+module.exports = { abrir, obter, fechar, remover, listar, retomarSessoesSalvas, definirGanchos, normalizarId };

@@ -74,15 +74,68 @@ describe Whatsapp::Providers::WhatsappBaileysService do
 
       expect(service.send_message('5527988982141', message)).to eq('X2')
     end
+  end
 
-    # Enviar só o texto e descartar o anexo em silêncio faria o agente acreditar que a foto foi.
-    it 'recusa anexo em vez de mandar só o texto' do
-      message.attachments.new(account_id: message.account_id, file_type: :image)
+  describe '#send_message com anexo' do
+    let(:sessao_url_media) { "#{sessao_url}/send_media" }
+
+    def com_anexo(tipo, nome)
+      anexo = message.attachments.new(account_id: message.account_id, file_type: tipo)
+      anexo.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: nome,
+                        content_type: tipo == :image ? 'image/png' : 'application/pdf')
       message.save!
+      message
+    end
+
+    # A ponte baixa o arquivo da URL: o anexo já está no storage com URL assinada, e trafegar
+    # megabytes em JSON entre dois serviços da mesma rede não melhora nada.
+    it 'manda a URL do anexo, o tipo e o nome do arquivo' do
+      com_anexo(:image, 'foto.png')
+      stub_request(:post, sessao_url_media)
+        .to_return(status: 200, body: { status: 'ok', message_id: 'MID1' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      expect(service.send_message('5527988982141', message)).to eq('MID1')
+      expect(WebMock).to(have_requested(:post, sessao_url_media).with do |req|
+        corpo = JSON.parse(req.body)
+        corpo['media_type'] == 'image' && corpo['media_url'].present? && corpo['filename'] == 'foto.png'
+      end)
+    end
+
+    # O que não é imagem, áudio ou vídeo vai como documento — senão o WhatsApp não sabe desenhar.
+    it 'trata o que não é mídia conhecida como documento' do
+      com_anexo(:file, 'contrato.pdf')
+      stub_request(:post, sessao_url_media)
+        .to_return(status: 200, body: { status: 'ok', message_id: 'MID2' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      service.send_message('5527988982141', message)
+
+      expect(WebMock).to(have_requested(:post, sessao_url_media).with do |req|
+        JSON.parse(req.body)['media_type'] == 'document'
+      end)
+    end
+
+    # Áudio no WhatsApp não tem legenda: o texto viraria uma mensagem perdida.
+    it 'não manda legenda junto com áudio' do
+      com_anexo(:audio, 'recado.ogg')
+      stub_request(:post, sessao_url_media)
+        .to_return(status: 200, body: { status: 'ok', message_id: 'MID3' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      service.send_message('5527988982141', message)
+
+      expect(WebMock).to(have_requested(:post, sessao_url_media).with do |req|
+        !JSON.parse(req.body).key?('caption')
+      end)
+    end
+
+    it 'marca como falhada quando a ponte não responde' do
+      com_anexo(:image, 'foto.png')
+      stub_request(:post, sessao_url_media).to_timeout
 
       expect(service.send_message('5527988982141', message)).to be_nil
-      expect(message.reload.external_error).to eq(I18n.t('errors.whatsapp.baileys.attachment_unsupported'))
-      expect(WebMock).not_to have_requested(:post, sessao_url_send)
+      expect(message.reload.status).to eq('failed')
     end
   end
 

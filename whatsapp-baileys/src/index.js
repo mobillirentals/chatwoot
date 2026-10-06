@@ -43,16 +43,13 @@ app.get('/sessions', exigirToken, (_req, res) => {
   res.json({ sessoes: gerenciador.listar() });
 });
 
-// Cria (ou devolve) a sessao de um numero. E o primeiro passo da tela de conexao: cria, depois
-// busca o QR, depois acompanha o status ate conectar.
+// Abre uma sessao. E o primeiro passo da tela de conexao: cria, busca o QR, acompanha ate
+// conectar. O `id` e opcional -- sem ele a ponte gera um, porque o numero so se descobre depois
+// do pareamento e exigi-lo aqui obrigaria o usuario a digitar o que a sessao ja vai informar.
 app.post('/sessions', exigirToken, async (req, res) => {
-  const { id } = req.body || {};
-  if (!gerenciador.normalizarId(id)) {
-    return res.status(400).json({ error: '"id" precisa ser o numero da caixa, com DDI' });
-  }
-
   try {
-    const sessao = await gerenciador.abrir(id);
+    // expected_number trava a sessao num numero so — usado ao reparear uma caixa existente.
+    const sessao = await gerenciador.abrir(req.body?.id, { numeroEsperado: req.body?.expected_number || null });
     res.json(sessao.resumo());
   } catch (err) {
     tratarErro(res, err);
@@ -95,6 +92,33 @@ app.post('/sessions/:id/send', exigirToken, comSessao, async (req, res) => {
   }
 });
 
+app.post('/sessions/:id/send_media', exigirToken, comSessao, async (req, res) => {
+  const { to, media_url: mediaUrl, media_type: mediaType, mime_type: mimeType,
+    filename, caption, quoted_id: idCitado } = req.body || {};
+  if (!to || !mediaUrl) return res.status(400).json({ error: '"to" e "media_url" sao obrigatorios.' });
+
+  try {
+    const messageId = await req.sessao.enviarMidia(to, { mediaUrl, mediaType, mimeType, filename, caption, idCitado });
+    res.json({ status: 'ok', message_id: messageId });
+  } catch (err) {
+    tratarErro(res, err);
+  }
+});
+
+// O Chatwoot busca o arquivo por aqui ao anexar a mensagem recebida (e o media_url do provider).
+app.get('/sessions/:id/media/:mediaId', exigirToken, comSessao, async (req, res) => {
+  try {
+    const { buffer, mime_type: mimeType, filename } = await req.sessao.baixarMidia(req.params.mediaId);
+    res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+    // O Chatwoot usa este nome como nome do anexo; sem ele o arquivo chega como "download".
+    res.setHeader('Content-Disposition', `attachment; filename="${filename || req.params.mediaId}"`);
+    res.send(buffer);
+  } catch (err) {
+    if (err.code === 'NOT_FOUND') return res.status(404).json({ error: err.message });
+    tratarErro(res, err);
+  }
+});
+
 // Devolve o visto-azul ao cliente quando o agente abre a conversa no painel.
 app.post('/sessions/:id/read', exigirToken, comSessao, async (req, res) => {
   const { to } = req.body || {};
@@ -119,6 +143,28 @@ app.post('/sessions/:id/presence', exigirToken, comSessao, async (req, res) => {
   try {
     await req.sessao.avisarPresenca(to, state);
     res.json({ status: 'ok' });
+  } catch (err) {
+    tratarErro(res, err);
+  }
+});
+
+// Derruba o pareamento atual e ja oferece QR novo, mantendo a sessao (e a trava de numero).
+// E o "reconectar" da tela de configuracoes da caixa.
+app.post('/sessions/:id/repair', exigirToken, comSessao, async (req, res) => {
+  try {
+    if (req.body?.expected_number) req.sessao.numeroEsperado = String(req.body.expected_number).replace(/\D/g, '');
+    await req.sessao.desconectar();
+    res.json(req.sessao.resumo());
+  } catch (err) {
+    tratarErro(res, err);
+  }
+});
+
+// Descarta a sessao de vez (ao contrario de /logout, que reconecta para reparear).
+app.delete('/sessions/:id', exigirToken, comSessao, async (req, res) => {
+  try {
+    await gerenciador.remover(req.params.id);
+    res.json({ status: 'ok', removida: req.params.id });
   } catch (err) {
     tratarErro(res, err);
   }

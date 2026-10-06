@@ -6,6 +6,7 @@ RSpec.describe 'Conexão do WhatsApp por QR code', type: :request do
   let(:agente) { create(:user, account: account, role: :agent) }
   let(:ponte) { 'http://ponte:3400' }
   let(:numero) { '5527988982141' }
+  let(:sessao) { 's-abc123' }
 
   before do
     create(:installation_config, name: 'BAILEYS_BRIDGE_URL', value: ponte)
@@ -15,24 +16,25 @@ RSpec.describe 'Conexão do WhatsApp por QR code', type: :request do
   end
 
   describe 'POST baileys/sessions' do
-    it 'abre a sessão na ponte e devolve o estado dela' do
+    # Sem número: quem pareia só descobre o número ao ler o QR, e a sessão o informa de volta.
+    it 'abre a sessão na ponte sem exigir o número e devolve o id dela' do
       stub_request(:post, "#{ponte}/sessions")
-        .with(body: { id: numero }.to_json, headers: { 'X-Bridge-Token' => 'segredo-da-ponte' })
-        .to_return(status: 200, body: { id: numero, whatsapp_connection: 'waiting_qr' }.to_json,
+        .with(headers: { 'X-Bridge-Token' => 'segredo-da-ponte' })
+        .to_return(status: 200, body: { id: sessao, whatsapp_connection: 'waiting_qr' }.to_json,
                    headers: { 'Content-Type' => 'application/json' })
 
       post "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions",
-           params: { phone_number: '+55 27 98898-2141' }, headers: admin.create_new_auth_token, as: :json
+           headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
-      expect(response.parsed_body['whatsapp_connection']).to eq('waiting_qr')
+      expect(response.parsed_body['id']).to eq(sessao)
     end
 
     # O segredo da ponte fica no servidor: se o painel pudesse falar direto com ela, qualquer
     # pessoa com acesso ao navegador mandaria WhatsApp por qualquer número.
     it 'exige administrador' do
       post "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions",
-           params: { phone_number: numero }, headers: agente.create_new_auth_token, as: :json
+           headers: agente.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unauthorized)
     end
@@ -42,7 +44,7 @@ RSpec.describe 'Conexão do WhatsApp por QR code', type: :request do
       GlobalConfig.clear_cache
 
       post "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions",
-           params: { phone_number: numero }, headers: admin.create_new_auth_token, as: :json
+           headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -51,31 +53,31 @@ RSpec.describe 'Conexão do WhatsApp por QR code', type: :request do
       stub_request(:post, "#{ponte}/sessions").to_timeout
 
       post "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions",
-           params: { phone_number: numero }, headers: admin.create_new_auth_token, as: :json
+           headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:service_unavailable)
     end
   end
 
-  describe 'GET baileys/sessions/:phone_number/qr' do
+  describe 'GET baileys/sessions/:session_id/qr' do
     # 202 significa "o QR ainda não saiu": a tela entende isso e volta a perguntar, em vez de
     # mostrar erro para quem está com o celular na mão esperando.
     it 'repassa o 202 de QR ainda não gerado' do
-      stub_request(:get, "#{ponte}/sessions/#{numero}/qr?format=text")
+      stub_request(:get, "#{ponte}/sessions/#{sessao}/qr?format=text")
         .to_return(status: 202, body: { status: 'connecting' }.to_json, headers: { 'Content-Type' => 'application/json' })
 
-      get "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions/#{numero}/qr",
+      get "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions/#{sessao}/qr",
           headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:accepted)
     end
 
     it 'devolve o QR como texto para o painel desenhar' do
-      stub_request(:get, "#{ponte}/sessions/#{numero}/qr?format=text")
+      stub_request(:get, "#{ponte}/sessions/#{sessao}/qr?format=text")
         .to_return(status: 200, body: { status: 'waiting_qr', qr: '2@abc' }.to_json,
                    headers: { 'Content-Type' => 'application/json' })
 
-      get "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions/#{numero}/qr",
+      get "/api/v1/accounts/#{account.id}/whatsapp/baileys/sessions/#{sessao}/qr",
           headers: admin.create_new_auth_token, as: :json
 
       expect(response.parsed_body['qr']).to eq('2@abc')
@@ -83,33 +85,35 @@ RSpec.describe 'Conexão do WhatsApp por QR code', type: :request do
   end
 
   describe 'POST baileys/connect' do
-    def stub_ponte_pareada_com(numero_pareado)
-      stub_request(:get, "#{ponte}/sessions/#{numero}/health")
+    def stub_sessao(connection:, number: nil)
+      stub_request(:get, "#{ponte}/sessions/#{sessao}/health")
         .to_return(status: 200,
-                   body: { whatsapp_connection: 'connected', whatsapp_number: numero_pareado }.to_json,
+                   body: { whatsapp_connection: connection, whatsapp_number: number }.to_json,
                    headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'cria a caixa quando a ponte está pareada com aquele número' do
-      stub_ponte_pareada_com(numero)
+    # O número da caixa vem do pareamento, não do formulário.
+    it 'cria a caixa com o número que a sessão pareou' do
+      stub_sessao(connection: 'connected', number: numero)
 
       post "/api/v1/accounts/#{account.id}/whatsapp/baileys/connect",
-           params: { phone_number: numero, name: 'Vendas' }, headers: admin.create_new_auth_token, as: :json
+           params: { session_id: sessao, name: 'Vendas' }, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
       inbox = account.inboxes.find(response.parsed_body['id'])
       expect(inbox.name).to eq('Vendas')
+      expect(inbox.channel.phone_number).to eq("+#{numero}")
       expect(inbox.channel.provider).to eq('baileys')
+      expect(inbox.channel.provider_config['session_id']).to eq(sessao)
       expect(inbox.channel.provider_config['webhook_verify_token']).to eq('segredo-do-webhook')
     end
 
-    # A armadilha com mais de uma sessão no ar: apontar a caixa para a sessão errada mandaria
-    # mensagem de outro número sem avisar ninguém.
-    it 'recusa quando a ponte está pareada com outro número' do
-      stub_ponte_pareada_com('5527992962147')
+    # Criar a caixa antes de escanear deixaria uma caixa apontando para sessão que nunca conecta.
+    it 'recusa enquanto a sessão não pareou' do
+      stub_sessao(connection: 'waiting_qr')
 
       post "/api/v1/accounts/#{account.id}/whatsapp/baileys/connect",
-           params: { phone_number: numero, name: 'Vendas' }, headers: admin.create_new_auth_token, as: :json
+           params: { session_id: sessao, name: 'Vendas' }, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(account.inboxes.count).to eq(0)

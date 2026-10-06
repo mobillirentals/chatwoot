@@ -410,9 +410,13 @@ Rails.application.routes.draw do
             post 'manual/:inbox_id/setup_webhook', to: 'manual_setup#setup_webhook'
             # WhatsApp nao oficial (ponte Baileys): parear por QR code e criar a caixa.
             post 'baileys/sessions', to: 'baileys_sessions#create'
-            get 'baileys/sessions/:phone_number', to: 'baileys_sessions#show', constraints: { phone_number: %r{[^/]+} }
-            get 'baileys/sessions/:phone_number/qr', to: 'baileys_sessions#qr', constraints: { phone_number: %r{[^/]+} }
+            get 'baileys/sessions/:session_id', to: 'baileys_sessions#show'
+            get 'baileys/sessions/:session_id/qr', to: 'baileys_sessions#qr'
             post 'baileys/connect', to: 'baileys_sessions#connect'
+            # Caixa que já existe: acompanhar a conexão e reparear quando ela cair.
+            get 'baileys/inboxes/:inbox_id', to: 'baileys_sessions#inbox_status'
+            get 'baileys/inboxes/:inbox_id/qr', to: 'baileys_sessions#inbox_qr'
+            post 'baileys/inboxes/:inbox_id/reconnect', to: 'baileys_sessions#reconnect'
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]

@@ -23,6 +23,7 @@ import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
+import BaileysConnection from './components/BaileysConnection.vue';
 import VoiceConfigurationPage from './settingsPage/VoiceConfigurationPage.vue';
 import WhatsappCallingPage from './settingsPage/WhatsappCallingPage.vue';
 import CustomerSatisfactionPage from './settingsPage/CustomerSatisfactionPage.vue';
@@ -58,6 +59,7 @@ export default {
     BotConfiguration,
     CollaboratorsPage,
     ConfigurationPage,
+    BaileysConnection,
     VoiceConfigurationPage,
     WhatsappCallingPage,
     CustomerSatisfactionPage,
@@ -181,6 +183,9 @@ export default {
       }
       if (this.isATwilioWhatsAppChannel) {
         return this.$t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.TWILIO');
+      }
+      if (this.inbox.provider === 'baileys') {
+        return this.$t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.BAILEYS');
       }
       return '';
     },
@@ -984,6 +989,16 @@ export default {
                 disabled
                 class="!mb-0"
               />
+            </SettingsFieldSection>
+
+            <!-- WhatsApp fora da API oficial: a sessão cai quando o aparelho desloga, e sem isso a
+                 caixa ficaria morta sem aviso nenhum. -->
+            <SettingsFieldSection
+              v-if="inbox.provider === 'baileys'"
+              :label="$t('INBOX_MGMT.SETTINGS_POPUP.BAILEYS.TITLE')"
+              :help-text="$t('INBOX_MGMT.SETTINGS_POPUP.BAILEYS.SUBTITLE')"
+            >
+              <BaileysConnection :inbox="inbox" />
             </SettingsFieldSection>
 
             <SettingsFieldSection
