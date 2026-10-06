@@ -19,7 +19,10 @@ class AsyncDispatcher < BaseDispatcher
       ParticipationListener.instance,
       Conversations::UnreadCounts::Listener.instance,
       ReportingEventListener.instance,
-      WebhookListener.instance
+      WebhookListener.instance,
+      # Leva o "digitando" do agente ate o WhatsApp nas caixas da ponte Baileys. Async de
+      # proposito: uma chamada HTTP por tecla dentro do request do agente travaria o painel.
+      BaileysPresenceListener.instance
     ]
   end
 end

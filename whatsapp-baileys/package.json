@@ -1,0 +1,17 @@
+{
+  "name": "whatsapp-baileys-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ponte entre um numero de WhatsApp pareado por QR code (protocolo multi-device via Baileys) e uma caixa do Chatwoot com provider 'baileys'. Separado do whatsapp-number-checker de proposito: sessoes e numeros diferentes, e uma falha aqui nao pode derrubar a verificacao de numeros.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.0",
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  }
+}

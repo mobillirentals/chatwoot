@@ -254,7 +254,9 @@
           "WHATSAPP_CLOUD_DESC": "Configuração rápida via Meta",
           "WHATSAPP_CLOUD_MANUAL_SETUP_DESC": "Configuração manual com credenciais da Cloud API",
           "TWILIO_DESC": "Conectar através de credenciais Twilio",
-          "360_DIALOG": "360Dialog"
+          "360_DIALOG": "360Dialog",
+          "BAILEYS": "WhatsApp por QR code",
+          "BAILEYS_DESC": "Conectar um número fora da API oficial"
         },
         "SELECT_PROVIDER": {
           "TITLE": "Selecione seu provedor de API",
@@ -438,6 +440,19 @@
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp",
           "MANUAL_RESTRICTION_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. A configuração manual funciona apenas para números que já estão conectados à WhatsApp Cloud API. Números que utilizam a coexistência com o aplicativo WhatsApp Business ainda não são compatíveis com esse fluxo. Estamos trabalhando em conjunto com a Meta para resolver o problema o mais rápido possível. Agradecemos pela sua paciência.",
           "STATUS_LINK": "Ver atualizações de status"
+        },
+        "BAILEYS": {
+          "WARNING": "Isto conecta um número fora da API oficial do WhatsApp, o que contraria os termos da Meta: o número pode ser banido, sem recurso. Use um número secundário, nunca o principal.",
+          "START": "Mostrar QR code",
+          "BACK": "Voltar",
+          "SCAN_INSTRUCTIONS": "No aparelho desse número, abra o WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho, e escaneie o código abaixo.",
+          "QR_ALT": "QR code para parear o número",
+          "WAITING_QR": "Gerando o QR code…",
+          "WAITING_SCAN": "Aguardando a leitura. O código se renova sozinho a cada poucos segundos.",
+          "CHANGE_NUMBER": "Usar outro número",
+          "CONNECTED": "O número {number} está pareado.",
+          "CREATE_INBOX": "Criar caixa de entrada",
+          "BRIDGE_ERROR": "Não consegui falar com a ponte do WhatsApp. Verifique se ela está no ar e configurada."
         }
       },
       "VOICE": {
@@ -1145,7 +1160,17 @@
         "LABEL": "Ativar chamadas de voz",
         "DESCRIPTION": "Permita que os atendentes iniciem e recebam chamadas de voz do WhatsApp nesta caixa de entrada. Disponível apenas para canais do WhatsApp Cloud com cadastro incorporado e permissão de chamadas concedida pela Meta."
       },
-      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat"
+      "UPDATE_PRE_CHAT_FORM_SETTINGS": "Atualizar configurações do Formulário Pre Chat",
+      "BAILEYS": {
+        "TITLE": "Conexão do WhatsApp",
+        "SUBTITLE": "Este número é pareado por QR code. Se o aparelho for desconectado, a caixa para de receber e enviar até ser pareada de novo.",
+        "CONNECTED": "Conectado como {number}",
+        "DISCONNECTED": "Sem conexão",
+        "RECONNECT": "Reconectar",
+        "RECONNECT_HELP": "Derruba o pareamento atual e mostra um QR code novo. Só o número desta caixa é aceito.",
+        "SCAN_INSTRUCTIONS": "No aparelho desse número, abra o WhatsApp → Configurações → Aparelhos conectados → Conectar aparelho, e escaneie o código abaixo.",
+        "WRONG_NUMBER": "O número lido ({scanned}) não é o desta caixa ({expected}), então o pareamento foi desfeito. Escaneie com o aparelho certo — outro número continuaria com o histórico e os contatos desta caixa, mas enviando de outro lugar."
+      }
     },
     "HELP_CENTER": {
       "LABEL": "Centro de Ajuda",

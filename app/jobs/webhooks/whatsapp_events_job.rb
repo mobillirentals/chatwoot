@@ -78,10 +78,17 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
   # - "to_user_id" is the contact BSUID; "to_parent_user_id" is included when parent BSUIDs are enabled
   # - contacts[] contains the same contact identifiers
   def message_echo_event?(params)
-    params.dig(:entry, 0, :changes, 0, :field) == 'smb_message_echoes'
+    # O envelope `smb_message_echoes` e da Meta. A ponte Baileys entrega no formato enxuto, em que
+    # o echo se reconhece pela propria chave -- e serve ao mesmo proposito: mensagem que saiu por
+    # fora do painel (atendente respondendo pelo celular) aparecer na conversa.
+    params.dig(:entry, 0, :changes, 0, :field) == 'smb_message_echoes' || params[:message_echoes].present?
   end
 
   def handle_message_echo(channel, params)
+    if channel.provider == 'baileys'
+      return Whatsapp::IncomingMessageBaileysService.new(inbox: channel.inbox, params: params, outgoing_echo: true).perform
+    end
+
     Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: channel.inbox, params: params, outgoing_echo: true).perform
   end
 
@@ -91,6 +98,8 @@ class Webhooks::WhatsappEventsJob < MutexApplicationJob
       service_params = { inbox: channel.inbox, params: params }
       service_params[:locked_sender_id] = locked_sender_id if locked_sender_id.present?
       Whatsapp::IncomingMessageWhatsappCloudService.new(**service_params).perform
+    when 'baileys'
+      Whatsapp::IncomingMessageBaileysService.new(inbox: channel.inbox, params: params).perform
     else
       Whatsapp::IncomingMessageService.new(inbox: channel.inbox, params: params).perform
     end
