@@ -77,6 +77,12 @@ const inboxTypes = computed(() => ({
   isEmail: props.targetInbox?.channelType === INBOX_TYPES.EMAIL,
   isTwilio: props.targetInbox?.channelType === INBOX_TYPES.TWILIO,
   isWhatsapp: props.targetInbox?.channelType === INBOX_TYPES.WHATSAPP,
+  // Template é mecanismo da API oficial: a Meta aprova o texto e ele vale fora da janela de 24h.
+  // Num número pareado por QR code não existe nem aprovação nem janela, então exigir template ali
+  // impediria acionar cliente — não há modelo nenhum para escolher.
+  isWhatsappComTemplate:
+    props.targetInbox?.channelType === INBOX_TYPES.WHATSAPP &&
+    props.targetInbox?.provider !== 'baileys',
   isWebWidget: props.targetInbox?.channelType === INBOX_TYPES.WEB,
   isApi: props.targetInbox?.channelType === INBOX_TYPES.API,
   isEmailOrWebWidget:
@@ -109,7 +115,8 @@ const effectiveChannelType = computed(() =>
 const validationRules = computed(() => ({
   selectedContact: { required },
   targetInbox: { required },
-  message: { required: requiredIf(!inboxTypes.value.isWhatsapp) },
+  // A mensagem é dispensada só onde o conteúdo vem do modelo escolhido.
+  message: { required: requiredIf(!inboxTypes.value.isWhatsappComTemplate) },
   subject: { required: requiredIf(inboxTypes.value.isEmail) },
 }));
 
@@ -335,8 +342,10 @@ const handleSendTwilioMessage = async ({ message, templateParams }) => {
 };
 
 const shouldShowMessageEditor = computed(() => {
+  // Quem exige modelo aprovado escreve pelo seletor de template, não aqui. Num número pareado por
+  // QR code não há modelo nenhum para escolher, então sem o editor não sobra como escrever.
   return (
-    !inboxTypes.value.isWhatsapp &&
+    !inboxTypes.value.isWhatsappComTemplate &&
     !showNoInboxAlert.value &&
     !inboxTypes.value.isTwilioWhatsapp
   );
@@ -438,7 +447,7 @@ useKeyboardEvents({
     <ActionButtons
       v-else
       :attached-files="state.attachedFiles"
-      :is-whatsapp-inbox="inboxTypes.isWhatsapp"
+      :requires-whatsapp-template="inboxTypes.isWhatsappComTemplate"
       :is-email-or-web-widget-inbox="inboxTypes.isEmailOrWebWidget"
       :is-twilio-sms-inbox="inboxTypes.isTwilioSMS"
       :is-twilio-whats-app-inbox="inboxTypes.isTwilioWhatsapp"
