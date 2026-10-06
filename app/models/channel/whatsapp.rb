@@ -9,7 +9,7 @@
 #  phone_number                   :string           not null
 #  phone_number_health            :jsonb            not null
 #  phone_number_health_checked_at :datetime
-#  phone_number_health_error      :string
+#  phone_number_health_error      :string(500)
 #  provider                       :string           default("default")
 #  provider_config                :jsonb
 #  created_at                     :datetime         not null
@@ -31,7 +31,9 @@ class Channel::Whatsapp < ApplicationRecord
   encrypts :business_management_token if Chatwoot.encryption_configured?
 
   # default at the moment is 360dialog lets change later.
-  PROVIDERS = %w[default whatsapp_cloud].freeze
+  # baileys: numero fora da API oficial, atendido por uma ponte nossa que mantem a sessao do
+  # WhatsApp Web (ver Whatsapp::Providers::WhatsappBaileysService).
+  PROVIDERS = %w[default whatsapp_cloud baileys].freeze
   before_validation :ensure_webhook_verify_token
 
   validates :provider, inclusion: { in: PROVIDERS }
@@ -69,11 +71,19 @@ class Channel::Whatsapp < ApplicationRecord
   end
 
   def provider_service
-    if provider == 'whatsapp_cloud'
+    case provider
+    when 'whatsapp_cloud'
       Whatsapp::Providers::WhatsappCloudService.new(whatsapp_channel: self)
+    when 'baileys'
+      Whatsapp::Providers::WhatsappBaileysService.new(whatsapp_channel: self)
     else
       Whatsapp::Providers::Whatsapp360DialogService.new(whatsapp_channel: self)
     end
+  end
+
+  # Sem Meta no caminho, nao existe janela de 24h nem template aprovado.
+  def baileys?
+    provider == 'baileys'
   end
 
   def template_access_token
