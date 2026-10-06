@@ -27,41 +27,61 @@ class Llm::SpeechToTextService < Llm::LegacyBaseOpenAiService
   AZURE_HOSTS = ['.openai.azure.com', '.cognitiveservices.azure.com'].freeze
   AZURE_API_VERSION = '2024-06-01'.freeze
 
-  def initialize(blob:, account:)
+  # `with_segments` pede o tempo de cada trecho, que e o que permite saber QUANDO cada frase foi
+  # dita. So o whisper devolve isso: os modelos novos de transcricao (gpt-4o-transcribe e familia)
+  # recusam `verbose_json` com 400 — testado contra o proprio recurso. Por isso o modelo tambem
+  # muda junto, via CALL_TRANSCRIPTION_MODEL, em vez de valer para todo audio.
+  def initialize(blob:, account:, with_segments: false)
     super()
     @blob = blob
     @account = account
-    @transcription_model = Llm::FeatureRouter.resolve(feature: 'audio_transcription', account: account)[:model]
+    @with_segments = with_segments
+    @transcription_model = resolve_model
     @client = azure_transcription_client if azure_endpoint?
   end
 
   def perform
     temp_file_path = fetch_audio_file
-    transcribed_text = nil
+    resultado = nil
 
     File.open(temp_file_path, 'rb') do |file|
-      transcribed_text = instrument_audio_transcription(instrumentation_params(temp_file_path)) do
+      resultado = instrument_audio_transcription(instrumentation_params(temp_file_path)) do
         # temperature: 0.0 minimises hallucinations on silence / near-silent
         # audio; non-zero values trigger spiraling repeats — well-documented
         # behaviour across OpenAI transcription models.
-        response = @client.audio.transcribe(
-          parameters: {
-            model: transcription_model,
-            file: file,
-            temperature: 0.0
-          }
-        )
-        response['text']
+        parametros = { model: transcription_model, file: file }
+        if @with_segments
+          parametros[:response_format] = 'verbose_json'
+          # Sem `temperature`, de proposito. Fixar 0.0 desliga o fallback de temperatura da propria
+          # API, que e o mecanismo que quebra os loops de repeticao do whisper: medido no mesmo
+          # audio, 0.0 devolveu 79 trechos e 189 palavras (um trecho repetido 66 vezes) contra 29
+          # trechos e 87 palavras sem ele. Nos modelos novos, que nao tem esse fallback, 0.0 ajuda —
+          # por isso a diferenca fica aqui e nao vale para todo audio.
+        else
+          parametros[:temperature] = 0.0
+        end
+        response = @client.audio.transcribe(parameters: parametros)
+        @with_segments ? response : response['text']
       end
     end
 
-    account.increment_response_usage if transcribed_text.present?
-    transcribed_text
+    texto = @with_segments ? resultado['text'] : resultado
+    account.increment_response_usage if texto.present?
+    resultado
   ensure
     FileUtils.rm_f(temp_file_path) if temp_file_path.present?
   end
 
   private
+
+  def resolve_model
+    if @with_segments
+      configurado = GlobalConfigService.load('CALL_TRANSCRIPTION_MODEL', 'whisper').to_s.strip
+      return configurado if configurado.present?
+    end
+
+    Llm::FeatureRouter.resolve(feature: 'audio_transcription', account: account)[:model]
+  end
 
   # O Azure não expõe transcrição na camada OpenAI-compatível: `/openai/v1/audio/transcriptions`
   # devolve 404 e só a rota clássica `/openai/deployments/{deployment}/audio/transcriptions`

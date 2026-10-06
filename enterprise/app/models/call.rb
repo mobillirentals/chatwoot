@@ -34,7 +34,7 @@ class Call < ApplicationRecord
   TERMINAL_STATUSES = %w[completed no_answer failed rejected].freeze
 
   store_accessor :meta, :conference_sid, :twilio_conference_sid, :recording_sid, :parent_call_sid, :initiated_at, :ended_at,
-                 :accepted_broadcast_at, :recording_enabled
+                 :accepted_broadcast_at, :recording_enabled, :transcript_segments
 
   # Frontend voice bubbles/stores expect inbound/outbound string values
   DISPLAY_DIRECTION = { 'incoming' => 'inbound', 'outgoing' => 'outbound' }.freeze
@@ -52,6 +52,12 @@ class Call < ApplicationRecord
   belongs_to :accepted_by_agent, class_name: 'User', optional: true
 
   has_one_attached :recording
+  # Os dois lados da conversa, gravados separados no navegador do atendente. Nao ha ffmpeg no
+  # container para separar canais depois, e e so com eles que da para saber quem falou cada frase.
+  # Sao insumo de transcricao, nao de reproducao: o player toca `recording`, e estes sao apagados
+  # assim que o texto sai.
+  has_one_attached :recording_agent
+  has_one_attached :recording_contact
 
   # Snapshot the inbox's "Record calls" setting so every leg of a call agrees and a mid-call toggle can't change it.
   before_create { self.recording_enabled = inbox.channel.try(:recording_enabled?) }
@@ -140,6 +146,16 @@ class Call < ApplicationRecord
     Rails.application.routes.url_helpers.rails_blob_url(recording)
   end
 
+  # Com os dois lados no disco, quem transcreve e o fluxo por locutor; sem eles, o caminho de
+  # sempre (o anexo misturado) continua valendo, entao uma falha no envio degrada em vez de quebrar.
+  def sides_recorded?
+    recording_agent.attached? && recording_contact.attached?
+  end
+
+  def transcript_segments
+    super || []
+  end
+
   def push_event_data
     {
       id: id,
@@ -157,7 +173,8 @@ class Call < ApplicationRecord
       from_number: from_number,
       to_number: to_number,
       recording_url: recording_url,
-      transcript: transcript
+      transcript: transcript,
+      transcript_segments: transcript_segments
     }
   end
 end

@@ -29,6 +29,8 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
   end
 
   def upload_recording
+    return (@upload_status = attach_side_recording) if side_param.present?
+
     # Quem dispara a transcricao e o `after_create_commit` do proprio anexo de audio
     # (Messages::AudioTranscriptionJob), que ao terminar enfileira o job da chamada. Enfileirar
     # daqui tambem faria o mesmo audio ser transcrito duas vezes, e transcricao e cobrada.
@@ -137,6 +139,25 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
     return 'already_uploaded' if @call.message.attachments.exists?(file_type: :audio)
 
     @call.message.attachments.create!(account_id: @call.account_id, file_type: :audio, file: params[:recording])
+    'uploaded'
+  end
+
+  SIDES = %w[agent contact].freeze
+
+  def side_param
+    @side_param ||= params[:side].to_s.presence_in(SIDES)
+  end
+
+  # Os lados ficam no proprio Call, nao em anexo da mensagem: anexo viraria mais um player na
+  # conversa e seria transcrito sozinho pelo callback do Attachment. Sao insumo, e o fluxo por
+  # locutor os apaga quando termina.
+  def attach_side_recording
+    anexo = side_param == 'agent' ? @call.recording_agent : @call.recording_contact
+    return 'already_uploaded' if anexo.attached?
+
+    anexo.attach(params[:recording])
+    # So quando os DOIS chegam da para intercalar as falas, entao o ultimo a chegar e quem dispara.
+    Voice::SpeakerTranscriptionJob.perform_later(@call.id) if @call.reload.sides_recorded?
     'uploaded'
   end
 

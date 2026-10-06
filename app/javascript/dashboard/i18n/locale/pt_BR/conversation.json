@@ -123,7 +123,12 @@
       "JOIN_CALL": "Entrar na chamada",
       "CALL_BACK": "Retornar chamada",
       "TRANSCRIPT_SHOW_MORE": "Ver mais",
-      "TRANSCRIPT_SHOW_LESS": "Mostrar menos"
+      "TRANSCRIPT_SHOW_LESS": "Mostrar menos",
+      "TRANSCRIPT_PLAY": "Reproduzir gravação",
+      "TRANSCRIPT_PAUSE": "Pausar gravação",
+      "SPEAKER_AGENT": "Atendente",
+      "SPEAKER_CONTACT": "Cliente",
+      "TRANSCRIPT_SEEK": "Pular para um ponto da chamada"
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolver",

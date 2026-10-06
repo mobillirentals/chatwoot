@@ -42,8 +42,7 @@ class Conversations::UnattendedAlertService
   pattr_initialize [:conversation!, :agent_status!, :available_users]
 
   def perform
-    return if waited_minutes.nil?
-    return if conversation.inbox.out_of_office?
+    return unless avaliar?
 
     try_layer(3) if layer3_due?
     try_layer(1) if layer1_due?
@@ -54,15 +53,49 @@ class Conversations::UnattendedAlertService
 
   private
 
+  def avaliar?
+    return false if waited_minutes.nil?
+    return false if conversation.inbox.out_of_office?
+
+    !chamada_atendida_em_espera?
+  end
+
   def agent_away?
     agent_status != 'online'
   end
 
+  # Chamada nao e mensagem esperando resposta escrita: ela foi tratada por voz, ao vivo. Como entra
+  # na conversa como mensagem do cliente, marca `waiting_since` e cai aqui como se o atendente
+  # estivesse ignorando alguem — e o cliente que acabou de falar no telefone recebia um texto
+  # dizendo que a equipe "ja viu sua mensagem e vai responder em breve".
+  def chamada_em_espera
+    return @chamada_em_espera if defined?(@chamada_em_espera)
+
+    ultima = conversation.messages.incoming.order(:id).last
+    @chamada_em_espera = ultima&.voice_call? ? ultima.call : nil
+  end
+
+  def aguardando_por_chamada?
+    chamada_em_espera.present?
+  end
+
+  # Chamada atendida nao deixa nada pendente, nem para o cliente nem para quem administra. Perdida
+  # deixa: alguem precisa retornar — entao a camada interna (2) continua valendo nesse caso.
+  def chamada_atendida_em_espera?
+    chamada_em_espera&.status == 'completed'
+  end
+
+  # As duas camadas que falam com o CLIENTE nunca disparam por causa de uma chamada: a conversa ja
+  # aconteceu por voz.
   def layer3_due?
+    return false if aguardando_por_chamada?
+
     agent_away? && waited_minutes >= LAYER3_AWAY_MINUTES
   end
 
   def layer1_due?
+    return false if aguardando_por_chamada?
+
     !agent_away? && waited_minutes >= LAYER1_DELAY_MINUTES
   end
 
