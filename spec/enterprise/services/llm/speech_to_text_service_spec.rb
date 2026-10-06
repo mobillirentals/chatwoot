@@ -117,4 +117,77 @@ RSpec.describe Llm::SpeechToTextService, type: :service do
       expect(account).not_to have_received(:increment_response_usage)
     end
   end
+
+  # Saber QUANDO cada frase foi dita e o que permite a transcricao acompanhar o audio. So o whisper
+  # devolve isso: os modelos novos recusam `verbose_json` com 400, testado contra o proprio recurso.
+  describe '#perform com segmentos' do
+    let(:service) { described_class.new(blob: attachment.file.blob, account: account, with_segments: true) }
+    let(:audio_api) { double('audio_api') } # rubocop:disable RSpec/VerifiedDoubles
+    let(:audio_file_path) { Rails.root.join('tmp/speech_to_text_segments_spec.mp3').to_s }
+    let(:resposta) { { 'text' => 'Bom dia.', 'segments' => [{ 'start' => 0.0, 'end' => 1.0, 'text' => 'Bom dia.' }] } }
+
+    before do
+      File.binwrite(audio_file_path, 'audio')
+      allow(service).to receive(:fetch_audio_file).and_return(audio_file_path)
+      allow(account).to receive(:increment_response_usage)
+      allow(service.client).to receive(:audio).and_return(audio_api)
+      allow(audio_api).to receive(:transcribe).and_return(resposta)
+    end
+
+    after { FileUtils.rm_f(audio_file_path) }
+
+    it 'devolve a resposta inteira, com os trechos e seus tempos' do
+      expect(service.perform).to eq(resposta)
+    end
+
+    it 'pede verbose_json' do
+      service.perform
+
+      expect(audio_api).to have_received(:transcribe) do |parameters:|
+        expect(parameters[:response_format]).to eq('verbose_json')
+      end
+    end
+
+    # Fixar 0.0 desliga o fallback de temperatura da propria API, que e o mecanismo que quebra os
+    # loops de repeticao do whisper: no mesmo audio, 0.0 devolveu 79 trechos (um repetido 66 vezes)
+    # contra 29 sem ele.
+    it 'nao fixa a temperatura, para a API poder quebrar loops de repeticao' do
+      service.perform
+
+      expect(audio_api).to have_received(:transcribe) do |parameters:|
+        expect(parameters).not_to have_key(:temperature)
+      end
+    end
+
+    # Stub direto em vez de InstallationConfig: o cache do GlobalConfig vaza entre exemplos e deixa
+    # este teste intermitente conforme a ordem de execucao.
+    it 'usa o modelo configurado em CALL_TRANSCRIPTION_MODEL' do
+      allow(GlobalConfigService).to receive(:load).and_call_original
+      allow(GlobalConfigService).to receive(:load).with('CALL_TRANSCRIPTION_MODEL', anything).and_return('whisper-proprio')
+
+      described_class.new(blob: attachment.file.blob, account: account, with_segments: true)
+                     .tap { |s| allow(s).to receive(:fetch_audio_file).and_return(audio_file_path) }
+                     .tap { |s| allow(s.client).to receive(:audio).and_return(audio_api) }
+                     .perform
+
+      expect(audio_api).to have_received(:transcribe) do |parameters:|
+        expect(parameters[:model]).to eq('whisper-proprio')
+      end
+    end
+
+    # Sem segmentos, o caminho de sempre: texto puro e temperatura fixa, que nos modelos novos
+    # ajuda justamente por nao terem esse fallback.
+    it 'mantem o comportamento antigo quando nao se pede segmentos' do
+      simples = described_class.new(blob: attachment.file.blob, account: account)
+      allow(simples).to receive(:fetch_audio_file).and_return(audio_file_path)
+      allow(simples.client).to receive(:audio).and_return(audio_api)
+      allow(audio_api).to receive(:transcribe).and_return({ 'text' => 'Bom dia.' })
+
+      expect(simples.perform).to eq('Bom dia.')
+      expect(audio_api).to have_received(:transcribe) do |parameters:|
+        expect(parameters[:temperature]).to eq(0.0)
+        expect(parameters).not_to have_key(:response_format)
+      end
+    end
+  end
 end

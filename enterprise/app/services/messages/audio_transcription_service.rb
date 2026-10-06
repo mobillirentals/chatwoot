@@ -25,7 +25,13 @@ class Messages::AudioTranscriptionService
 
   # Call recordings honour the inbox's "Transcribe recordings" setting; ordinary voice notes don't.
   def call_recording_transcription_disabled?
-    message.voice_call? && !message.inbox.channel.transcription_enabled?
+    return false unless message.voice_call?
+    return true unless message.inbox.channel.transcription_enabled?
+
+    # Com os dois lados gravados, quem transcreve e o fluxo por locutor. Transcrever a mistura
+    # tambem seria pagar de novo por um texto que nao sabe quem falou. Sem os dois lados (envio
+    # falhou, chamada antiga), este caminho segue valendo: a degradacao e automatica.
+    message.call&.sides_recorded? || false
   end
 
   def transcribe_audio

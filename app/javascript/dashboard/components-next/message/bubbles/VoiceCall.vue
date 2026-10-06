@@ -22,6 +22,8 @@ import { useAlert } from 'dashboard/composables';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import BaseBubble from 'next/message/bubbles/Base.vue';
 import AudioChip from 'next/message/chips/Audio.vue';
+import CallTranscript from 'dashboard/components-next/Calls/CallTranscript.vue';
+import MessageMeta from 'dashboard/components-next/message/MessageMeta.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const LABEL_MAP = {
@@ -115,6 +117,19 @@ const displayAgentName = computed(() => {
 const audioAttachment = computed(() =>
   (attachments?.value || []).find(a => a.fileType === ATTACHMENT_TYPES.AUDIO)
 );
+
+// Chamada gravada nos dois lados traz a conversa já separada por quem falou. Chamada antiga, ou
+// cujo envio de um dos lados falhou, cai no player de sempre com o texto corrido.
+const transcriptSegments = computed(() => call.value?.transcriptSegments || []);
+const hasSpeakerTranscript = computed(
+  () => transcriptSegments.value.length > 0
+);
+const contactDisplayName = computed(() => {
+  const conversation = store.getters.getConversationById?.(
+    conversationId?.value
+  );
+  return conversation?.meta?.sender?.name || '';
+});
 
 const durationSeconds = computed(() => {
   const fromCall = call.value?.durationSeconds || call.value?.duration_seconds;
@@ -340,9 +355,18 @@ const handleCallBack = async () => {
         </div>
       </div>
 
+      <!-- Transcrição com os dois lados, quando a chamada foi gravada separada -->
+      <CallTranscript
+        v-if="hasSpeakerTranscript"
+        :segments="transcriptSegments"
+        :recording-url="recordingAttachment?.dataUrl || ''"
+        :agent-name="displayAgentName || ''"
+        :contact-name="contactDisplayName"
+      />
+
       <!-- Audio player (when there's a recording) -->
       <AudioChip
-        v-if="recordingAttachment"
+        v-else-if="recordingAttachment"
         :attachment="recordingAttachment"
         show-transcribed-text
       />
@@ -370,6 +394,9 @@ const handleCallBack = async () => {
         :disabled="isJoining"
         @click="handleJoinCall"
       />
+
+      <!-- Hora da chamada. O balão de voz era o único sem ela: os outros a trazem pelo Base. -->
+      <MessageMeta class="mt-1" />
     </div>
   </BaseBubble>
 </template>

@@ -136,7 +136,12 @@
       "JOIN_CALL": "Join call",
       "CALL_BACK": "Call back",
       "TRANSCRIPT_SHOW_MORE": "Show more",
-      "TRANSCRIPT_SHOW_LESS": "Show less"
+      "TRANSCRIPT_SHOW_LESS": "Show less",
+      "TRANSCRIPT_PLAY": "Play recording",
+      "TRANSCRIPT_PAUSE": "Pause recording",
+      "SPEAKER_AGENT": "Agent",
+      "SPEAKER_CONTACT": "Contact",
+      "TRANSCRIPT_SEEK": "Jump to a point in the call"
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolve",

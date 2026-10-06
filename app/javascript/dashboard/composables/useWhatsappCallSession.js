@@ -10,8 +10,10 @@ let pc = null;
 let localStream = null;
 let remoteStream = null;
 let remoteAudioEl = null;
-let mediaRecorder = null;
-let recorderChunks = [];
+// Tres gravadores sobre o mesmo AudioContext: a mistura (que o player toca) e cada lado isolado.
+// Os lados existem porque saber quem falou cada frase e informacao que a transcricao nao devolve —
+// ela vem de ter os audios separados. Separar depois exigiria ffmpeg, que nao existe no container.
+let recorders = [];
 let audioContext = null;
 let activeCallId = null;
 // voice_call.outbound_connected (the sole source of the outbound SDP answer) is
@@ -95,7 +97,7 @@ const waitForIceGatheringComplete = peer =>
 
 const setupRecorder = () => {
   if (!callRecordingEnabled) return;
-  if (!localStream || !remoteStream || mediaRecorder) return;
+  if (!localStream || !remoteStream || recorders.length) return;
   // createMediaStreamSource on a stream with no audio tracks wires up to
   // nothing — the recorded mix would be silence. Wait until ontrack fires.
   if (remoteStream.getAudioTracks().length === 0) return;
@@ -105,35 +107,48 @@ const setupRecorder = () => {
   // resume() the destination stream produces silence.
   audioContext.resume().catch(() => {});
 
-  const destination = audioContext.createMediaStreamDestination();
-  audioContext.createMediaStreamSource(localStream).connect(destination);
-  audioContext.createMediaStreamSource(remoteStream).connect(destination);
-
   const mimeType = RECORDER_MIME_CANDIDATES.find(t =>
     MediaRecorder.isTypeSupported(t)
   );
   if (!mimeType) return;
 
-  recorderChunks = [];
-  // 48 kbps Opus is transparent for speech vs Chrome's ~128 kbps default.
-  mediaRecorder = new MediaRecorder(destination.stream, {
-    mimeType,
-    audioBitsPerSecond: 48000,
+  // Uma fonte por stream, criada uma vez: createMediaStreamSource toca o stream, e dois taps sobre
+  // o mesmo stream se atrapalham.
+  const localSource = audioContext.createMediaStreamSource(localStream);
+  const remoteSource = audioContext.createMediaStreamSource(remoteStream);
+
+  const trilhas = [
+    { key: 'mix', sources: [localSource, remoteSource] },
+    { key: 'agent', sources: [localSource] },
+    { key: 'contact', sources: [remoteSource] },
+  ];
+
+  recorders = trilhas.map(({ key, sources }) => {
+    const destination = audioContext.createMediaStreamDestination();
+    sources.forEach(source => source.connect(destination));
+    // 48 kbps Opus is transparent for speech vs Chrome's ~128 kbps default.
+    const recorder = new MediaRecorder(destination.stream, {
+      mimeType,
+      audioBitsPerSecond: 48000,
+    });
+    const entrada = { key, recorder, chunks: [] };
+    recorder.ondataavailable = event => {
+      if (event.data && event.data.size > 0) entrada.chunks.push(event.data);
+    };
+    recorder.start(RECORDING_TIMESLICE_MS);
+    return entrada;
   });
-  mediaRecorder.ondataavailable = event => {
-    if (event.data && event.data.size > 0) recorderChunks.push(event.data);
-  };
-  mediaRecorder.start(RECORDING_TIMESLICE_MS);
 };
 
 const cleanup = () => {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+  recorders.forEach(({ recorder }) => {
+    if (recorder.state === 'inactive') return;
     try {
-      mediaRecorder.stop();
+      recorder.stop();
     } catch (_) {
       /* noop */
     }
-  }
+  });
   if (audioContext && audioContext.state !== 'closed') {
     audioContext.close().catch(() => {});
   }
@@ -145,9 +160,8 @@ const cleanup = () => {
   pc = null;
   localStream = null;
   remoteStream = null;
-  mediaRecorder = null;
+  recorders = [];
   callRecordingEnabled = true;
-  recorderChunks = [];
   audioContext = null;
   activeCallId = null;
   pendingOutboundAnswers.clear();
@@ -178,35 +192,75 @@ const buildPeerConnection = iceServers => {
   return pc;
 };
 
-const stopRecorderAndUpload = async callId => {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    await new Promise(resolve => {
-      mediaRecorder.addEventListener('stop', resolve, { once: true });
-      try {
-        mediaRecorder.stop();
-      } catch (_) {
-        resolve();
-      }
-    });
-  }
-  if (!recorderChunks.length || !callId) return;
+const pararGravador = ({ recorder }) =>
+  new Promise(resolve => {
+    if (recorder.state === 'inactive') {
+      resolve();
+      return;
+    }
+    recorder.addEventListener('stop', resolve, { once: true });
+    try {
+      recorder.stop();
+    } catch (_) {
+      resolve();
+    }
+  });
 
-  let blob = new Blob(recorderChunks, { type: recorderChunks[0].type });
+const montarArquivo = async ({ key, chunks }) => {
+  if (!chunks.length) return null;
+
+  let blob = new Blob(chunks, { type: chunks[0].type });
+  const sufixo = key === 'mix' ? '' : `-${key}`;
   const isWebm = blob.type.startsWith('audio/webm');
-  let filename = isWebm ? 'call-recording.webm' : 'call-recording.ogg';
+  let filename = `call-recording${sufixo}.${isWebm ? 'webm' : 'ogg'}`;
   // Remux to OGG so the file carries a real duration (MediaRecorder never
   // backfills the WebM duration header, which breaks mobile players).
   if (isWebm && blob.size <= MAX_REMUX_BYTES) {
     try {
       blob = await remuxWebmToOgg(blob);
-      filename = 'call-recording.ogg';
+      filename = `call-recording${sufixo}.ogg`;
     } catch (_) {
       /* noop — fall back to uploading the raw WebM */
     }
   }
+  return { blob, filename };
+};
+
+const stopRecorderAndUpload = async callId => {
+  await Promise.all(recorders.map(pararGravador));
+  if (!callId) return;
+
+  const porLado = Object.fromEntries(recorders.map(r => [r.key, r]));
+
+  // Os lados sobem ANTES da mistura, e isso e proposital: o anexo da mistura e transcrito pelo seu
+  // proprio callback, e esse caminho so se cala quando os dois lados ja estao no Call. Invertida a
+  // ordem, o mesmo audio seria transcrito duas vezes. Se um lado falhar, a mistura cobre sozinha.
+  await Promise.all(
+    ['agent', 'contact'].map(async side => {
+      const arquivo = porLado[side] && (await montarArquivo(porLado[side]));
+      if (!arquivo) return;
+      try {
+        await WhatsappCallsAPI.uploadRecording(
+          callId,
+          arquivo.blob,
+          arquivo.filename,
+          side
+        );
+      } catch (_) {
+        /* noop — a mistura segue como reserva */
+      }
+    })
+  );
+
+  const mistura = porLado.mix && (await montarArquivo(porLado.mix));
+  if (!mistura) return;
   // Best-effort — the controller's idempotency guard handles a retry.
   try {
-    await WhatsappCallsAPI.uploadRecording(callId, blob, filename);
+    await WhatsappCallsAPI.uploadRecording(
+      callId,
+      mistura.blob,
+      mistura.filename
+    );
   } catch (_) {
     /* noop */
   }

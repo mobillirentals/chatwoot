@@ -338,6 +338,63 @@ RSpec.describe 'WhatsApp Calls API', type: :request do
       end
     end
 
+    # Os dois lados chegam separados porque saber quem falou cada frase não vem do modelo de
+    # transcrição: vem de ter os áudios separados. Separar depois exigiria ffmpeg, que não existe
+    # no container.
+    describe 'lados separados' do
+      around do |exemplo|
+        adapter = ActiveJob::Base.queue_adapter
+        ActiveJob::Base.queue_adapter = :test
+        exemplo.run
+        ActiveJob::Base.queue_adapter = adapter
+      end
+
+      def subir(side)
+        post "/api/v1/accounts/#{account.id}/whatsapp_calls/#{call.id}/upload_recording",
+             params: { recording: fixture_file_upload(Rails.root.join('spec/assets/sample.mp3'), 'audio/mpeg'),
+                       side: side },
+             headers: agent.create_new_auth_token
+      end
+
+      # Anexo da mensagem viraria mais um player na conversa e seria transcrito sozinho pelo
+      # callback do Attachment. Os lados são insumo, e ficam no próprio Call.
+      it 'guarda o lado no Call, sem criar anexo na mensagem' do
+        expect { subir('agent') }.not_to(change { call.message.attachments.count })
+
+        expect(response.parsed_body['status']).to eq('uploaded')
+        expect(call.reload.recording_agent).to be_attached
+      end
+
+      # Só com os dois dá para intercalar as falas, então o último a chegar é quem dispara.
+      it 'não transcreve com um lado só' do
+        expect { subir('agent') }.not_to have_enqueued_job(Voice::SpeakerTranscriptionJob)
+      end
+
+      it 'dispara a transcrição quando o segundo lado chega' do
+        subir('agent')
+
+        expect { subir('contact') }.to have_enqueued_job(Voice::SpeakerTranscriptionJob).with(call.id)
+      end
+
+      it 'é idempotente: reenvio do mesmo lado não substitui nem redispara' do
+        subir('agent')
+        subir('contact')
+
+        expect { subir('agent') }.not_to have_enqueued_job(Voice::SpeakerTranscriptionJob)
+        expect(response.parsed_body['status']).to eq('already_uploaded')
+      end
+
+      # `side` fora da lista cai no caminho da mistura, que é o comportamento de sempre.
+      it 'trata lado desconhecido como a gravação misturada' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/whatsapp_calls/#{call.id}/upload_recording",
+               params: { recording: fixture_file_upload(Rails.root.join('spec/assets/sample.mp3'), 'audio/mpeg'),
+                         side: 'ambos' },
+               headers: agent.create_new_auth_token
+        end.to change { call.message.attachments.count }.by(1)
+      end
+    end
+
     # The browser gate ships in JS, so a stale tab could still post audio for a call that decided not to record.
     it 'refuses to store audio for a call created with recording off' do
       call.update!(recording_enabled: false)

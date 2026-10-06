@@ -147,6 +147,31 @@ RSpec.describe Messages::AudioTranscriptionService, type: :service do
         )
       end
 
+      # Com os dois lados gravados, quem transcreve é o fluxo por locutor. Transcrever a mistura
+      # também seria pagar de novo por um texto que não sabe quem falou.
+      it 'não transcreve a mistura quando os dois lados foram gravados' do
+        %i[recording_agent recording_contact].each do |lado|
+          call.public_send(lado).attach(
+            io: File.open(Rails.public_path.join('audio/widget/ding.mp3')),
+            filename: "#{lado}.mp3", content_type: 'audio/mpeg'
+          )
+        end
+
+        expect(Llm::SpeechToTextService).not_to receive(:new)
+
+        expect(service.perform).to eq({ error: 'Transcription disabled for this inbox' })
+      end
+
+      # Sem os dois lados (envio falhou, chamada antiga), este caminho segue valendo.
+      it 'transcreve a mistura quando só um lado chegou' do
+        call.recording_agent.attach(
+          io: File.open(Rails.public_path.join('audio/widget/ding.mp3')),
+          filename: 'agent.mp3', content_type: 'audio/mpeg'
+        )
+
+        expect { service.perform }.to have_enqueued_job(Voice::CallTranscriptionJob).with(call.id)
+      end
+
       it 'enfileira o job que leva o texto para a chamada' do
         expect { service.perform }.to have_enqueued_job(Voice::CallTranscriptionJob).with(call.id)
       end
