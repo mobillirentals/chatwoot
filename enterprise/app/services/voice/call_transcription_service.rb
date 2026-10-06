@@ -10,7 +10,7 @@ class Voice::CallTranscriptionService
   private
 
   def transcribe
-    return unless call.recording.attached?
+    return if recording_blob.blank?
     return unless call.inbox.channel.transcription_enabled?
     return unless Llm::SpeechToTextService.available_for?(call.account)
     return if Llm::SpeechToTextService.too_large?(recording_blob)
@@ -32,7 +32,16 @@ class Voice::CallTranscriptionService
     message.reload.send_update_event
   end
 
+  # O Twilio guarda a gravacao em `call.recording`. A chamada do WhatsApp e gravada no navegador do
+  # atendente e sobe como anexo de audio da mensagem (e de la que o player da conversa toca), entao
+  # `call.recording` fica vazio e a transcricao sumia justamente nessas chamadas.
   def recording_blob
-    call.recording.blob
+    return @recording_blob if defined?(@recording_blob)
+
+    @recording_blob = call.recording.attached? ? call.recording.blob : message_recording_blob
+  end
+
+  def message_recording_blob
+    call.message&.attachments&.find_by(file_type: :audio)&.file&.blob
   end
 end

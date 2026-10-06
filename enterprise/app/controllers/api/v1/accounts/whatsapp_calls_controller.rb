@@ -30,6 +30,11 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
 
   def upload_recording
     @upload_status = @call.message.with_lock { attach_recording_idempotently }
+
+    # So a chamada que de fato gravou o blob paga a transcricao: um reenvio do navegador devolve
+    # 'already_uploaded' e nao enfileira de novo. Mesmo criterio do caminho do Twilio, que era o
+    # unico lugar que enfileirava este job — por isso chamada do WhatsApp nunca era transcrita.
+    Voice::CallTranscriptionJob.perform_later(@call.id) if @upload_status == 'uploaded'
   end
 
   def initiate
