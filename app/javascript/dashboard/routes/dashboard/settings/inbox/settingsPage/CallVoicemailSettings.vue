@@ -1,5 +1,12 @@
 <script setup>
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import InboxesAPI from 'dashboard/api/inboxes';
@@ -23,22 +30,41 @@ const tocador = useTemplateRef('tocador');
 const ativo = computed(() => config.value?.status === 'ENABLED');
 const gatilhos = computed(() => config.value?.triggers || []);
 
-// A URL volta com um carimbo de tempo para o navegador não servir o áudio antigo do cache depois
-// de uma troca — sem isso, quem acabou de subir um recado novo ouve o anterior e acha que falhou.
+// Os bytes vêm por requisição autenticada e viram um objeto local: apontar o <audio> direto para
+// a API dá 401, porque o elemento não manda os cabeçalhos de autenticação.
 const audioUrl = ref('');
-const atualizarAudio = () => {
-  audioUrl.value = ativo.value
-    ? `${InboxesAPI.callVoicemailAnnouncementUrl(props.inbox.id)}?t=${Date.now()}`
-    : '';
-  if (tocador.value) tocador.value.load();
+
+const soltarAudio = () => {
+  if (audioUrl.value) URL.revokeObjectURL(audioUrl.value);
+  audioUrl.value = '';
 };
+
+const atualizarAudio = async () => {
+  soltarAudio();
+  if (!ativo.value) return;
+
+  try {
+    const { data } = await InboxesAPI.getCallVoicemailAnnouncement(
+      props.inbox.id
+    );
+    // 204 (sem recado) chega como corpo vazio.
+    if (!data || !data.size) return;
+    audioUrl.value = URL.createObjectURL(data);
+    await nextTick();
+    tocador.value?.load();
+  } catch (e) {
+    // Sem áudio o resto da seção continua útil: dá para trocar ou desligar mesmo assim.
+  }
+};
+
+onBeforeUnmount(soltarAudio);
 
 const carregar = async () => {
   carregando.value = true;
   try {
     const { data } = await InboxesAPI.getCallVoicemail(props.inbox.id);
     config.value = data || {};
-    atualizarAudio();
+    await atualizarAudio();
   } catch (e) {
     config.value = {};
   } finally {
@@ -62,7 +88,7 @@ const aoEscolher = async evento => {
       triggers: gatilhos.value.length ? gatilhos.value : ['REJECT'],
     });
     config.value = data || {};
-    atualizarAudio();
+    await atualizarAudio();
     useAlert(t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
   } catch (e) {
     useAlert(
@@ -78,7 +104,7 @@ const desligar = async () => {
   try {
     const { data } = await InboxesAPI.disableCallVoicemail(props.inbox.id);
     config.value = data || {};
-    atualizarAudio();
+    await atualizarAudio();
     useAlert(t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
   } catch (e) {
     useAlert(
@@ -118,15 +144,17 @@ const desligar = async () => {
     </p>
 
     <template v-else>
-      <!-- Ouvir o que está no ar hoje, antes de trocar. -->
+      <!-- Ouvir o que está no ar hoje, antes de trocar. `preload="metadata"` e não `none`: sem
+           isso o player abre em 0:00 / 0:00, como se estivesse vazio. Aqui há um áudio só, de
+           poucos KB — vale carregar a duração de cara. -->
       <audio
         v-if="ativo && audioUrl"
         ref="tocador"
         controls
         class="w-full max-w-sm h-9"
-        preload="none"
+        preload="metadata"
       >
-        <source :src="audioUrl" type="audio/ogg" />
+        <source :src="audioUrl" />
       </audio>
 
       <div class="flex flex-wrap items-center gap-2">

@@ -92,9 +92,13 @@ class Inboxes extends CacheEnabledApiClient {
     return axios.get(`${this.url}/${inboxId}/call_voicemail`);
   }
 
-  // O áudio atual só sai da Meta com o token, então o servidor devolve os bytes.
-  callVoicemailAnnouncementUrl(inboxId) {
-    return `${this.url}/${inboxId}/call_voicemail_announcement`;
+  // O áudio atual só sai da Meta com o token, então o servidor devolve os bytes. Tem que vir por
+  // aqui, e não num `src` do <audio>: a requisição do elemento é do navegador, sem os cabeçalhos
+  // de autenticação da API — e volta 401.
+  getCallVoicemailAnnouncement(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/call_voicemail_announcement`, {
+      responseType: 'blob',
+    });
   }
 
   setCallVoicemail(inboxId, { file, triggers, timeoutSeconds }) {
