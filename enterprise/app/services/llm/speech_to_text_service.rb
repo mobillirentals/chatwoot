@@ -49,18 +49,7 @@ class Llm::SpeechToTextService < Llm::LegacyBaseOpenAiService
         # temperature: 0.0 minimises hallucinations on silence / near-silent
         # audio; non-zero values trigger spiraling repeats — well-documented
         # behaviour across OpenAI transcription models.
-        parametros = { model: transcription_model, file: file }
-        if @with_segments
-          parametros[:response_format] = 'verbose_json'
-          # Sem `temperature`, de proposito. Fixar 0.0 desliga o fallback de temperatura da propria
-          # API, que e o mecanismo que quebra os loops de repeticao do whisper: medido no mesmo
-          # audio, 0.0 devolveu 79 trechos e 189 palavras (um trecho repetido 66 vezes) contra 29
-          # trechos e 87 palavras sem ele. Nos modelos novos, que nao tem esse fallback, 0.0 ajuda —
-          # por isso a diferenca fica aqui e nao vale para todo audio.
-        else
-          parametros[:temperature] = 0.0
-        end
-        response = @client.audio.transcribe(parameters: parametros)
+        response = @client.audio.transcribe(parameters: parametros_de(file))
         @with_segments ? response : response['text']
       end
     end
@@ -73,6 +62,27 @@ class Llm::SpeechToTextService < Llm::LegacyBaseOpenAiService
   end
 
   private
+
+  # Sem isto o whisper adivinha o idioma a cada trecho e erra feio em áudio curto: numa chamada
+  # real de 17 s ele detectou "english" e devolveu "Thank you very much."; com o idioma informado,
+  # o mesmo arquivo virou "Tudo bem? / Pra gente... / Então, valeu.". Só vale no caminho com
+  # segmentos — o modelo dos áudios de cliente acerta sozinho e tem 2300 transcrições boas.
+  def idioma_da_conta
+    account&.locale.to_s.split(/[_-]/).first.presence
+  end
+
+  # Sem `temperature` quando se pede segmentos, de proposito: fixar 0.0 desliga o fallback de
+  # temperatura da propria API, que e o mecanismo que quebra os loops de repeticao do whisper. No
+  # mesmo audio, 0.0 devolveu 79 trechos e 189 palavras (um repetido 66 vezes) contra 29 e 87 sem
+  # ele. Nos modelos novos, que nao tem esse fallback, 0.0 ajuda — por isso a diferenca fica aqui.
+  def parametros_de(file)
+    parametros = { model: transcription_model, file: file }
+    return parametros.merge(temperature: 0.0) unless @with_segments
+
+    parametros[:response_format] = 'verbose_json'
+    parametros[:language] = idioma_da_conta if idioma_da_conta.present?
+    parametros
+  end
 
   def resolve_model
     if @with_segments
