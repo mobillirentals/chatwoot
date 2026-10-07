@@ -72,6 +72,58 @@ RSpec.describe Voice::SpeakerTranscriptionService, type: :service do
         .to eq("#{conversation.contact.name}: Bom dia.\n#{agente.available_name}: Pois não?")
     end
 
+    # O whisper INVENTA texto no silêncio: numa chamada real devolveu télugo de um lado e
+    # "Thank you very much." do outro. Ele mesmo entrega como reconhecer — cada trecho traz a
+    # probabilidade de não haver fala ali e a confiança média.
+    it 'descarta trecho que o próprio modelo marca como provável silêncio' do
+      responder_com(
+        { 'segments' => [
+          { 'start' => 0.0, 'end' => 2.0, 'text' => 'Thank you very much.',
+            'no_speech_prob' => 0.92, 'avg_logprob' => -1.4, 'compression_ratio' => 1.1 },
+          { 'start' => 3.0, 'end' => 5.0, 'text' => 'Bom dia, tudo bem?',
+            'no_speech_prob' => 0.05, 'avg_logprob' => -0.3, 'compression_ratio' => 1.2 }
+        ] },
+        { 'segments' => [] }
+      )
+
+      described_class.new(call: call).perform
+
+      expect(call.reload.transcript_segments.map { |s| s['text'] }).to eq(['Bom dia, tudo bem?'])
+    end
+
+    # Razão de compressão alta é a assinatura de repetição, mesmo quando o modelo se diz confiante.
+    it 'descarta trecho com cara de repetição' do
+      responder_com(
+        { 'segments' => [
+          { 'start' => 0.0, 'end' => 9.0, 'text' => 'alô alô alô alô alô alô alô alô',
+            'no_speech_prob' => 0.01, 'avg_logprob' => -0.2, 'compression_ratio' => 3.8 }
+        ] },
+        { 'segments' => [] }
+      )
+
+      described_class.new(call: call).perform
+
+      expect(call.reload.transcript_segments).to be_empty
+    end
+
+    # O whisper conta só a fala e descarta o silêncio inicial, então sem os intervalos medidos no
+    # navegador os dois lados começam em 0,0 e a ordem do diálogo vira sorteio.
+    it 'põe os dois lados no relógio real antes de ordenar' do
+      call.update!(speech_intervals: { 'agent' => [{ 'start' => 12.0, 'end' => 16.0 }],
+                                       'contact' => [{ 'start' => 1.0, 'end' => 5.0 }] })
+      responder_com(
+        { 'segments' => [{ 'start' => 0.0, 'end' => 2.0, 'text' => 'Bom dia!' }] },
+        { 'segments' => [{ 'start' => 0.0, 'end' => 3.0, 'text' => 'Oi, bom dia.' }] }
+      )
+
+      described_class.new(call: call).perform
+
+      segmentos = call.reload.transcript_segments
+      expect(segmentos.map { |s| s['speaker'] }).to eq(%w[contact agent])
+      expect(segmentos.first['start']).to eq(1.0)
+      expect(segmentos.last['start']).to eq(12.0)
+    end
+
     # O whisper entra em loop no silêncio do fim e repete a última frase até o arquivo acabar —
     # num teste real, 66 cópias de "E aí?".
     it 'corta a repetição em loop do fim da gravação' do

@@ -38,10 +38,21 @@ class WhatsappCallsAPI extends ApiClient {
 
   // `side` ('agent' | 'contact') sobe o lado isolado, que serve so para a transcricao saber quem
   // falou. Sem ele, e a mistura, que e o que o player toca.
-  uploadRecording(callId, blob, filename = 'call-recording.webm', side = null) {
+  uploadRecording(
+    callId,
+    blob,
+    filename = 'call-recording.webm',
+    side = null,
+    speechIntervals = null
+  ) {
     const formData = new FormData();
     formData.append('recording', blob, filename);
     if (side) formData.append('side', side);
+    // Onde este lado falou, no relógio do navegador: é o que permite ordenar os dois lados entre
+    // si, já que os tempos que o whisper devolve são relativos a cada arquivo.
+    if (speechIntervals?.length) {
+      formData.append('speech_intervals', JSON.stringify(speechIntervals));
+    }
     return axios
       .post(`${this.url}/${callId}/upload_recording`, formData)
       .then(r => r.data);

@@ -26,9 +26,17 @@ class Voice::SpeakerTranscriptionService
 
   SPEAKERS = { 'agent' => :recording_agent, 'contact' => :recording_contact }.freeze
 
+  # Ordenar por `start` só faz sentido depois de pôr os dois lados no MESMO relógio: o whisper
+  # descarta o silêncio inicial de cada arquivo, então o tempo que ele devolve para um lado não é
+  # comparável com o do outro. Quem dá o relógio comum são os intervalos medidos no navegador.
   def montar_segmentos
-    SPEAKERS.flat_map { |speaker, anexo| sem_eco(segmentos_de(speaker, call.public_send(anexo))) }
+    SPEAKERS.flat_map { |speaker, anexo| segmentos_no_relogio_real(speaker, anexo) }
             .sort_by { |s| s['start'] }
+  end
+
+  def segmentos_no_relogio_real(speaker, anexo)
+    trechos = sem_eco(segmentos_de(speaker, call.public_send(anexo)))
+    Voice::SpeechTimeline.place(trechos, call.speech_intervals[speaker])
   end
 
   # Quantas repeticoes seguidas da mesma frase ainda podem ser fala humana ("alo, alo, alo").
@@ -48,16 +56,33 @@ class Voice::SpeakerTranscriptionService
     end
   end
 
+  # O whisper INVENTA texto quando nao ha fala — num teste real devolveu telugo, "Thank you very
+  # much." e letra de musica em cima de silencio. Ele mesmo entrega como reconhecer isso: cada
+  # trecho vem com a probabilidade de nao haver fala ali, a confianca media, e a razao de
+  # compressao (que dispara em repeticao). Sem esse corte, o lado que ficou calado aparece
+  # "falando" na tela, porque as faixas sao desenhadas a partir dos segmentos.
+  SEM_FALA = 0.6
+  CONFIANCA_MINIMA = -1.0
+  REPETICAO = 2.4
+
+  def alucinacao?(trecho)
+    return true if trecho['compression_ratio'].to_f > REPETICAO
+    return false if trecho['no_speech_prob'].nil?
+
+    trecho['no_speech_prob'].to_f > SEM_FALA && trecho['avg_logprob'].to_f < CONFIANCA_MINIMA
+  end
+
+  def trecho_de(speaker, trecho)
+    { 'speaker' => speaker, 'start' => trecho['start'].to_f.round(2),
+      'end' => trecho['end'].to_f.round(2), 'text' => trecho['text'].to_s.strip }
+  end
+
   def segmentos_de(speaker, anexo)
     return [] if Llm::SpeechToTextService.too_large?(anexo.blob)
 
     resposta = Llm::SpeechToTextService.new(blob: anexo.blob, account: call.account, with_segments: true).perform
-    Array(resposta['segments']).filter_map do |trecho|
-      texto = trecho['text'].to_s.strip
-      next if texto.blank?
-
-      { 'speaker' => speaker, 'start' => trecho['start'].to_f.round(2), 'end' => trecho['end'].to_f.round(2), 'text' => texto }
-    end
+    Array(resposta['segments']).reject { |t| alucinacao?(t) || t['text'].to_s.strip.blank? }
+                               .map { |t| trecho_de(speaker, t) }
   rescue Faraday::BadRequestError, Faraday::UnauthorizedError => e
     # Um lado que o modelo recusa (audio corrompido, credencial invalida) nao pode levar o outro
     # junto: sem nenhum segmento, o fluxo inteiro desiste e a mistura segue como estava.
