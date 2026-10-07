@@ -7,9 +7,15 @@ class Whatsapp::CallPermissionRequestService
 
   pattr_initialize [:conversation!, :recipient!]
 
+  # A solicitação é mensagem interativa de FORMA LIVRE, não template: fora da janela de 24h a Meta
+  # aceita o POST (devolve um wamid) e só falha a entrega depois, por webhook de status. Como a
+  # solicitação não é uma mensagem do Chatwoot, não há o que marcar como falhada — o agente via
+  # "Solicitação enviada" e ficava esperando uma resposta que nunca ia chegar. Mesmo critério que o
+  # CSAT já usa (`not_sent_due_to_messaging_window`).
   # Locked so two agents calling the same contact can't both send the template.
   def perform
     conversation.with_lock do
+      next 'window_closed' unless conversation.can_reply?
       next 'permission_pending' if throttled?
 
       sent = send_request_safely

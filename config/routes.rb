@@ -330,6 +330,9 @@ Rails.application.routes.draw do
               post :enable_whatsapp_calling, on: :member
               post :disable_whatsapp_calling, on: :member
               post :set_inbound_calls, on: :member
+              get :call_voicemail, on: :member
+              post :set_call_voicemail, on: :member
+              get :call_voicemail_announcement, on: :member
               post :set_call_recording, on: :member
             end
 

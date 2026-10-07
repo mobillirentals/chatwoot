@@ -817,6 +817,17 @@
         "LABEL": "Mensagem de solicitação de permissão de chamada",
         "HELP_TEXT": "Exibido ao contato quando ele ainda não consentiu em receber chamadas. Deixe em branco para usar a mensagem padrão.",
         "PLACEHOLDER": "Gostaríamos de ligar para você em relação à sua conversa."
+      },
+      "VOICEMAIL": {
+        "LABEL": "Recado quando a chamada é recusada",
+        "HELP_TEXT": "Com as chamadas de entrada desligadas, o cliente ouve este recado em vez de a ligação cair, e pode gravar uma mensagem — que chega na conversa como áudio. O arquivo precisa ser OGG com codec Opus e ter menos de 60 segundos; o WhatsApp recusa qualquer outro formato.",
+        "LOADING": "Carregando…",
+        "ACTIVE": "Ativo",
+        "INACTIVE": "Não configurado",
+        "UPLOAD": "Enviar áudio",
+        "REPLACE": "Trocar áudio",
+        "DISABLE": "Desligar",
+        "WONT_PLAY": "As chamadas de entrada estão ligadas, então elas são atendidas em vez de recusadas — este recado só toca quando você desligar a opção acima."
       }
     },
     "CHANNEL_PREFERENCES": "Preferências do Canal",

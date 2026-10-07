@@ -87,6 +87,30 @@ class Inboxes extends CacheEnabledApiClient {
     });
   }
 
+  // Recado de voz: o que o cliente ouve quando a chamada é recusada. Vive na Meta, não no banco.
+  getCallVoicemail(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/call_voicemail`);
+  }
+
+  // O áudio atual só sai da Meta com o token, então o servidor devolve os bytes.
+  callVoicemailAnnouncementUrl(inboxId) {
+    return `${this.url}/${inboxId}/call_voicemail_announcement`;
+  }
+
+  setCallVoicemail(inboxId, { file, triggers, timeoutSeconds }) {
+    const formData = new FormData();
+    formData.append('audio', file);
+    formData.append('triggers', (triggers || ['REJECT']).join(','));
+    if (timeoutSeconds) formData.append('timeout_seconds', timeoutSeconds);
+    return axios.post(`${this.url}/${inboxId}/set_call_voicemail`, formData);
+  }
+
+  disableCallVoicemail(inboxId) {
+    return axios.post(`${this.url}/${inboxId}/set_call_voicemail`, {
+      disable: true,
+    });
+  }
+
   setCallRecording(inboxId, { recordingEnabled, transcriptionEnabled }) {
     return axios.post(`${this.url}/${inboxId}/set_call_recording`, {
       recording_enabled: recordingEnabled,

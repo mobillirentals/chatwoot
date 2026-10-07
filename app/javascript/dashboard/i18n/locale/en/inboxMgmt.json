@@ -823,6 +823,17 @@
         "LABEL": "Call permission request message",
         "HELP_TEXT": "Shown to the contact when they haven't yet consented to receive calls. Leave blank to use the default.",
         "PLACEHOLDER": "We would like to call you regarding your conversation."
+      },
+      "VOICEMAIL": {
+        "LABEL": "Voicemail when a call is refused",
+        "HELP_TEXT": "With inbound calls off, the caller hears this message instead of the line dropping, and can leave a recording — which arrives in the conversation as an audio message. The file must be OGG with the Opus codec and under 60 seconds; WhatsApp refuses anything else.",
+        "LOADING": "Loading…",
+        "ACTIVE": "Active",
+        "INACTIVE": "Not configured",
+        "UPLOAD": "Upload audio",
+        "REPLACE": "Replace audio",
+        "DISABLE": "Turn off",
+        "WONT_PLAY": "Inbound calls are on, so calls are answered instead of refused — this message won't play until you turn them off."
       }
     },
     "CHANNEL_PREFERENCES": "Channel Preferences",

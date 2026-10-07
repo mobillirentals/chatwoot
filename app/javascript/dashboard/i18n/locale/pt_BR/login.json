@@ -36,6 +36,12 @@
       "API": {
         "ERROR_MESSAGE": "A autenticação SSO falhou. Verifique suas credenciais e tente novamente."
       }
+    },
+    "AZURE": {
+      "LABEL": "Entrar com a Microsoft"
+    },
+    "SSO": {
+      "ACCOUNT_ACTIVATED": "Sua conta foi ativada. Entre com a Microsoft para continuar."
     }
   }
 }
