@@ -148,6 +148,21 @@ RSpec.describe Llm::SpeechToTextService, type: :service do
       end
     end
 
+    # Sem informar o idioma, o whisper adivinha a cada trecho e erra feio em audio curto: numa
+    # chamada real de 17 s ele detectou "english" e devolveu "Thank you very much.".
+    it 'informa o idioma da conta' do
+      account.update!(locale: 'pt_BR')
+
+      described_class.new(blob: attachment.file.blob, account: account, with_segments: true)
+                     .tap { |svc| allow(svc).to receive(:fetch_audio_file).and_return(audio_file_path) }
+                     .tap { |svc| allow(svc.client).to receive(:audio).and_return(audio_api) }
+                     .perform
+
+      expect(audio_api).to have_received(:transcribe) do |parameters:|
+        expect(parameters[:language]).to eq('pt')
+      end
+    end
+
     # Fixar 0.0 desliga o fallback de temperatura da propria API, que e o mecanismo que quebra os
     # loops de repeticao do whisper: no mesmo audio, 0.0 devolveu 79 trechos (um repetido 66 vezes)
     # contra 29 sem ele.
@@ -187,6 +202,7 @@ RSpec.describe Llm::SpeechToTextService, type: :service do
       expect(audio_api).to have_received(:transcribe) do |parameters:|
         expect(parameters[:temperature]).to eq(0.0)
         expect(parameters).not_to have_key(:response_format)
+        expect(parameters).not_to have_key(:language)
       end
     end
   end
