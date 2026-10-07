@@ -187,6 +187,8 @@ en:
         sdp_offer_required: 'sdp_offer is required'
         contact_phone_required: 'Contact phone number is required'
         permission_request_failed: 'Failed to send call permission request'
+        permission_request_window_closed: 'Call permission request not sent: the 24-hour messaging window is closed. Ask the contact to send a message first.'
+        voicemail_audio_required: 'Choose an audio file (OGG/Opus, under 60 seconds) for the voicemail announcement.'
     openai:
       invalid_api_key: 'OpenAI API key is invalid or revoked. Please check your key in your OpenAI dashboard.'
     inboxes:

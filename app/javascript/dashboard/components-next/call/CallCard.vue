@@ -33,6 +33,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Só o card principal mostra a alça: a pilha inteira se move junto, e uma alça por cartão
+  // sugeriria que dá para separá-los.
+  showDragHandle: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits([
@@ -75,9 +81,29 @@ const channelIcon = computed(() => {
 
 <template>
   <div
-    class="flex flex-col gap-1 pt-4 bg-n-call-widget rounded-2xl shadow-xl outline outline-1 outline-n-call-widget-border backdrop-blur-md"
-    :class="call?.conversationId ? 'pb-2' : 'pb-4'"
+    class="flex flex-col gap-1 bg-n-call-widget rounded-2xl shadow-xl outline outline-1 outline-n-call-widget-border backdrop-blur-md"
+    :class="[
+      call?.conversationId ? 'pb-2' : 'pb-4',
+      showDragHandle ? 'pt-1.5' : 'pt-4',
+    ]"
   >
+    <!-- Alça de arrasto. Decorativa para leitor de tela: arrastar é mouse, e o painel já nasce
+         num canto que funciona sem isso. -->
+    <div v-if="showDragHandle" class="flex justify-center pb-1">
+      <svg
+        viewBox="0 0 24 16"
+        class="w-5 h-3 fill-current text-n-call-widget-sub-text opacity-60"
+        aria-hidden="true"
+      >
+        <circle cx="4" cy="5" r="2" />
+        <circle cx="12" cy="5" r="2" />
+        <circle cx="20" cy="5" r="2" />
+        <circle cx="4" cy="11" r="2" />
+        <circle cx="12" cy="11" r="2" />
+        <circle cx="20" cy="11" r="2" />
+      </svg>
+    </div>
+
     <!-- Top section: status badge + location/inbox + duration -->
     <div class="flex flex-col gap-3 pb-3 border-b border-n-call-widget-border">
       <div class="flex items-center gap-2 px-4">

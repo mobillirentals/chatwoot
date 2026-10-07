@@ -150,11 +150,16 @@ const handlerName = computed(() => {
   return agent?.available_name || agent?.name || null;
 });
 
-const handledBy = computed(() =>
-  handlerName.value
-    ? t('CONVERSATION.VOICE_CALL.HANDLED_BY', { agentName: handlerName.value })
-    : null
-);
+// "Atendido por" descreve quem RECEBEU a ligação. Quando foi o agente que ligou, ele a fez — em
+// inglês "Handled by" cobre os dois casos, mas em português a mesma palavra não serve para ambos.
+const handledBy = computed(() => {
+  if (!handlerName.value) return null;
+
+  const chave = isOutbound.value
+    ? 'CONVERSATION.VOICE_CALL.PLACED_BY'
+    : 'CONVERSATION.VOICE_CALL.HANDLED_BY';
+  return t(chave, { agentName: handlerName.value });
+});
 
 const labelKey = computed(() => {
   if (LABEL_MAP[status.value]) return LABEL_MAP[status.value];
@@ -396,7 +401,7 @@ const handleCallBack = async () => {
       />
 
       <!-- Hora da chamada. O balão de voz era o único sem ela: os outros a trazem pelo Base. -->
-      <MessageMeta class="mt-1" />
+      <MessageMeta class="mt-1" :show-status="false" />
     </div>
   </BaseBubble>
 </template>

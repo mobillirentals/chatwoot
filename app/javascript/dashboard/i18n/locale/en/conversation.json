@@ -141,7 +141,8 @@
       "TRANSCRIPT_PAUSE": "Pause recording",
       "SPEAKER_AGENT": "Agent",
       "SPEAKER_CONTACT": "Contact",
-      "TRANSCRIPT_SEEK": "Jump to a point in the call"
+      "TRANSCRIPT_SEEK": "Jump to a point in the call",
+      "PLACED_BY": "Placed by {agentName}"
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolve",

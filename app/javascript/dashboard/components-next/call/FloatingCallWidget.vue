@@ -1,5 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { useCallSession } from 'dashboard/composables/useCallSession';
@@ -11,8 +18,105 @@ import { VOICE_CALL_DIRECTION } from 'dashboard/components-next/message/constant
 import WindowVisibilityHelper from 'dashboard/helper/AudioAlerts/WindowVisibilityHelper';
 import CallCard from 'dashboard/components-next/call/CallCard.vue';
 import countriesList from 'shared/constants/countries.js';
+import { clampDragOffset, isDragHandle } from 'dashboard/helper/floatingDrag';
 
 const RINGTONE_URL = '/audio/dashboard/ringtone.mp3';
+// O painel tapa justamente o canto onde ficam o editor e o botão de enviar. Arrastável, cada um
+// o tira do caminho do seu jeito; guardado, não precisa repetir isso a cada chamada.
+const POSICAO_GUARDADA = 'call_widget_offset';
+
+const painel = useTemplateRef('painel');
+const deslocamento = ref({ x: 0, y: 0 });
+const arrastando = ref(false);
+// Posição do painel sem deslocamento nenhum, medida no início de cada arrasto: a janela pode ter
+// mudado de tamanho desde o último.
+let origem = null;
+let inicio = null;
+
+const lerPosicaoGuardada = () => {
+  try {
+    const bruto = window.localStorage.getItem(POSICAO_GUARDADA);
+    if (!bruto) return;
+    const { x, y } = JSON.parse(bruto);
+    if (Number.isFinite(x) && Number.isFinite(y)) deslocamento.value = { x, y };
+  } catch (_) {
+    // Janela anônima ou armazenamento bloqueado: começa do canto, sem drama.
+  }
+};
+
+const guardarPosicao = () => {
+  try {
+    window.localStorage.setItem(
+      POSICAO_GUARDADA,
+      JSON.stringify(deslocamento.value)
+    );
+  } catch (_) {
+    /* noop */
+  }
+};
+
+const medirOrigem = () => {
+  const el = painel.value;
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  return {
+    left: rect.left - deslocamento.value.x,
+    top: rect.top - deslocamento.value.y,
+    width: rect.width,
+    height: rect.height,
+  };
+};
+
+const dentroDaTela = () => {
+  const base = medirOrigem();
+  if (!base) return;
+  deslocamento.value = clampDragOffset(deslocamento.value, base, {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+};
+
+const aoMover = evento => {
+  if (!inicio || !origem) return;
+  deslocamento.value = clampDragOffset(
+    {
+      x: inicio.x + evento.clientX - inicio.px,
+      y: inicio.y + evento.clientY - inicio.py,
+    },
+    origem,
+    { width: window.innerWidth, height: window.innerHeight }
+  );
+};
+
+const aoSoltar = () => {
+  arrastando.value = false;
+  inicio = null;
+  origem = null;
+  window.removeEventListener('pointermove', aoMover);
+  guardarPosicao();
+};
+
+const aoPressionar = evento => {
+  if (evento.button !== 0 || !isDragHandle(evento.target)) return;
+
+  origem = medirOrigem();
+  if (!origem) return;
+
+  arrastando.value = true;
+  inicio = {
+    px: evento.clientX,
+    py: evento.clientY,
+    x: deslocamento.value.x,
+    y: deslocamento.value.y,
+  };
+  window.addEventListener('pointermove', aoMover);
+  window.addEventListener('pointerup', aoSoltar, { once: true });
+};
+
+onMounted(() => {
+  lerPosicaoGuardada();
+  window.addEventListener('resize', dentroDaTela);
+});
 
 const route = useRoute();
 const router = useRouter();
@@ -233,12 +337,23 @@ watch(
 );
 
 onBeforeUnmount(stopRingtone);
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', dentroDaTela);
+  // Um arrasto em curso quando o painel some deixaria o listener de movimento vivo no window.
+  window.removeEventListener('pointermove', aoMover);
+});
 </script>
 
 <template>
   <div
     v-if="incomingCalls.length || hasActiveCall"
-    class="fixed ltr:right-4 rtl:left-4 bottom-4 z-50 flex flex-col gap-3 w-[400px]"
+    ref="painel"
+    class="fixed ltr:right-4 rtl:left-4 bottom-4 z-50 flex flex-col gap-3 w-[400px] cursor-grab"
+    :class="{ 'cursor-grabbing select-none': arrastando }"
+    :style="{
+      transform: `translate(${deslocamento.x}px, ${deslocamento.y}px)`,
+    }"
+    @pointerdown="aoPressionar"
   >
     <!-- Stacked incoming calls (shown above the primary card) -->
     <CallCard
@@ -262,6 +377,7 @@ onBeforeUnmount(stopRingtone);
       :duration="hasActiveCall ? formattedCallDuration : ''"
       :is-muted="isMuted"
       :show-mute="hasActiveCall"
+      show-drag-handle
       @accept="handleJoinCall(primaryIncomingCall)"
       @reject="rejectIncomingCall(primaryIncomingCall?.callSid)"
       @dismiss="dismissCall(primaryIncomingCall?.callSid)"

@@ -45,7 +45,8 @@
       "TABLE_HEADER": {
         "ACTIVITY": "Usuário",
         "TIME": "Ação",
-        "IP_ADDRESS": "Endereço IP"
+        "IP_ADDRESS": "Endereço IP",
+        "LOCATION": "Localização"
       }
     },
     "API": {
@@ -113,7 +114,6 @@
     "AGENT_BOT": {
       "ADD": "{agentName} criou um novo robô (#{id})",
       "EDIT": "{agentName} atualizou um robô (#{id})",
-      "DELETE": "{agentName} excluiu um robô (#{id})",
       "DELETE": "{agentName} excluiu a conversa #{id}"
     },
     "MESSAGE": {

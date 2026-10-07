@@ -53,6 +53,11 @@ app.use(store);
 app.use(pinia);
 app.use(router);
 
+// Só em desenvolvimento (o Vite remove no build de produção): deixa as stores alcançáveis pelo
+// console. Serve para exercitar o que depende de evento externo — o painel de chamada, por
+// exemplo, que sem isso só aparece com uma ligação de verdade.
+if (import.meta.env.DEV) window.$pinia = pinia;
+
 // [VITE] Disabled this, need to renable later
 if (window.errorLoggingConfig) {
   Sentry.init({

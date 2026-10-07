@@ -63,7 +63,14 @@ const playRemoteStream = stream => {
 // 1s timeslice keeps a recent recording chunk in memory so a remote hangup
 // that races cleanup still has data to upload.
 const RECORDING_TIMESLICE_MS = 1000;
+// Teto duro, para o caso patológico de não chegar candidato nenhum.
 const ICE_GATHER_TIMEOUT_MS = 10000;
+// Com um candidato público na mão não há motivo para esperar os outros: esta folga deixa entrar
+// mais um ou dois e segue.
+const ICE_GATHER_GRACE_MS = 800;
+// Só candidatos locais depois disso significa que o STUN não está respondendo; esperar mais não
+// vai produzir um candidato público, e o teto de 10 s viraria espera pura.
+const ICE_HOST_ONLY_MS = 3000;
 // The OGG remux is a whole-file in-memory pass on the main thread (~4x the
 // blob size transient); past this cap (~3 h at the 48 kbps recording bitrate)
 // skip it and upload the raw WebM instead.
@@ -80,18 +87,48 @@ const RECORDER_MIME_CANDIDATES = [
 // browser→Meta media silently drops through any non-trivial NAT.
 const DEFAULT_OUTBOUND_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
+// A oferta só vai para a Meta depois desta espera: a API de chamadas não aceita candidatos
+// enviados depois (trickle ICE), então o SDP precisa sair completo. Esperar a coleta TERMINAR,
+// porém, custava os 10 s inteiros do teto sempre que ela não fechava — que é o caso quando o UDP
+// até o STUN está bloqueado. Agora a espera acaba no primeiro candidato público (mais uma folga
+// curta), ou cedo quando dá para concluir que o STUN não vai responder.
 const waitForIceGatheringComplete = peer =>
   new Promise(resolve => {
     if (peer.iceGatheringState === 'complete') {
       resolve();
       return;
     }
-    const timer = setTimeout(resolve, ICE_GATHER_TIMEOUT_MS);
+
+    const timers = [];
+    const terminar = () => {
+      timers.forEach(clearTimeout);
+      resolve();
+    };
+
+    timers.push(setTimeout(terminar, ICE_GATHER_TIMEOUT_MS));
+
     peer.addEventListener('icegatheringstatechange', () => {
-      if (peer.iceGatheringState === 'complete') {
-        clearTimeout(timer);
-        resolve();
+      if (peer.iceGatheringState === 'complete') terminar();
+    });
+
+    let temPublico = false;
+    peer.addEventListener('icecandidate', ({ candidate }) => {
+      // Candidato nulo é o fim da coleta, o mesmo instante do estado 'complete'.
+      if (!candidate) {
+        terminar();
+        return;
       }
+      if (temPublico) return;
+
+      const publico = / typ (srflx|relay) /.test(candidate.candidate);
+      if (publico) {
+        temPublico = true;
+        timers.push(setTimeout(terminar, ICE_GATHER_GRACE_MS));
+        return;
+      }
+      timers.push(
+        setTimeout(() => !temPublico && terminar(), ICE_HOST_ONLY_MS)
+      );
     });
   });
 

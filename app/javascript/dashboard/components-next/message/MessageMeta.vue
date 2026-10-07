@@ -10,6 +10,12 @@ import { useMessageContext } from './provider.js';
 
 import { MESSAGE_STATUS, MESSAGE_TYPES } from './constants';
 
+// Chamada de voz não tem "enviando/entregue/lido": esses estados são de mensagem. Sem isto, o
+// balão da ligação mostrava um relógio de "Enviando" que nunca vira nada.
+const { showStatus = true } = defineProps({
+  showStatus: { type: Boolean, default: true },
+});
+
 const exactTimestamp = useExactTimestamp();
 
 const {
@@ -46,6 +52,7 @@ const readableTime = computed(() =>
 const exactTime = computed(() => exactTimestamp(createdAt.value));
 
 const showStatusIndicator = computed(() => {
+  if (!showStatus) return false;
   if (isPrivate.value) return false;
   // Don't show status for failed messages, we already show error message
   if (status.value === MESSAGE_STATUS.FAILED) return false;

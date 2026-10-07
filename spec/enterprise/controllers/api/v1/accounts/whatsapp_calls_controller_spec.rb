@@ -109,7 +109,12 @@ RSpec.describe 'WhatsApp Calls API', type: :request do
     let(:contact) { create(:contact, account: account, phone_number: '+15551234567') }
     let!(:contact_inbox) { create(:contact_inbox, contact: contact, inbox: inbox, source_id: '15551234567') }
     let(:initiate_conversation) do
-      create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
+      create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox).tap do |c|
+        # O pedido de permissão é mensagem de forma livre e exige a janela de 24h aberta; uma
+        # mensagem do cliente é o que a abre.
+        create(:message, account: account, inbox: inbox, conversation: c, message_type: :incoming)
+        c.reload
+      end
     end
 
     it 'creates an outbound Call and returns calling status' do
@@ -210,6 +215,10 @@ RSpec.describe 'WhatsApp Calls API', type: :request do
     end
 
     it 'keeps the contact-level phone recipient when an existing conversation uses a BSUID' do
+      # Aqui o controller monta a conversa pelo contato, e conversa recém-criada não tem janela de
+      # 24h aberta. O alvo deste exemplo é o destinatário, não a janela — que tem cobertura própria
+      # em call_permission_request_service_spec.
+      allow_any_instance_of(Conversation).to receive(:can_reply?).and_return(true) # rubocop:disable RSpec/AnyInstance
       contact_inbox.update!(source_id: 'IN.2081978709342942')
       initiate_conversation
       expect(provider_service).to receive(:initiate_call)

@@ -17,6 +17,23 @@ describe Whatsapp::CallPermissionRequestService do
   before do
     allow(Whatsapp::Providers::WhatsappCloudService).to receive(:new).and_return(provider_service)
     allow(Conversations::ActivityMessageJob).to receive(:perform_later)
+    # O pedido é mensagem de forma livre: fora da janela de 24h a Meta aceita o POST e falha a
+    # entrega depois, então o serviço recusa antes. Uma mensagem do cliente abre a janela.
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming)
+    conversation.reload
+  end
+
+  # Sem isto, o agente via "Solicitação enviada" e ficava esperando uma resposta que nunca viria: a
+  # solicitação não é uma mensagem do Chatwoot, então quando a falha chega não há o que marcar.
+  it 'recusa antes de enviar quando a janela de 24h está fechada' do
+    conversation.messages.destroy_all
+    conversation.update!(waiting_since: nil)
+    conversation.reload
+
+    status = described_class.new(conversation: conversation, recipient: 'IN.2081978709342942').perform
+
+    expect(status).to eq('window_closed')
+    expect(provider_service).not_to have_received(:send_call_permission_request) if provider_service.respond_to?(:send_call_permission_request)
   end
 
   it 'throttles permission requests for the same recipient' do

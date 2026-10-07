@@ -97,4 +97,16 @@ class InboxPolicy < ApplicationPolicy
   def set_call_recording?
     @account_user.administrator?
   end
+
+  def call_voicemail?
+    @account_user.administrator?
+  end
+
+  def set_call_voicemail?
+    @account_user.administrator?
+  end
+
+  def call_voicemail_announcement?
+    @account_user.administrator?
+  end
 end

@@ -7,6 +7,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CallRecordingSettings from './CallRecordingSettings.vue';
+import CallVoicemailSettings from './CallVoicemailSettings.vue';
 
 export default {
   components: {
@@ -16,6 +17,7 @@ export default {
     TextArea,
     Spinner,
     CallRecordingSettings,
+    CallVoicemailSettings,
   },
   props: {
     inbox: {
@@ -156,6 +158,15 @@ export default {
         >
           <template v-if="isTogglingInbound" #hiddenToggle>
             <Spinner class="size-4 text-n-slate-11" />
+          </template>
+
+          <!-- O recado só existe por causa desta opção: com as chamadas recusadas, é o que o
+               cliente ouve em vez de a ligação cair. Fica dentro do mesmo cartão. -->
+          <template #editor>
+            <CallVoicemailSettings
+              :inbox="inbox"
+              :inbound-calls-enabled="inboundCallsEnabled"
+            />
           </template>
         </SettingsToggleSection>
       </div>

@@ -128,7 +128,8 @@
       "TRANSCRIPT_PAUSE": "Pausar gravação",
       "SPEAKER_AGENT": "Atendente",
       "SPEAKER_CONTACT": "Cliente",
-      "TRANSCRIPT_SEEK": "Pular para um ponto da chamada"
+      "TRANSCRIPT_SEEK": "Pular para um ponto da chamada",
+      "PLACED_BY": "Efetuada por {agentName}"
     },
     "HEADER": {
       "RESOLVE_ACTION": "Resolver",
@@ -446,6 +447,19 @@
       "BANNER_BETWEEN": "Mostrando de {de} até {ate}",
       "BANNER_FROM": "Mostrando a partir de {de}",
       "BANNER_UNTIL": "Mostrando até {ate}"
+    },
+    "CONTACT_HISTORY": {
+      "OLDER": "Conversa anterior com este cliente",
+      "NEWER": "Próxima conversa com este cliente"
+    },
+    "REQUEST_CONTACT_INFO": {
+      "ACTION": "Pedir ao cliente que compartilhe o número de WhatsApp",
+      "PENDING_ACTION": "Pedido de dados de contato pendente",
+      "STATES": {
+        "PENDING": "Aguardando os dados de contato",
+        "SHARED": "Número compartilhado",
+        "IDENTITY_CONFLICT": "Número precisa de conferência"
+      }
     }
   },
   "EMAIL_TRANSCRIPT": {
