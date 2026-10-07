@@ -144,6 +144,19 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
 
   SIDES = %w[agent contact].freeze
 
+  # Medidos no navegador durante a gravação: é o único relógio compartilhado pelos dois lados.
+  def guardar_intervalos_de_fala
+    intervalos = JSON.parse(params[:speech_intervals].to_s)
+    return unless intervalos.is_a?(Array)
+
+    @call.with_lock do
+      @call.reload
+      @call.update!(speech_intervals: @call.speech_intervals.merge(side_param => intervalos))
+    end
+  rescue JSON::ParserError
+    nil
+  end
+
   def side_param
     @side_param ||= params[:side].to_s.presence_in(SIDES)
   end
@@ -156,6 +169,7 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
     return 'already_uploaded' if anexo.attached?
 
     anexo.attach(params[:recording])
+    guardar_intervalos_de_fala
     # So quando os DOIS chegam da para intercalar as falas, entao o ultimo a chegar e quem dispara.
     Voice::SpeakerTranscriptionJob.perform_later(@call.id) if @call.reload.sides_recorded?
     'uploaded'

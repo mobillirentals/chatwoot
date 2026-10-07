@@ -34,7 +34,7 @@ class Call < ApplicationRecord
   TERMINAL_STATUSES = %w[completed no_answer failed rejected].freeze
 
   store_accessor :meta, :conference_sid, :twilio_conference_sid, :recording_sid, :parent_call_sid, :initiated_at, :ended_at,
-                 :accepted_broadcast_at, :recording_enabled, :transcript_segments
+                 :accepted_broadcast_at, :recording_enabled, :transcript_segments, :speech_intervals
 
   # Frontend voice bubbles/stores expect inbound/outbound string values
   DISPLAY_DIRECTION = { 'incoming' => 'inbound', 'outgoing' => 'outbound' }.freeze
@@ -154,6 +154,12 @@ class Call < ApplicationRecord
 
   def transcript_segments
     super || []
+  end
+
+  # Onde cada lado falou, no relógio do navegador. O whisper descarta o silêncio inicial de cada
+  # arquivo, então só isto permite dizer quem falou antes de quem.
+  def speech_intervals
+    super || {}
   end
 
   def push_event_data

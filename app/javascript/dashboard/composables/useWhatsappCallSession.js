@@ -2,6 +2,7 @@ import { readonly, ref } from 'vue';
 import Cookies from 'js-cookie';
 import WhatsappCallsAPI from 'dashboard/api/channel/whatsapp/whatsappCallsAPI';
 import { remuxWebmToOgg } from 'dashboard/components/widgets/WootWriter/utils/webmOpusToOgg';
+import { buildSpeechIntervals } from 'dashboard/helper/speechIntervals';
 import { VOICE_CALL_OUTBOUND_INIT_STATUS } from 'dashboard/components-next/message/constants';
 
 // Module-level state lets the cable handlers and unload listeners reach the
@@ -14,6 +15,9 @@ let remoteAudioEl = null;
 // Os lados existem porque saber quem falou cada frase e informacao que a transcricao nao devolve —
 // ela vem de ter os audios separados. Separar depois exigiria ffmpeg, que nao existe no container.
 let recorders = [];
+let analisadores = [];
+let amostrador = null;
+let comecoDaGravacao = 0;
 let audioContext = null;
 let activeCallId = null;
 // voice_call.outbound_connected (the sole source of the outbound SDP answer) is
@@ -63,6 +67,8 @@ const playRemoteStream = stream => {
 // 1s timeslice keeps a recent recording chunk in memory so a remote hangup
 // that races cleanup still has data to upload.
 const RECORDING_TIMESLICE_MS = 1000;
+// 100 ms resolve turno de fala de sobra e custa quase nada: um Float32Array de 1024 por lado.
+const SPEECH_SAMPLE_MS = 100;
 // Teto duro, para o caso patológico de não chegar candidato nenhum.
 const ICE_GATHER_TIMEOUT_MS = 10000;
 // Com um candidato público na mão não há motivo para esperar os outros: esta folga deixa entrar
@@ -175,6 +181,35 @@ const setupRecorder = () => {
     recorder.start(RECORDING_TIMESLICE_MS);
     return entrada;
   });
+
+  // Quem fala quando, medido aqui porque este é o único relógio que vale para os dois lados: o
+  // whisper descarta o silêncio inicial de cada arquivo, então os tempos dele não são comparáveis
+  // entre um lado e o outro.
+  analisadores = [
+    { key: 'agent', source: localSource },
+    { key: 'contact', source: remoteSource },
+  ].map(({ key, source }) => {
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+    return {
+      key,
+      analyser,
+      buffer: new Float32Array(analyser.fftSize),
+      amostras: [],
+    };
+  });
+
+  comecoDaGravacao = performance.now();
+  amostrador = setInterval(() => {
+    const t = performance.now() - comecoDaGravacao;
+    analisadores.forEach(({ analyser, buffer, amostras }) => {
+      analyser.getFloatTimeDomainData(buffer);
+      let soma = 0;
+      for (let i = 0; i < buffer.length; i += 1) soma += buffer[i] * buffer[i];
+      amostras.push({ t, rms: Math.sqrt(soma / buffer.length) });
+    });
+  }, SPEECH_SAMPLE_MS);
 };
 
 const cleanup = () => {
@@ -194,10 +229,13 @@ const cleanup = () => {
   if (pc) pc.close();
   if (remoteAudioEl) remoteAudioEl.srcObject = null;
 
+  if (amostrador) clearInterval(amostrador);
+  amostrador = null;
   pc = null;
   localStream = null;
   remoteStream = null;
   recorders = [];
+  analisadores = [];
   callRecordingEnabled = true;
   audioContext = null;
   activeCallId = null;
@@ -264,6 +302,10 @@ const montarArquivo = async ({ key, chunks }) => {
 };
 
 const stopRecorderAndUpload = async callId => {
+  // Parar de medir antes de montar os arquivos: medida depois do fim da gravação não corresponde
+  // a nada e só estica o último turno.
+  if (amostrador) clearInterval(amostrador);
+  amostrador = null;
   await Promise.all(recorders.map(pararGravador));
   if (!callId) return;
 
@@ -276,12 +318,14 @@ const stopRecorderAndUpload = async callId => {
     ['agent', 'contact'].map(async side => {
       const arquivo = porLado[side] && (await montarArquivo(porLado[side]));
       if (!arquivo) return;
+      const medido = analisadores.find(a => a.key === side);
       try {
         await WhatsappCallsAPI.uploadRecording(
           callId,
           arquivo.blob,
           arquivo.filename,
-          side
+          side,
+          medido ? buildSpeechIntervals(medido.amostras) : null
         );
       } catch (_) {
         /* noop — a mistura segue como reserva */
