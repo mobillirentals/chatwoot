@@ -106,7 +106,10 @@ describe('AutomationWaitCondition', () => {
         custom_attribute_type: '',
       },
     ]);
-    expect(wrapper.findComponent(NextButton).exists()).toBe(false);
+    // A espera por status também aceita condição extra: sem isso uma regra "resolve 1h depois"
+    // fecha a conversa que um atendente assumiu no meio do caminho, porque assumir não muda o
+    // status e a contagem segue correndo.
+    expect(wrapper.findComponent(NextButton).exists()).toBe(true);
   });
 
   it('hydrates and updates the status condition for a saved wait', async () => {
@@ -479,7 +482,9 @@ describe('AutomationWaitCondition', () => {
     expect(removeFilter).toHaveBeenCalledWith(3);
   });
 
-  it('preserves added conditions between message waits and drops them for a status wait', async () => {
+  // Trocar o gatilho ainda limpa as condições que pertenciam ao gatilho anterior; o que mudou é
+  // que a espera por status deixa somar condição depois, em vez de não oferecer nenhuma.
+  it('preserves added conditions between message waits and resets them when the trigger changes', async () => {
     const wrapper = mountComponent({
       eventName: 'message_created',
       isSavedWait: true,
@@ -535,7 +540,8 @@ describe('AutomationWaitCondition', () => {
       }),
     ]);
     expect(wrapper.findComponent(ConditionRow).exists()).toBe(false);
-    expect(wrapper.findComponent(NextButton).exists()).toBe(false);
+    // A lista veio limpa, mas o botão continua: dá para somar uma condição nova à espera.
+    expect(wrapper.findComponent(NextButton).exists()).toBe(true);
   });
 
   it('validates every added condition before returning the result', async () => {

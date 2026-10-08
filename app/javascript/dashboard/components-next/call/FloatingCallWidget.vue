@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -133,6 +134,23 @@ const {
   dismissCall,
   formattedCallDuration,
 } = useCallSession();
+
+// A posição guardada veio da janela de ontem. Numa tela menor — outro monitor, janela reduzida,
+// zoom diferente — esse mesmo deslocamento joga o painel para fora da viewport, e aí a chamada
+// toca sem nada aparecer. Recarregar não resolve: o valor vem do armazenamento.
+//
+// O ajuste tem que acontecer quando o painel APARECE, não quando o componente monta: ele vive
+// atrás de um v-if, então na montagem não há elemento nenhum para medir.
+const painelVisivel = computed(
+  () => incomingCalls.value.length > 0 || hasActiveCall.value
+);
+
+watch(painelVisivel, async visivel => {
+  if (!visivel) return;
+
+  await nextTick();
+  dentroDaTela();
+});
 
 // Mute routes by provider: WhatsApp toggles the local mic track, Twilio uses
 // the Voice SDK connection's native mute. Both surface the same button.

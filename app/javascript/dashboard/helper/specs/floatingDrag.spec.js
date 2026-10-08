@@ -66,3 +66,31 @@ describe('isDragHandle', () => {
     expect(isDragHandle(null)).toBe(true);
   });
 });
+
+// O caso que apareceu em producao: o deslocamento guardado veio de uma janela maior, e aplicado
+// numa tela menor jogava o painel inteiro para fora -- a chamada tocava sem nada aparecer.
+describe('posicao guardada de uma janela maior', () => {
+  const origem = { left: 1000, top: 700, width: 400, height: 220 };
+
+  it('traz o painel de volta para dentro da tela menor', () => {
+    const guardado = { x: -200, y: -400 };
+    const janelaPequena = { width: 1280, height: 720 };
+
+    const ajustado = clampDragOffset(guardado, origem, janelaPequena);
+    const direita = origem.left + ajustado.x + origem.width;
+    const baixo = origem.top + ajustado.y + origem.height;
+
+    expect(origem.left + ajustado.x).toBeGreaterThanOrEqual(0);
+    expect(origem.top + ajustado.y).toBeGreaterThanOrEqual(0);
+    expect(direita).toBeLessThanOrEqual(janelaPequena.width);
+    expect(baixo).toBeLessThanOrEqual(janelaPequena.height);
+  });
+
+  it('nao mexe num deslocamento que ainda cabe', () => {
+    const cabe = { x: -100, y: -100 };
+
+    expect(
+      clampDragOffset(cabe, origem, { width: 1920, height: 1080 })
+    ).toEqual(cabe);
+  });
+});
