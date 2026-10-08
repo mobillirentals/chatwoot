@@ -243,8 +243,10 @@ onMounted(async () => {
 
 <template>
   <!-- O wrapper de configurações entrega altura fixa e `overflow-hidden`, então a rolagem tem que
-       ser deste container: sem isso o formulário fica cortado no rodapé. -->
-  <div class="flex flex-col flex-1 w-full min-h-0 overflow-y-auto">
+       acontecer aqui dentro. Quem rola é o miolo, não este container: assim o rodapé fica no fundo
+       da tela quando o passo é curto, em vez de boiar logo abaixo do conteúdo, e continua à vista
+       na rolagem de um formulário longo. -->
+  <div class="flex flex-col flex-1 w-full min-h-0">
     <div
       v-if="carregando"
       class="flex items-center justify-center gap-2 p-10 text-sm text-n-slate-11"
@@ -297,570 +299,583 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <!-- Sem `flex-1`: com ele o rodapé era empurrado para o fundo da tela mesmo quando o passo
-           é curto, deixando um vão grande no meio. Largura casada com o cabeçalho da página. -->
-      <div class="w-full max-w-7xl px-6 pt-5 pb-8 mx-auto">
-        <!-- A Meta mostra em que passo você está; sem isso "Próximo" parece um salto no escuro. -->
-        <div v-if="!editando" class="flex items-center gap-1.5 mb-5 text-xs">
-          <template v-for="(passo, indice) in [1, 2]" :key="passo">
-            <span
-              v-if="indice"
-              class="w-6 h-px"
-              :class="etapa === 2 ? 'bg-n-brand' : 'bg-n-strong'"
-            />
-            <button
-              type="button"
-              class="flex items-center gap-1.5 px-2.5 py-1 transition-colors border rounded-full cursor-pointer"
-              :class="
-                etapa === passo
-                  ? 'border-n-brand text-n-brand bg-n-brand/10 font-medium'
-                  : 'border-n-weak text-n-slate-11 bg-transparent hover:text-n-slate-12'
-              "
-              @click="etapa = passo"
-            >
+      <!-- Largura casada com o cabeçalho da página, que também usa max-w-7xl. -->
+      <div class="flex-1 min-h-0 overflow-y-auto">
+        <div class="w-full max-w-7xl px-6 pt-5 pb-8 mx-auto">
+          <!-- A Meta mostra em que passo você está; sem isso "Próximo" parece um salto no escuro. -->
+          <div v-if="!editando" class="flex items-center gap-1.5 mb-5 text-xs">
+            <template v-for="(passo, indice) in [1, 2]" :key="passo">
               <span
-                class="flex items-center justify-center text-[10px] rounded-full size-4 tabular-nums"
+                v-if="indice"
+                class="w-6 h-px"
+                :class="etapa === 2 ? 'bg-n-brand' : 'bg-n-strong'"
+              />
+              <button
+                type="button"
+                class="flex items-center gap-1.5 px-2.5 py-1 transition-colors border rounded-full cursor-pointer"
                 :class="
                   etapa === passo
-                    ? 'bg-n-brand text-white'
-                    : 'bg-n-alpha-2 text-n-slate-11'
+                    ? 'border-n-brand text-n-brand bg-n-brand/10 font-medium'
+                    : 'border-n-weak text-n-slate-11 bg-transparent hover:text-n-slate-12'
                 "
+                @click="etapa = passo"
               >
-                {{ passo }}
-              </span>
-              {{ $t(`WHATSAPP_TEMPLATE_MGMT.EDITOR.STEPS.${passo}`) }}
-            </button>
-          </template>
-        </div>
+                <span
+                  class="flex items-center justify-center text-[10px] rounded-full size-4 tabular-nums"
+                  :class="
+                    etapa === passo
+                      ? 'bg-n-brand text-white'
+                      : 'bg-n-alpha-2 text-n-slate-11'
+                  "
+                >
+                  {{ passo }}
+                </span>
+                {{ $t(`WHATSAPP_TEMPLATE_MGMT.EDITOR.STEPS.${passo}`) }}
+              </button>
+            </template>
+          </div>
 
-        <div class="flex items-start gap-6">
-          <div class="flex flex-col flex-1 gap-4 min-w-0">
-            <!-- Passo 1: categoria. A Meta pergunta primeiro porque muda preço e regra de envio. -->
-            <template v-if="etapa === 1">
-              <section
-                class="flex flex-col gap-4 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-              >
-                <div class="flex flex-col gap-1">
-                  <h2 class="text-sm font-medium text-n-slate-12">
-                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.TITLE') }}
-                  </h2>
-                  <p class="text-sm text-n-slate-11">
-                    {{
-                      $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.DESCRIPTION')
-                    }}
-                  </p>
-                </div>
+          <div class="flex items-start gap-6">
+            <div class="flex flex-col flex-1 gap-4 min-w-0">
+              <!-- Passo 1: categoria. A Meta pergunta primeiro porque muda preço e regra de envio. -->
+              <template v-if="etapa === 1">
+                <section
+                  class="flex flex-col gap-4 p-5 border rounded-xl border-n-weak bg-n-solid-1"
+                >
+                  <div class="flex flex-col gap-1">
+                    <h2 class="text-sm font-medium text-n-slate-12">
+                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.TITLE') }}
+                    </h2>
+                    <p class="text-sm text-n-slate-11">
+                      {{
+                        $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.DESCRIPTION')
+                      }}
+                    </p>
+                  </div>
 
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <button
-                    v-for="categoria in CATEGORIES"
-                    :key="categoria"
-                    type="button"
-                    class="flex flex-col gap-1 p-4 text-left transition-colors border rounded-lg cursor-pointer"
-                    :class="
-                      modelo.category === categoria
-                        ? 'border-n-brand bg-n-brand/5'
-                        : 'border-n-weak bg-transparent hover:border-n-strong'
-                    "
-                    @click="modelo.category = categoria"
-                  >
-                    <span class="flex items-center justify-between gap-2">
-                      <span class="text-sm font-medium text-n-slate-12">
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <button
+                      v-for="categoria in CATEGORIES"
+                      :key="categoria"
+                      type="button"
+                      class="flex flex-col gap-1 p-4 text-left transition-colors border rounded-lg cursor-pointer"
+                      :class="
+                        modelo.category === categoria
+                          ? 'border-n-brand bg-n-brand/5'
+                          : 'border-n-weak bg-transparent hover:border-n-strong'
+                      "
+                      @click="modelo.category = categoria"
+                    >
+                      <span class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-medium text-n-slate-12">
+                          {{
+                            $t(
+                              `WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.${categoria}.LABEL`
+                            )
+                          }}
+                        </span>
+                        <Icon
+                          v-if="modelo.category === categoria"
+                          icon="i-lucide-check-circle-2"
+                          class="size-4 text-n-brand shrink-0"
+                        />
+                      </span>
+                      <span class="text-xs leading-relaxed text-n-slate-11">
                         {{
                           $t(
-                            `WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.${categoria}.LABEL`
+                            `WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.${categoria}.HELP`
                           )
                         }}
                       </span>
-                      <Icon
-                        v-if="modelo.category === categoria"
-                        icon="i-lucide-check-circle-2"
-                        class="size-4 text-n-brand shrink-0"
-                      />
-                    </span>
-                    <span class="text-xs leading-relaxed text-n-slate-11">
-                      {{
-                        $t(
-                          `WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.${categoria}.HELP`
-                        )
-                      }}
-                    </span>
-                  </button>
-                </div>
+                    </button>
+                  </div>
 
-                <p class="text-xs text-n-slate-10">
-                  {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.AUTH_NOTE') }}
-                </p>
-              </section>
+                  <p class="text-xs text-n-slate-10">
+                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CATEGORY.AUTH_NOTE') }}
+                  </p>
+                </section>
 
-              <section
-                class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-              >
-                <h2 class="text-sm font-medium text-n-slate-12">
-                  {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.TITLE') }}
-                </h2>
-                <div
-                  class="flex items-start gap-3 p-4 border rounded-lg border-n-brand bg-n-brand/5"
+                <section
+                  class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
                 >
-                  <Icon
-                    icon="i-lucide-message-square-text"
-                    class="mt-0.5 size-4 text-n-brand shrink-0"
-                  />
-                  <span class="flex flex-col gap-1">
-                    <span class="text-sm font-medium text-n-slate-12">
-                      {{
-                        $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.STANDARD.LABEL')
-                      }}
-                    </span>
-                    <span class="text-xs leading-relaxed text-n-slate-11">
-                      {{
-                        $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.STANDARD.HELP')
-                      }}
-                    </span>
-                  </span>
-                </div>
-                <!-- Catálogo, Flows, pagamento e compartilhar contato ficam de fora: oferecer e
-                     falhar no envio é pior do que não oferecer. -->
-                <p class="text-xs text-n-slate-10">
-                  {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.OTHERS_NOTE') }}
-                </p>
-              </section>
-            </template>
-
-            <!-- Passo 2: identidade e conteúdo. -->
-            <template v-else>
-              <section
-                class="flex flex-col gap-4 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-              >
-                <h2 class="text-sm font-medium text-n-slate-12">
-                  {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.TITLE') }}
-                </h2>
-
-                <!-- ComboBox em vez de <select>: o nativo abre com o tema do sistema, branco no
-                     meio da tela escura. -->
-                <div class="grid gap-4 sm:grid-cols-2">
-                  <div class="flex flex-col gap-1.5">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.INBOX') }}
-                    </span>
-                    <ComboBox
-                      v-model="inboxId"
-                      :options="opcoesDeCaixa"
-                      :disabled="editando"
-                      :placeholder="
-                        $t(
-                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.INBOX_PLACEHOLDER'
-                        )
-                      "
-                    />
-                  </div>
-
-                  <div class="flex flex-col gap-1.5">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{
-                        $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.LANGUAGE')
-                      }}
-                    </span>
-                    <ComboBox
-                      v-model="modelo.language"
-                      :options="IDIOMAS"
-                      :disabled="editando"
-                    />
-                  </div>
-                </div>
-
-                <label class="flex flex-col gap-1.5">
-                  <span class="flex items-baseline justify-between gap-2">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.NAME') }}
-                    </span>
-                    <span
-                      v-if="!editando"
-                      class="text-xs tabular-nums text-n-slate-10"
-                    >
-                      {{ contagem('name') }}
-                    </span>
-                  </span>
-                  <input
-                    :value="modelo.name"
-                    type="text"
-                    :disabled="editando"
-                    :class="CAMPO"
-                    :placeholder="
-                      $t(
-                        'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.NAME_PLACEHOLDER'
-                      )
-                    "
-                    @input="aoDigitarNome"
-                    @blur="marcarTocado('name')"
-                  />
-                  <!-- A Meta não deixa trocar nome nem idioma depois: dizer isso aqui evita a
-                       pergunta "por que está travado?". -->
-                  <span
-                    class="text-xs"
-                    :class="
-                      erroDe('name') ? 'text-n-ruby-11' : 'text-n-slate-10'
-                    "
-                  >
-                    {{
-                      erroDe('name')
-                        ? $t(
-                            `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.NAME.${erroDe('name')}`
-                          )
-                        : editando
-                          ? $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.LOCKED')
-                          : $t(
-                              'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.NAME_HELP'
-                            )
-                    }}
-                  </span>
-                </label>
-              </section>
-
-              <section
-                class="flex flex-col gap-5 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-              >
-                <h2 class="text-sm font-medium text-n-slate-12">
-                  {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.TITLE') }}
-                </h2>
-
-                <label class="flex flex-col gap-1.5">
-                  <span class="flex items-baseline justify-between gap-2">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.HEADER') }}
-                    </span>
-                    <span class="text-xs tabular-nums text-n-slate-10">
-                      {{ contagem('header') }}
-                    </span>
-                  </span>
-                  <input
-                    v-model="modelo.header"
-                    type="text"
-                    :class="CAMPO"
-                    :placeholder="
-                      $t(
-                        'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.HEADER_PLACEHOLDER'
-                      )
-                    "
-                    @blur="marcarTocado('header')"
-                  />
-                  <span v-if="erroDe('header')" class="text-xs text-n-ruby-11">
-                    {{
-                      $t(
-                        `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.HEADER.${erroDe('header')}`
-                      )
-                    }}
-                  </span>
-                </label>
-
-                <div class="flex flex-col gap-1.5">
-                  <span class="flex items-baseline justify-between gap-2">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.BODY') }}
-                    </span>
-                    <span class="text-xs tabular-nums text-n-slate-10">
-                      {{ contagem('body') }}
-                    </span>
-                  </span>
-
-                  <!-- Barra e campo dividem a mesma moldura: é um controle só, não dois. -->
+                  <h2 class="text-sm font-medium text-n-slate-12">
+                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.TITLE') }}
+                  </h2>
                   <div
-                    class="overflow-hidden transition-colors border rounded-lg border-n-weak bg-n-alpha-black2 focus-within:border-n-brand"
+                    class="flex items-start gap-3 p-4 border rounded-lg border-n-brand bg-n-brand/5"
                   >
-                    <div
-                      class="flex items-center gap-0.5 px-2 py-1 border-b border-n-weak"
-                    >
-                      <button
-                        v-for="formato in FORMATOS"
-                        :key="formato.chave"
-                        type="button"
-                        class="flex items-center justify-center transition-colors bg-transparent border-0 rounded-md cursor-pointer size-8 text-n-slate-12 hover:bg-n-alpha-2"
-                        :title="
-                          $t(
-                            `WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FORMAT.${formato.chave}`
-                          )
-                        "
-                        @mousedown.prevent
-                        @click="formatar(formato.marcador)"
-                      >
-                        <Icon :icon="formato.icone" class="size-4" />
-                      </button>
-                      <span class="w-px h-5 mx-1.5 bg-n-weak" />
-                      <button
-                        type="button"
-                        class="flex items-center gap-1.5 px-2 text-xs font-medium transition-colors bg-transparent border-0 rounded-md cursor-pointer h-8 text-n-brand hover:bg-n-alpha-2"
-                        @mousedown.prevent
-                        @click="inserirVariavel"
-                      >
-                        <Icon icon="i-lucide-braces" class="size-4" />
+                    <Icon
+                      icon="i-lucide-message-square-text"
+                      class="mt-0.5 size-4 text-n-brand shrink-0"
+                    />
+                    <span class="flex flex-col gap-1">
+                      <span class="text-sm font-medium text-n-slate-12">
                         {{
                           $t(
-                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.ADD_VARIABLE'
+                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.STANDARD.LABEL'
                           )
                         }}
-                      </button>
-                    </div>
-                    <textarea
-                      ref="corpoRef"
-                      v-model="modelo.body"
-                      rows="7"
-                      class="w-full px-3 py-2 text-sm bg-transparent border-0 outline-none resize-y text-n-slate-12 placeholder:text-n-slate-10"
-                      :placeholder="
-                        $t(
-                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.BODY_PLACEHOLDER'
-                        )
-                      "
-                      @blur="marcarTocado('body')"
-                    />
+                      </span>
+                      <span class="text-xs leading-relaxed text-n-slate-11">
+                        {{
+                          $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.STANDARD.HELP')
+                        }}
+                      </span>
+                    </span>
                   </div>
+                  <!-- Catálogo, Flows, pagamento e compartilhar contato ficam de fora: oferecer e
+                     falhar no envio é pior do que não oferecer. -->
+                  <p class="text-xs text-n-slate-10">
+                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.TYPE.OTHERS_NOTE') }}
+                  </p>
+                </section>
+              </template>
 
-                  <span
-                    class="text-xs"
-                    :class="
-                      erroDe('body') ? 'text-n-ruby-11' : 'text-n-slate-10'
-                    "
-                  >
-                    {{
-                      erroDe('body')
-                        ? $t(
-                            `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.BODY.${erroDe('body')}`
-                          )
-                        : $t(
-                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FORMAT.NOTE'
-                          )
-                    }}
-                  </span>
-                </div>
-
-                <!-- A Meta exige um exemplo por variável e usa esse valor para entender o modelo na
-                     análise. Valor genérico pesa contra a aprovação, então pedimos o real. -->
-                <div
-                  v-if="variaveis.length"
-                  class="flex flex-col gap-2.5 p-4 rounded-lg bg-n-alpha-1"
+              <!-- Passo 2: identidade e conteúdo. -->
+              <template v-else>
+                <section
+                  class="flex flex-col gap-4 p-5 border rounded-xl border-n-weak bg-n-solid-1"
                 >
-                  <div class="flex flex-col gap-0.5">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.EXAMPLES') }}
-                    </span>
-                    <span class="text-xs leading-relaxed text-n-slate-10">
-                      {{
-                        $t(
-                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.EXAMPLES_HELP'
-                        )
-                      }}
-                    </span>
+                  <h2 class="text-sm font-medium text-n-slate-12">
+                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.TITLE') }}
+                  </h2>
+
+                  <!-- ComboBox em vez de <select>: o nativo abre com o tema do sistema, branco no
+                     meio da tela escura. -->
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="flex flex-col gap-1.5">
+                      <span class="text-xs font-medium text-n-slate-11">
+                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.INBOX') }}
+                      </span>
+                      <ComboBox
+                        v-model="inboxId"
+                        :options="opcoesDeCaixa"
+                        :disabled="editando"
+                        :placeholder="
+                          $t(
+                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.INBOX_PLACEHOLDER'
+                          )
+                        "
+                      />
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                      <span class="text-xs font-medium text-n-slate-11">
+                        {{
+                          $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.LANGUAGE')
+                        }}
+                      </span>
+                      <ComboBox
+                        v-model="modelo.language"
+                        :options="IDIOMAS"
+                        :disabled="editando"
+                      />
+                    </div>
                   </div>
-                  <label
-                    v-for="numero in variaveis"
-                    :key="numero"
-                    class="flex items-center gap-2"
-                  >
-                    <span
-                      class="px-2 py-1 font-mono text-xs rounded-md shrink-0 bg-n-alpha-2 text-n-slate-11"
-                    >
-                      {{ rotuloVariavel(numero) }}
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="flex items-baseline justify-between gap-2">
+                      <span class="text-xs font-medium text-n-slate-11">
+                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.NAME') }}
+                      </span>
+                      <span
+                        v-if="!editando"
+                        class="text-xs tabular-nums text-n-slate-10"
+                      >
+                        {{ contagem('name') }}
+                      </span>
                     </span>
                     <input
-                      v-model="modelo.examples[numero]"
+                      :value="modelo.name"
+                      type="text"
+                      :disabled="editando"
+                      :class="CAMPO"
+                      :placeholder="
+                        $t(
+                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.NAME_PLACEHOLDER'
+                        )
+                      "
+                      @input="aoDigitarNome"
+                      @blur="marcarTocado('name')"
+                    />
+                    <!-- A Meta não deixa trocar nome nem idioma depois: dizer isso aqui evita a
+                       pergunta "por que está travado?". -->
+                    <span
+                      class="text-xs"
+                      :class="
+                        erroDe('name') ? 'text-n-ruby-11' : 'text-n-slate-10'
+                      "
+                    >
+                      {{
+                        erroDe('name')
+                          ? $t(
+                              `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.NAME.${erroDe('name')}`
+                            )
+                          : editando
+                            ? $t(
+                                'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.LOCKED'
+                              )
+                            : $t(
+                                'WHATSAPP_TEMPLATE_MGMT.EDITOR.IDENTITY.NAME_HELP'
+                              )
+                      }}
+                    </span>
+                  </label>
+                </section>
+
+                <section
+                  class="flex flex-col gap-5 p-5 border rounded-xl border-n-weak bg-n-solid-1"
+                >
+                  <h2 class="text-sm font-medium text-n-slate-12">
+                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.TITLE') }}
+                  </h2>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="flex items-baseline justify-between gap-2">
+                      <span class="text-xs font-medium text-n-slate-11">
+                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.HEADER') }}
+                      </span>
+                      <span class="text-xs tabular-nums text-n-slate-10">
+                        {{ contagem('header') }}
+                      </span>
+                    </span>
+                    <input
+                      v-model="modelo.header"
                       type="text"
                       :class="CAMPO"
                       :placeholder="
                         $t(
-                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.EXAMPLE_PLACEHOLDER'
+                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.HEADER_PLACEHOLDER'
                         )
                       "
-                      @blur="marcarTocado('examples')"
+                      @blur="marcarTocado('header')"
                     />
-                  </label>
-                  <span
-                    v-if="erroDe('examples')"
-                    class="text-xs text-n-ruby-11"
-                  >
-                    {{
-                      $t(
-                        `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.EXAMPLES.${erroDe('examples')}`
-                      )
-                    }}
-                  </span>
-                </div>
-
-                <label class="flex flex-col gap-1.5">
-                  <span class="flex items-baseline justify-between gap-2">
-                    <span class="text-xs font-medium text-n-slate-11">
-                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FOOTER') }}
-                    </span>
-                    <span class="text-xs tabular-nums text-n-slate-10">
-                      {{ contagem('footer') }}
-                    </span>
-                  </span>
-                  <input
-                    v-model="modelo.footer"
-                    type="text"
-                    :class="CAMPO"
-                    :placeholder="
-                      $t(
-                        'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FOOTER_PLACEHOLDER'
-                      )
-                    "
-                    @blur="marcarTocado('footer')"
-                  />
-                  <span v-if="erroDe('footer')" class="text-xs text-n-ruby-11">
-                    {{
-                      $t(
-                        `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.FOOTER.${erroDe('footer')}`
-                      )
-                    }}
-                  </span>
-                </label>
-              </section>
-
-              <section
-                class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
-              >
-                <div class="flex flex-col gap-0.5">
-                  <h2 class="text-sm font-medium text-n-slate-12">
-                    {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.TITLE') }}
-                  </h2>
-                  <p class="text-xs text-n-slate-11">
-                    {{
-                      $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.DESCRIPTION')
-                    }}
-                  </p>
-                </div>
-
-                <div
-                  v-for="(botao, indice) in modelo.buttons"
-                  :key="indice"
-                  class="flex flex-col gap-3 p-3 border rounded-lg border-n-weak"
-                >
-                  <div class="flex items-center justify-between gap-2">
                     <span
-                      class="flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-md bg-n-alpha-2 text-n-slate-11"
+                      v-if="erroDe('header')"
+                      class="text-xs text-n-ruby-11"
                     >
-                      <Icon
-                        :icon="
-                          botao.type === 'URL'
-                            ? 'i-lucide-external-link'
-                            : 'i-lucide-reply'
-                        "
-                        class="size-3"
-                      />
                       {{
                         $t(
-                          `WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.KIND.${botao.type}`
+                          `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.HEADER.${erroDe('header')}`
                         )
                       }}
                     </span>
-                    <Button
-                      icon="i-lucide-trash-2"
-                      color="slate"
-                      variant="ghost"
-                      size="xs"
-                      @click="removerBotao(indice)"
-                    />
-                  </div>
-                  <div
-                    class="grid gap-3"
-                    :class="botao.type === 'URL' ? 'sm:grid-cols-2' : ''"
-                  >
-                    <label class="flex flex-col gap-1.5">
+                  </label>
+
+                  <div class="flex flex-col gap-1.5">
+                    <span class="flex items-baseline justify-between gap-2">
                       <span class="text-xs font-medium text-n-slate-11">
-                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.TEXT') }}
+                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.BODY') }}
                       </span>
-                      <input
-                        v-model="botao.text"
-                        type="text"
-                        :maxlength="LIMITS.buttonText"
-                        :class="CAMPO"
-                        @blur="marcarTocado('buttons')"
-                      />
-                    </label>
-                    <label
-                      v-if="botao.type === 'URL'"
-                      class="flex flex-col gap-1.5"
+                      <span class="text-xs tabular-nums text-n-slate-10">
+                        {{ contagem('body') }}
+                      </span>
+                    </span>
+
+                    <!-- Barra e campo dividem a mesma moldura: é um controle só, não dois. -->
+                    <div
+                      class="overflow-hidden transition-colors border rounded-lg border-n-weak bg-n-alpha-black2 focus-within:border-n-brand"
                     >
+                      <div
+                        class="flex items-center gap-0.5 px-2 py-1 border-b border-n-weak"
+                      >
+                        <button
+                          v-for="formato in FORMATOS"
+                          :key="formato.chave"
+                          type="button"
+                          class="flex items-center justify-center transition-colors bg-transparent border-0 rounded-md cursor-pointer size-8 text-n-slate-12 hover:bg-n-alpha-2"
+                          :title="
+                            $t(
+                              `WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FORMAT.${formato.chave}`
+                            )
+                          "
+                          @mousedown.prevent
+                          @click="formatar(formato.marcador)"
+                        >
+                          <Icon :icon="formato.icone" class="size-4" />
+                        </button>
+                        <span class="w-px h-5 mx-1.5 bg-n-weak" />
+                        <button
+                          type="button"
+                          class="flex items-center gap-1.5 px-2 text-xs font-medium transition-colors bg-transparent border-0 rounded-md cursor-pointer h-8 text-n-brand hover:bg-n-alpha-2"
+                          @mousedown.prevent
+                          @click="inserirVariavel"
+                        >
+                          <Icon icon="i-lucide-braces" class="size-4" />
+                          {{
+                            $t(
+                              'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.ADD_VARIABLE'
+                            )
+                          }}
+                        </button>
+                      </div>
+                      <textarea
+                        ref="corpoRef"
+                        v-model="modelo.body"
+                        rows="7"
+                        class="w-full px-3 py-2 text-sm bg-transparent border-0 outline-none resize-y text-n-slate-12 placeholder:text-n-slate-10"
+                        :placeholder="
+                          $t(
+                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.BODY_PLACEHOLDER'
+                          )
+                        "
+                        @blur="marcarTocado('body')"
+                      />
+                    </div>
+
+                    <span
+                      class="text-xs"
+                      :class="
+                        erroDe('body') ? 'text-n-ruby-11' : 'text-n-slate-10'
+                      "
+                    >
+                      {{
+                        erroDe('body')
+                          ? $t(
+                              `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.BODY.${erroDe('body')}`
+                            )
+                          : $t(
+                              'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FORMAT.NOTE'
+                            )
+                      }}
+                    </span>
+                  </div>
+
+                  <!-- A Meta exige um exemplo por variável e usa esse valor para entender o modelo na
+                     análise. Valor genérico pesa contra a aprovação, então pedimos o real. -->
+                  <div
+                    v-if="variaveis.length"
+                    class="flex flex-col gap-2.5 p-4 rounded-lg bg-n-alpha-1"
+                  >
+                    <div class="flex flex-col gap-0.5">
                       <span class="text-xs font-medium text-n-slate-11">
-                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.URL') }}
+                        {{
+                          $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.EXAMPLES')
+                        }}
+                      </span>
+                      <span class="text-xs leading-relaxed text-n-slate-10">
+                        {{
+                          $t(
+                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.EXAMPLES_HELP'
+                          )
+                        }}
+                      </span>
+                    </div>
+                    <label
+                      v-for="numero in variaveis"
+                      :key="numero"
+                      class="flex items-center gap-2"
+                    >
+                      <span
+                        class="px-2 py-1 font-mono text-xs rounded-md shrink-0 bg-n-alpha-2 text-n-slate-11"
+                      >
+                        {{ rotuloVariavel(numero) }}
                       </span>
                       <input
-                        v-model="botao.url"
-                        type="url"
+                        v-model="modelo.examples[numero]"
+                        type="text"
                         :class="CAMPO"
                         :placeholder="
                           $t(
-                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.URL_PLACEHOLDER'
+                            'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.EXAMPLE_PLACEHOLDER'
                           )
                         "
-                        @blur="marcarTocado('buttons')"
+                        @blur="marcarTocado('examples')"
                       />
                     </label>
+                    <span
+                      v-if="erroDe('examples')"
+                      class="text-xs text-n-ruby-11"
+                    >
+                      {{
+                        $t(
+                          `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.EXAMPLES.${erroDe('examples')}`
+                        )
+                      }}
+                    </span>
                   </div>
-                </div>
 
-                <span v-if="erroDe('buttons')" class="text-xs text-n-ruby-11">
-                  {{
-                    $t(
-                      `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.BUTTONS.${erroDe('buttons')}`
-                    )
-                  }}
-                </span>
+                  <label class="flex flex-col gap-1.5">
+                    <span class="flex items-baseline justify-between gap-2">
+                      <span class="text-xs font-medium text-n-slate-11">
+                        {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FOOTER') }}
+                      </span>
+                      <span class="text-xs tabular-nums text-n-slate-10">
+                        {{ contagem('footer') }}
+                      </span>
+                    </span>
+                    <input
+                      v-model="modelo.footer"
+                      type="text"
+                      :class="CAMPO"
+                      :placeholder="
+                        $t(
+                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.CONTENT.FOOTER_PLACEHOLDER'
+                        )
+                      "
+                      @blur="marcarTocado('footer')"
+                    />
+                    <span
+                      v-if="erroDe('footer')"
+                      class="text-xs text-n-ruby-11"
+                    >
+                      {{
+                        $t(
+                          `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.FOOTER.${erroDe('footer')}`
+                        )
+                      }}
+                    </span>
+                  </label>
+                </section>
 
-                <div class="flex flex-wrap items-center gap-2">
-                  <Button
-                    :label="
+                <section
+                  class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
+                >
+                  <div class="flex flex-col gap-0.5">
+                    <h2 class="text-sm font-medium text-n-slate-12">
+                      {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.TITLE') }}
+                    </h2>
+                    <p class="text-xs text-n-slate-11">
+                      {{
+                        $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.DESCRIPTION')
+                      }}
+                    </p>
+                  </div>
+
+                  <div
+                    v-for="(botao, indice) in modelo.buttons"
+                    :key="indice"
+                    class="flex flex-col gap-3 p-3 border rounded-lg border-n-weak"
+                  >
+                    <div class="flex items-center justify-between gap-2">
+                      <span
+                        class="flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-md bg-n-alpha-2 text-n-slate-11"
+                      >
+                        <Icon
+                          :icon="
+                            botao.type === 'URL'
+                              ? 'i-lucide-external-link'
+                              : 'i-lucide-reply'
+                          "
+                          class="size-3"
+                        />
+                        {{
+                          $t(
+                            `WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.KIND.${botao.type}`
+                          )
+                        }}
+                      </span>
+                      <Button
+                        icon="i-lucide-trash-2"
+                        color="slate"
+                        variant="ghost"
+                        size="xs"
+                        @click="removerBotao(indice)"
+                      />
+                    </div>
+                    <div
+                      class="grid gap-3"
+                      :class="botao.type === 'URL' ? 'sm:grid-cols-2' : ''"
+                    >
+                      <label class="flex flex-col gap-1.5">
+                        <span class="text-xs font-medium text-n-slate-11">
+                          {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.TEXT') }}
+                        </span>
+                        <input
+                          v-model="botao.text"
+                          type="text"
+                          :maxlength="LIMITS.buttonText"
+                          :class="CAMPO"
+                          @blur="marcarTocado('buttons')"
+                        />
+                      </label>
+                      <label
+                        v-if="botao.type === 'URL'"
+                        class="flex flex-col gap-1.5"
+                      >
+                        <span class="text-xs font-medium text-n-slate-11">
+                          {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.URL') }}
+                        </span>
+                        <input
+                          v-model="botao.url"
+                          type="url"
+                          :class="CAMPO"
+                          :placeholder="
+                            $t(
+                              'WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.URL_PLACEHOLDER'
+                            )
+                          "
+                          @blur="marcarTocado('buttons')"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <span v-if="erroDe('buttons')" class="text-xs text-n-ruby-11">
+                    {{
                       $t(
-                        'WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.ADD_QUICK_REPLY'
+                        `WHATSAPP_TEMPLATE_MGMT.EDITOR.ERRORS.BUTTONS.${erroDe('buttons')}`
                       )
-                    "
-                    icon="i-lucide-plus"
-                    color="slate"
-                    size="sm"
-                    :disabled="modelo.buttons.length >= LIMITS.buttons"
-                    @click="adicionarBotao('QUICK_REPLY')"
-                  />
-                  <Button
-                    :label="$t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.ADD_URL')"
-                    icon="i-lucide-plus"
-                    color="slate"
-                    size="sm"
-                    :disabled="modelo.buttons.length >= LIMITS.buttons"
-                    @click="adicionarBotao('URL')"
-                  />
-                  <span class="ml-auto text-xs tabular-nums text-n-slate-10">
-                    {{ modelo.buttons.length }}/{{ LIMITS.buttons }}
+                    }}
                   </span>
-                </div>
-              </section>
-            </template>
-          </div>
 
-          <!-- Prévia sempre à vista, como na Meta: é o que deixa julgar a mensagem enquanto
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Button
+                      :label="
+                        $t(
+                          'WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.ADD_QUICK_REPLY'
+                        )
+                      "
+                      icon="i-lucide-plus"
+                      color="slate"
+                      size="sm"
+                      :disabled="modelo.buttons.length >= LIMITS.buttons"
+                      @click="adicionarBotao('QUICK_REPLY')"
+                    />
+                    <Button
+                      :label="
+                        $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.BUTTONS.ADD_URL')
+                      "
+                      icon="i-lucide-plus"
+                      color="slate"
+                      size="sm"
+                      :disabled="modelo.buttons.length >= LIMITS.buttons"
+                      @click="adicionarBotao('URL')"
+                    />
+                    <span class="ml-auto text-xs tabular-nums text-n-slate-10">
+                      {{ modelo.buttons.length }}/{{ LIMITS.buttons }}
+                    </span>
+                  </div>
+                </section>
+              </template>
+            </div>
+
+            <!-- Prévia sempre à vista, como na Meta: é o que deixa julgar a mensagem enquanto
                escreve. Fica grudada no topo para não sumir na rolagem. -->
-          <aside
-            v-if="etapa === 2"
-            class="sticky top-0 hidden w-80 shrink-0 lg:flex lg:flex-col lg:gap-3"
-          >
-            <h2 class="text-sm font-medium text-n-slate-12">
-              {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.PREVIEW.TITLE') }}
-            </h2>
-            <TemplateBubblePreview
-              :header="modelo.header"
-              :body="modelo.body"
-              :examples="modelo.examples"
-              :footer="modelo.footer"
-              :buttons="modelo.buttons"
-            />
-            <p class="text-xs leading-relaxed text-n-slate-10">
-              {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.PREVIEW.VARIABLE_NOTE') }}
-            </p>
-          </aside>
+            <aside
+              v-if="etapa === 2"
+              class="sticky top-0 hidden w-80 shrink-0 lg:flex lg:flex-col lg:gap-3"
+            >
+              <h2 class="text-sm font-medium text-n-slate-12">
+                {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.PREVIEW.TITLE') }}
+              </h2>
+              <TemplateBubblePreview
+                :header="modelo.header"
+                :body="modelo.body"
+                :examples="modelo.examples"
+                :footer="modelo.footer"
+                :buttons="modelo.buttons"
+              />
+              <p class="text-xs leading-relaxed text-n-slate-10">
+                {{ $t('WHATSAPP_TEMPLATE_MGMT.EDITOR.PREVIEW.VARIABLE_NOTE') }}
+              </p>
+            </aside>
+          </div>
         </div>
       </div>
 
-      <!-- Grudado embaixo: as ações somem na rolagem de um formulário deste tamanho. -->
-      <div
-        class="sticky bottom-0 border-t bg-n-solid-1 border-n-weak backdrop-blur-sm"
-      >
+      <!-- Fora da área que rola, então fica sempre no fundo e nunca some. -->
+      <div class="border-t shrink-0 bg-n-solid-1 border-n-weak">
         <div
           class="flex flex-wrap items-center justify-between w-full gap-3 px-6 py-3 mx-auto max-w-7xl"
         >
