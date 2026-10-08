@@ -194,6 +194,19 @@ RSpec.describe AutomationRule do
       expect(rule.errors[:execution_delay]).to include('only supports status and inbox conditions for conversation-level events.')
     end
 
+    # Sem isto nao ha como escrever "resolve 1h depois, se ninguem pegou": assumir a conversa nao
+    # muda o status, entao a espera segue correndo e a regra fecha por cima do atendimento.
+    it 'allows a delayed conversation-level rule filtering on assignee' do
+      rule.event_name = 'conversation_updated'
+      rule.execution_delay = 60
+      rule.conditions = [{ 'attribute_key' => 'status', 'filter_operator' => 'equal_to', 'values' => ['open'],
+                           'query_operator' => 'and' },
+                         { 'attribute_key' => 'assignee_id', 'filter_operator' => 'is_not_present', 'values' => [],
+                           'query_operator' => nil }]
+
+      expect(rule).to be_valid
+    end
+
     it 'rejects a delayed conversation-level rule with a mutable non-status condition' do
       rule.event_name = 'conversation_updated'
       rule.execution_delay = 60

@@ -25,7 +25,15 @@ class AutomationRule < ApplicationRecord
   EXECUTION_DELAY_RANGE = (10..43_200) # minutes: 10 min to 30 days
   # Conversation-level delayed rules key their episode on status; only status and attributes
   # that never change after the delay (inbox) are safe to also filter on.
-  DELAYED_CONVERSATION_ATTRIBUTES = %w[status inbox_id].freeze
+  #
+  # `assignee_id` é a exceção deliberada: sem ela não há como escrever a regra mais comum deste
+  # tipo — "resolve 1h depois, se ninguém pegou". Assumir a conversa não muda o status, então a
+  # espera segue correndo e a regra fecha por cima de um atendimento em andamento.
+  # A condição é reavaliada antes de executar (ProcessPendingExecutionJob#conditions_still_match?),
+  # então uma conversa que ganhou agente no meio do caminho é pulada.
+  # O preço de ela ser mutável: desatribuir não reinicia a contagem, porque o episódio continua
+  # sendo o mesmo status. A conversa larga pelo agente é resolvida no prazo original.
+  DELAYED_CONVERSATION_ATTRIBUTES = %w[status inbox_id assignee_id].freeze
 
   belongs_to :account
   has_many :pending_executions, class_name: 'AutomationRulePendingExecution', dependent: :delete_all
