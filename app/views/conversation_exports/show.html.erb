@@ -265,6 +265,54 @@
       word-break: break-word;
     }
 
+    /* ── Call event ───────────────────────────────────────────── */
+    /* A ligação não é uma fala: ganha um bloco próprio para quem folheia o histórico achar as
+       chamadas sem ler mensagem por mensagem. */
+    .call-card {
+      margin-top: 2px;
+      padding: 8px 12px;
+      border: 1px solid #e0e0e0;
+      border-left: 3px solid #8a8a8a;
+      border-radius: 4px;
+      background: #fafafa;
+      page-break-inside: avoid;
+    }
+
+    .call-card__head {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .call-card__icon { font-size: 12pt; }
+
+    .call-card__title {
+      font-weight: 600;
+      color: #333;
+      font-size: 10pt;
+    }
+
+    .call-card__duration {
+      font-variant-numeric: tabular-nums;
+      color: #333;
+      font-size: 9pt;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: #ececec;
+    }
+
+    .call-card__status {
+      color: #777;
+      font-size: 9pt;
+    }
+
+    .call-card__agent {
+      margin-top: 3px;
+      color: #666;
+      font-size: 9pt;
+    }
+
     /* ── Attachment blocks ────────────────────────────────────── */
     .attachment {
       margin-top: 6px;
@@ -513,7 +561,27 @@
                   <div class="message-row__reply-ref">⇌ Respondendo a mensagem #<%= m[:in_reply_to] %></div>
                 <% end %>
 
-                <% if m[:content].present? %>
+                <% if m[:call].present? %>
+                  <%# A ligação é um evento, não um texto: duração e sentido valem mais no
+                      histórico do que a frase "Chamada do WhatsApp" que vem no conteúdo. %>
+                  <div class="call-card">
+                    <div class="call-card__head">
+                      <span class="call-card__icon">📞</span>
+                      <span class="call-card__title"><%= m[:call][:title] %></span>
+                      <% if m[:call][:duration].present? %>
+                        <span class="call-card__duration"><%= m[:call][:duration] %></span>
+                      <% end %>
+                      <% if m[:call][:status].present? %>
+                        <span class="call-card__status"><%= m[:call][:status] %></span>
+                      <% end %>
+                    </div>
+                    <% if m[:call][:agent].present? %>
+                      <div class="call-card__agent">
+                        <%= m[:call][:agent_label] %> <%= m[:call][:agent] %>
+                      </div>
+                    <% end %>
+                  </div>
+                <% elsif m[:content].present? %>
                   <div class="message-row__text"><%= m[:content] %></div>
                 <% end %>
 
@@ -534,7 +602,11 @@
                     <% when :audio %>
                       <div class="attachment--media">
                         <span class="attachment--media__icon">🎙️</span>
-                        <span class="attachment--media__name"><%= att[:filename].presence || 'Áudio' %></span>
+                        <%# Numa ligação o áudio é a gravação: nomear assim evita confundir com
+                            um áudio que o cliente mandou. %>
+                        <span class="attachment--media__name">
+                          <%= m[:call].present? ? 'Gravação da chamada' : (att[:filename].presence || 'Áudio') %>
+                        </span>
                         <span class="attachment--media__size"><%= att[:size] %></span>
                         <a class="attachment--media__url" href="<%= att[:url] %>"><%= att[:url] %></a>
                       </div>
@@ -584,6 +656,14 @@
       O hash SHA-256 acima é calculado com base no conteúdo de todas as mensagens exportadas e pode ser
       utilizado para verificar que o conteúdo não foi alterado após a geração.
     </div>
+    <%# Os links de anexo são assinados e expiram. Sem a data escrita aqui, quem guardar o
+        documento só descobre isso ao clicar e não conseguir abrir. %>
+    <% if @links_valid_until.present? %>
+      <div class="integrity-section__note">
+        Os links de anexos e gravações deste documento funcionam até <strong><%= @links_valid_until %></strong>.
+        Depois dessa data, os arquivos continuam acessíveis pela conversa no sistema.
+      </div>
+    <% end %>
   </div>
 
 </div>

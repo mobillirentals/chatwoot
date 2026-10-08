@@ -18,6 +18,23 @@ module Conversations
       IMAGE_QUALITY    = 75   # JPEG quality (1-100); 75 is visually lossless for documents
       EMBED_TIMEOUT    = 8    # seconds per image download
 
+      # O link de anexo do ActiveStorage vale 5 minutos por padrão — num documento que é guardado
+      # para consulta depois, ele nasce morto. 45 dias cobrem auditoria e disputa sem deixar a
+      # gravação de um cliente acessível para sempre a quem receber o arquivo. O documento informa
+      # a data de validade, então mudar este prazo muda o que está escrito lá.
+      ATTACHMENT_LINK_TTL = 45.days
+
+      # O webhook da Meta manda o estado em inglês; o documento é lido em português.
+      CALL_STATUS_LABELS = {
+        'completed' => 'concluída',
+        'missed' => 'não atendida',
+        'rejected' => 'recusada',
+        'failed' => 'falhou',
+        'busy' => 'ocupado',
+        'no-answer' => 'não atendida',
+        'canceled' => 'cancelada'
+      }.freeze
+
       def perform
         sha = content_sha256(@conversations)
         render_html(sha)
@@ -35,6 +52,7 @@ module Conversations
             exported_by: @exported_by,
             account: @account,
             generated_at: format_datetime(Time.current),
+            links_valid_until: format_date(ATTACHMENT_LINK_TTL.from_now),
             sha256: sha,
             logo_svg: brand_logo_svg
           }
@@ -87,8 +105,52 @@ module Conversations
           timestamp: format_date(msg.created_at),
           private: msg.private?,
           content: msg.content.presence,
+          call: decorate_call(msg),
           attachments: decorate_attachments(msg.attachments)
         }
+      end
+
+      # A chamada chega como mensagem de conteúdo `voice_call`: o texto é só "Chamada do WhatsApp"
+      # e o que interessa — duração, sentido, quem falou — mora em content_attributes['data'].
+      # Sem isto o histórico registra que houve uma ligação, mas não quanto tempo durou.
+      def decorate_call(msg)
+        return unless msg.voice_call?
+
+        dados = msg.content_attributes['data'] || {}
+        saida = dados['call_direction'].to_s == 'outbound'
+
+        {
+          title: saida ? 'Chamada efetuada' : 'Chamada recebida',
+          # Quem ligou "efetua"; quem recebeu "atende". Trocar os dois faz o documento descrever
+          # errado quem procurou quem.
+          agent_label: saida ? 'Efetuada por' : 'Atendida por',
+          agent: dados.dig('accepted_by', 'name'),
+          status: CALL_STATUS_LABELS[dados['status'].to_s] || dados['status'].presence,
+          duration: call_duration_label(dados['duration_seconds'])
+        }
+      end
+
+      # Segundos crus não se leem num documento: 97 vira "1 min 37 s".
+      def call_duration_label(segundos)
+        total = segundos.to_i
+        return nil if total <= 0
+        return "#{total} s" if total < 60
+
+        minutos, resto = total.divmod(60)
+        resto.zero? ? "#{minutos} min" : "#{minutos} min #{resto} s"
+      end
+
+      # Mesmo link assinado do `download_url`, só que com a validade deste documento em vez dos
+      # 5 minutos padrão. Anexo sem arquivo próprio (só URL externa) devolve vazio e o chamador
+      # cai no external_url.
+      def attachment_url(att)
+        return '' unless att.file&.attached?
+
+        ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+        att.file.blob.url(expires_in: ATTACHMENT_LINK_TTL)
+      rescue StandardError => e
+        Rails.logger.warn "[HtmlExporter] Could not sign attachment #{att.id}: #{e.message}"
+        att.download_url
       end
 
       def decorate_attachments(attachments)
@@ -97,19 +159,19 @@ module Conversations
           when :image
             decorate_image_attachment(att)
           when :audio
-            { type: :audio, url: att.download_url, filename: att.file&.filename.to_s,
+            { type: :audio, url: attachment_url(att), filename: att.file&.filename.to_s,
               size: human_size(att.file&.byte_size) }
           when :video
-            { type: :video, url: att.download_url, filename: att.file&.filename.to_s,
+            { type: :video, url: attachment_url(att), filename: att.file&.filename.to_s,
               size: human_size(att.file&.byte_size) }
           when :file
-            { type: :file, url: att.download_url, filename: att.file&.filename.to_s,
+            { type: :file, url: attachment_url(att), filename: att.file&.filename.to_s,
               size: human_size(att.file&.byte_size) }
           when :location
             { type: :location, lat: att.coordinates_lat, lng: att.coordinates_long,
               title: att.fallback_title }
           else
-            { type: :other, url: att.download_url || att.external_url, filename: att.fallback_title }
+            { type: :other, url: attachment_url(att).presence || att.external_url, filename: att.fallback_title }
           end
         end
       end
@@ -122,7 +184,7 @@ module Conversations
       # Tratado como :video (link, nao imagem embutida) — mais fiel que qualquer frame unico.
       def decorate_image_attachment(att)
         if att.file&.content_type == 'image/gif'
-          { type: :video, url: att.download_url, filename: att.file&.filename.to_s,
+          { type: :video, url: attachment_url(att), filename: att.file&.filename.to_s,
             size: human_size(att.file&.byte_size) }
         else
           { type: :image, data_uri: image_to_base64(att), filename: att.file&.filename.to_s }
