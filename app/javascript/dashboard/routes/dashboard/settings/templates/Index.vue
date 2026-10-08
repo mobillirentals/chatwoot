@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onActivated, onDeactivated, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { picoSearch } from '@chatwoot/pico-search';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
@@ -33,9 +34,11 @@ const FUZZY_SEARCH_KEYS = [
 ];
 
 const store = useStore();
+const router = useRouter();
 const { t } = useI18n();
 
 const inboxes = useMapGetter('inboxes/getInboxes');
+const accountId = useMapGetter('getCurrentAccountId');
 const templates = ref([]);
 const searchQuery = ref('');
 const selectedInboxId = ref('all');
@@ -82,6 +85,16 @@ const whatsappInboxes = computed(() =>
       inbox.channel_type === INBOX_TYPES.WHATSAPP ||
       (inbox.channel_type === INBOX_TYPES.TWILIO &&
         inbox.medium === TWILIO_CHANNEL_MEDIUM.WHATSAPP)
+  )
+);
+
+// Criar e editar só alcança a API de modelos da Cloud: Twilio e 360dialog ficam de fora, e sem
+// nenhuma caixa dessas o botão não tem para onde apontar.
+const cloudInboxes = computed(() =>
+  inboxes.value.filter(
+    inbox =>
+      inbox.channel_type === INBOX_TYPES.WHATSAPP &&
+      inbox.provider_config?.business_account_id
   )
 );
 
@@ -169,6 +182,20 @@ const toggleFilterMenu = key => {
 const openPreview = template => {
   selectedTemplate.value = template;
   previewPanelRef.value?.open();
+};
+
+// A caixa vai junto porque a Meta guarda o modelo por conta comercial: sem ela o editor não sabe
+// com qual credencial falar.
+const openEditor = (template = null) => {
+  const inboxId =
+    template?.inboxes?.find(inbox => inbox.provider_config?.business_account_id)
+      ?.id || cloudInboxes.value[0]?.id;
+
+  router.push({
+    name: template ? 'settings_templates_edit' : 'settings_templates_new',
+    params: { accountId: accountId.value, templateId: template?.id },
+    query: { inbox_id: inboxId },
+  });
 };
 
 const handleFilterAction = ({ action, value }) => {
@@ -391,14 +418,23 @@ onDeactivated(abortTemplateRequest);
           </span>
         </template>
         <template #actions>
+          <!-- Só o ícone: com os filtros, o contador e o botão de criar, o rótulo estourava a
+               linha e passava por cima do contador. -->
           <Button
-            :label="$t('WHATSAPP_TEMPLATE_MGMT.SYNC_TEMPLATES')"
+            v-tooltip.bottom="$t('WHATSAPP_TEMPLATE_MGMT.SYNC_TEMPLATES')"
             icon="i-lucide-refresh-cw"
             color="slate"
             size="sm"
             :is-loading="isSyncing"
             :disabled="!whatsappInboxes.length || isSyncing"
             @click="syncTemplates"
+          />
+          <Button
+            :label="$t('WHATSAPP_TEMPLATE_MGMT.NEW_TEMPLATE')"
+            icon="i-lucide-plus"
+            size="sm"
+            :disabled="!cloudInboxes.length"
+            @click="openEditor()"
           />
         </template>
       </BaseSettingsHeader>
@@ -424,6 +460,10 @@ onDeactivated(abortTemplateRequest);
       </div>
     </template>
 
-    <TemplatePreviewDrawer ref="previewPanelRef" :template="selectedTemplate" />
+    <TemplatePreviewDrawer
+      ref="previewPanelRef"
+      :template="selectedTemplate"
+      @edit="openEditor(selectedTemplate)"
+    />
   </SettingsLayout>
 </template>

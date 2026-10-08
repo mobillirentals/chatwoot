@@ -98,6 +98,18 @@ class InboxPolicy < ApplicationPolicy
     @account_user.administrator?
   end
 
+  def create_message_template?
+    @account_user.administrator?
+  end
+
+  def update_message_template?
+    @account_user.administrator?
+  end
+
+  def destroy_message_template?
+    @account_user.administrator?
+  end
+
   def call_voicemail?
     @account_user.administrator?
   end

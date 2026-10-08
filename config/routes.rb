@@ -315,6 +315,9 @@ Rails.application.routes.draw do
             get :campaigns, on: :member
             get :agent_bot, on: :member
             get :message_templates, on: :member
+            post :create_message_template, on: :member
+            post :update_message_template, on: :member
+            delete :destroy_message_template, on: :member
             post :set_agent_bot, on: :member
             delete :avatar, on: :member
             post :sync_templates, on: :member
