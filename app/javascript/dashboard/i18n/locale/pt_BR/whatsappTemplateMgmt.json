@@ -178,6 +178,14 @@
       "SAVE": "Salvar e enviar",
       "SUBMITTED": "Modelo enviado para análise da Meta.",
       "FAILED": "A Meta não aceitou o modelo. Tente de novo."
+    },
+    "DELETE_TEMPLATE": "Apagar modelo",
+    "CONFIRM_DELETE": {
+      "TITLE": "Apagar {name}?",
+      "DESCRIPTION": "Não dá para desfazer. A Meta apaga o modelo de vez e ainda segura o nome por 30 dias antes de alguém poder criar outro com ele. As mensagens já enviadas não mudam.",
+      "CONFIRM": "Apagar modelo",
+      "SUCCESS": "Modelo apagado.",
+      "ERROR": "A Meta não apagou o modelo. Tente de novo."
     }
   }
 }

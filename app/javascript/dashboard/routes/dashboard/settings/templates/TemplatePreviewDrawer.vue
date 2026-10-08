@@ -24,7 +24,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['edit']);
+const emit = defineEmits(['edit', 'delete']);
 
 const { t } = useI18n();
 const META_TEMPLATE_MANAGER_URL =
@@ -57,16 +57,25 @@ const managementLabel = computed(() =>
     ? t('WHATSAPP_TEMPLATE_MGMT.MANAGE_IN_TWILIO')
     : t('WHATSAPP_TEMPLATE_MGMT.MANAGE_IN_META')
 );
+const isCloudTemplate = computed(
+  () =>
+    platform.value === PLATFORMS.WHATSAPP &&
+    Boolean(
+      props.template?.inboxes?.some(
+        inbox => inbox.provider_config?.business_account_id
+      )
+    )
+);
+
 // Editar aqui reenvia o modelo inteiro para a Meta, então só oferecemos o que a nossa tela sabe
 // remontar — o resto continua sendo editado no painel da Meta.
 const canEditHere = computed(
-  () =>
-    platform.value === PLATFORMS.WHATSAPP &&
-    props.template?.inboxes?.some(
-      inbox => inbox.provider_config?.business_account_id
-    ) &&
-    !unsupportedReason(props.template)
+  () => isCloudTemplate.value && !unsupportedReason(props.template)
 );
+
+// Apagar não remonta nada, então vale para qualquer modelo da Cloud — inclusive os que esta tela
+// não sabe editar.
+const canDeleteHere = isCloudTemplate;
 const statusLabel = computed(() =>
   props.template?.status?.toLowerCase() === 'unsubmitted'
     ? t('WHATSAPP_TEMPLATE_MGMT.STATUSES.UNSUBMITTED')
@@ -142,13 +151,29 @@ defineExpose({ open, close });
 
     <template v-if="managementUrl || canEditHere" #footer>
       <div class="flex flex-col gap-2">
-        <Button
-          v-if="canEditHere"
-          class="w-full"
-          :label="$t('WHATSAPP_TEMPLATE_MGMT.EDIT_TEMPLATE')"
-          icon="i-lucide-pencil"
-          @click="emit('edit')"
-        />
+        <div v-if="canEditHere || canDeleteHere" class="flex gap-2">
+          <Button
+            v-if="canEditHere"
+            class="flex-1"
+            :label="$t('WHATSAPP_TEMPLATE_MGMT.EDIT_TEMPLATE')"
+            icon="i-lucide-pencil"
+            @click="emit('edit')"
+          />
+          <!-- Apagar é definitivo e a Meta ainda segura o nome por 30 dias, então fica discreto
+               ao lado da ação principal, nunca como o botão mais fácil de acertar. -->
+          <Button
+            v-if="canDeleteHere"
+            :class="canEditHere ? '' : 'flex-1'"
+            :label="
+              canEditHere ? '' : $t('WHATSAPP_TEMPLATE_MGMT.DELETE_TEMPLATE')
+            "
+            :aria-label="$t('WHATSAPP_TEMPLATE_MGMT.DELETE_TEMPLATE')"
+            icon="i-lucide-trash-2"
+            color="ruby"
+            variant="faded"
+            @click="emit('delete')"
+          />
+        </div>
         <a
           v-if="managementUrl"
           :href="managementUrl"
