@@ -72,12 +72,22 @@ const managedAttributeKeys = computed(() => {
 // tempo — assumir não muda o status, então a contagem segue. Com a condição de agente ausente, a
 // mesma regra passa a fechar só o que ninguém pegou.
 //
-// Status e caixa saem da lista porque já são os controles da espera logo acima.
-const additionalFilterTypes = computed(() =>
-  props.filterTypes.filter(
+// A lista espelha AutomationRule::DELAYED_CONVERSATION_ATTRIBUTES: oferecer aqui o que o servidor
+// recusa só produziria um 422 depois de a pessoa preencher tudo.
+const DELAYED_STATUS_EXTRA_ATTRIBUTES = ['assignee_id'];
+
+const additionalFilterTypes = computed(() => {
+  // Status e caixa saem da lista porque já são os controles da espera logo acima.
+  const disponiveis = props.filterTypes.filter(
     filter => !managedAttributeKeys.value.has(filter.attributeKey)
-  )
-);
+  );
+
+  if (!isStatusTrigger.value) return disponiveis;
+
+  return disponiveis.filter(filter =>
+    DELAYED_STATUS_EXTRA_ATTRIBUTES.includes(filter.attributeKey)
+  );
+});
 
 const isAdditionalCondition = condition =>
   !managedAttributeKeys.value.has(condition.attribute_key);
@@ -390,7 +400,10 @@ defineExpose({ validate, resetValidation });
           : 'outline-n-weak dark:outline-n-strong'
       "
     >
-      <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_20rem]">
+      <!-- Empilhado, não lado a lado: o painel tem largura fixa (max-w-3xl), então o `md:` da
+           janela ativava sempre e os 20rem da explicação comiam metade do espaço — o nome da caixa
+           de entrada aparecia truncado em qualquer tela. -->
+      <div class="flex flex-col gap-3">
         <div class="flex flex-col min-w-0 gap-3">
           <div class="flex items-center gap-3 min-h-8">
             <span class="text-sm w-20 shrink-0 text-n-slate-11">
@@ -408,7 +421,7 @@ defineExpose({ validate, resetValidation });
             <span class="text-sm w-20 shrink-0 text-n-slate-11">
               {{ $t('AUTOMATION.ADD.FORM.WAIT.FOR_LABEL') }}
             </span>
-            <div class="flex items-center w-64 gap-2">
+            <div class="flex items-center w-full gap-2 min-w-0 sm:w-64">
               <DurationInput
                 v-model="delay"
                 v-model:unit="unit"
@@ -424,9 +437,7 @@ defineExpose({ validate, resetValidation });
             <MultiSelect v-model="triggerInboxes" :options="inboxOptions" />
           </div>
         </div>
-        <aside
-          class="flex gap-2 p-3 min-w-0 rounded-xl bg-n-alpha-1 md:self-start"
-        >
+        <aside class="flex gap-2 p-3 min-w-0 rounded-xl bg-n-alpha-1">
           <Icon icon="i-lucide-info" class="mt-0.5 shrink-0 text-n-slate-10" />
           <div class="flex flex-col min-w-0 gap-2">
             <p class="mb-0 text-xs text-n-slate-11">{{ explanation }}</p>
