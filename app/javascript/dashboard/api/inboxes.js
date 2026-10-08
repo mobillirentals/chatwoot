@@ -87,6 +87,28 @@ class Inboxes extends CacheEnabledApiClient {
     });
   }
 
+  // Modelos vivem na Meta, não no nosso banco: estas três mexem lá e sincronizam o espelho.
+  createMessageTemplate(inboxId, template) {
+    return axios.post(
+      `${this.url}/${inboxId}/create_message_template`,
+      template
+    );
+  }
+
+  // A Meta não deixa trocar nome nem idioma de um modelo existente, só o conteúdo.
+  updateMessageTemplate(inboxId, templateId, template) {
+    return axios.post(`${this.url}/${inboxId}/update_message_template`, {
+      ...template,
+      template_id: templateId,
+    });
+  }
+
+  destroyMessageTemplate(inboxId, { name, templateId }) {
+    return axios.delete(`${this.url}/${inboxId}/destroy_message_template`, {
+      params: { name, template_id: templateId },
+    });
+  }
+
   // Recado de voz: o que o cliente ouve quando a chamada é recusada. Vive na Meta, não no banco.
   getCallVoicemail(inboxId) {
     return axios.get(`${this.url}/${inboxId}/call_voicemail`);

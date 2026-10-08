@@ -15,6 +15,7 @@ import {
   templateStatusClasses,
   templateTypeKey,
 } from './templateUtils';
+import { unsupportedReason } from './composeTemplate';
 
 const props = defineProps({
   template: {
@@ -22,6 +23,8 @@ const props = defineProps({
     default: null,
   },
 });
+
+const emit = defineEmits(['edit']);
 
 const { t } = useI18n();
 const META_TEMPLATE_MANAGER_URL =
@@ -53,6 +56,16 @@ const managementLabel = computed(() =>
   platform.value === PLATFORMS.TWILIO
     ? t('WHATSAPP_TEMPLATE_MGMT.MANAGE_IN_TWILIO')
     : t('WHATSAPP_TEMPLATE_MGMT.MANAGE_IN_META')
+);
+// Editar aqui reenvia o modelo inteiro para a Meta, então só oferecemos o que a nossa tela sabe
+// remontar — o resto continua sendo editado no painel da Meta.
+const canEditHere = computed(
+  () =>
+    platform.value === PLATFORMS.WHATSAPP &&
+    props.template?.inboxes?.some(
+      inbox => inbox.provider_config?.business_account_id
+    ) &&
+    !unsupportedReason(props.template)
 );
 const statusLabel = computed(() =>
   props.template?.status?.toLowerCase() === 'unsubmitted'
@@ -127,15 +140,30 @@ defineExpose({ open, close });
       </div>
     </div>
 
-    <template v-if="managementUrl" #footer>
-      <a :href="managementUrl" target="_blank" rel="noopener noreferrer">
+    <template v-if="managementUrl || canEditHere" #footer>
+      <div class="flex flex-col gap-2">
         <Button
+          v-if="canEditHere"
           class="w-full"
-          :label="managementLabel"
-          icon="i-lucide-external-link"
-          trailing-icon
+          :label="$t('WHATSAPP_TEMPLATE_MGMT.EDIT_TEMPLATE')"
+          icon="i-lucide-pencil"
+          @click="emit('edit')"
         />
-      </a>
+        <a
+          v-if="managementUrl"
+          :href="managementUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button
+            class="w-full"
+            :label="managementLabel"
+            icon="i-lucide-external-link"
+            :color="canEditHere ? 'slate' : 'blue'"
+            trailing-icon
+          />
+        </a>
+      </div>
     </template>
   </SidePanel>
 </template>

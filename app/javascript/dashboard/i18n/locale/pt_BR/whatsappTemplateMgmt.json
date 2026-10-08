@@ -1,7 +1,7 @@
 {
   "WHATSAPP_TEMPLATE_MGMT": {
     "TITLE": "Modelos",
-    "DESCRIPTION": "Visualize os modelos de mensagens sincronizados das suas caixas de entrada do WhatsApp. Para criar ou editar um modelo, gerencie-o com seu provedor.",
+    "DESCRIPTION": "Veja os modelos de mensagem das suas caixas de entrada do WhatsApp. Aqui você cria e edita modelo de texto; o resto se gerencia com o provedor.",
     "COUNT": "{n} modelo | {n} modelos",
     "LEARN_MORE": "Saiba mais sobre os modelos do WhatsApp",
     "SYNC_TEMPLATES": "Sincronizar modelos",
@@ -11,6 +11,8 @@
     "SEARCH_PLACEHOLDER": "Pesquisar por conteúdo ou nome...",
     "MANAGE_IN_META": "Gerenciar na Meta",
     "MANAGE_IN_TWILIO": "Gerenciar no Twilio",
+    "NEW_TEMPLATE": "Criar modelo",
+    "EDIT_TEMPLATE": "Editar modelo",
     "LOADING": "Carregando modelos do WhatsApp...",
     "EMPTY": "Nenhum modelo do WhatsApp encontrado.",
     "NO_RESULTS": "Nenhum modelo corresponde aos seus filtros.",
@@ -48,6 +50,134 @@
       "CATEGORY": "Categoria",
       "LANGUAGE": "Idioma",
       "INBOXES": "Caixas de Entrada"
+    },
+    "EDITOR": {
+      "LOADING": "Carregando o modelo...",
+      "NO_INBOX": "Criar modelo exige uma caixa de entrada do WhatsApp Cloud ligada a uma conta comercial.",
+      "BACK_TO_LIST": "Voltar para os modelos",
+      "STEPS": {
+        "1": "Categoria",
+        "2": "Conteúdo"
+      },
+      "CATEGORY": {
+        "TITLE": "Categoria",
+        "DESCRIPTION": "A categoria define o preço de cada envio e as regras que o WhatsApp aplica à mensagem.",
+        "AUTH_NOTE": "Modelo de autenticação segue um formato fixo da Meta e é criado no painel do WhatsApp.",
+        "MARKETING": {
+          "LABEL": "Marketing",
+          "HELP": "Oferta, novidade e tudo que serve para trazer o cliente de volta."
+        },
+        "UTILITY": {
+          "LABEL": "Utilidade",
+          "HELP": "Retorno sobre algo que o cliente pediu: um pedido, uma reserva, um pagamento."
+        }
+      },
+      "TYPE": {
+        "TITLE": "Tipo de modelo",
+        "STANDARD": {
+          "LABEL": "Texto com botões",
+          "HELP": "Cabeçalho, corpo, rodapé e até 10 botões de resposta rápida ou link."
+        },
+        "OTHERS_NOTE": "Modelo de catálogo, Flows, pagamento e compartilhar contato é criado no painel do WhatsApp."
+      },
+      "IDENTITY": {
+        "TITLE": "Identificação",
+        "INBOX": "Caixa de entrada",
+        "INBOX_PLACEHOLDER": "Escolha uma caixa",
+        "LANGUAGE": "Idioma",
+        "NAME": "Nome",
+        "NAME_PLACEHOLDER": "aviso_pagamento",
+        "NAME_HELP": "Só letras minúsculas, números e sublinhado. O cliente nunca vê esse nome.",
+        "LOCKED": "Nome, idioma e caixa não mudam depois que o modelo é criado."
+      },
+      "CONTENT": {
+        "TITLE": "Conteúdo",
+        "HEADER": "Cabeçalho (opcional)",
+        "HEADER_PLACEHOLDER": "Um título curto",
+        "BODY": "Corpo",
+        "BODY_PLACEHOLDER": "Olá, sua reserva está confirmada.",
+        "BODY_HELP": "Use variável no que muda a cada envio.",
+        "ADD_VARIABLE": "Adicionar variável",
+        "FOOTER": "Rodapé (opcional)",
+        "FOOTER_PLACEHOLDER": "Uma linha de fechamento, sem variável",
+        "FORMAT": {
+          "BOLD": "Negrito",
+          "ITALIC": "Itálico",
+          "STRIKE": "Tachado",
+          "MONO": "Monoespaçado",
+          "NOTE": "A formatação vale só no corpo. O WhatsApp não formata o cabeçalho nem o rodapé."
+        },
+        "EXAMPLES": "Exemplos das variáveis",
+        "EXAMPLES_HELP": "A Meta exige um exemplo por variável e lê esse valor para entender o modelo. Valor real ajuda na aprovação; genérico pesa contra.",
+        "EXAMPLE_PLACEHOLDER": "Um valor real, ex.: Ana Souza"
+      },
+      "BUTTONS": {
+        "TITLE": "Botões (opcional)",
+        "DESCRIPTION": "Resposta rápida abre conversa; link leva o cliente para uma página.",
+        "TEXT": "Texto do botão",
+        "URL": "Link",
+        "ADD_QUICK_REPLY": "Resposta rápida",
+        "ADD_URL": "Link",
+        "KIND": {
+          "QUICK_REPLY": "Resposta rápida",
+          "URL": "Link"
+        },
+        "URL_PLACEHOLDER": "https://"
+      },
+      "PREVIEW": {
+        "TITLE": "Prévia",
+        "EMPTY_BODY": "Sua mensagem aparece aqui.",
+        "VARIABLE_NOTE": "Aqui a variável aparece como exemplo; o valor de verdade entra na hora do envio."
+      },
+      "ERRORS": {
+        "NAME": {
+          "REQUIRED": "Dê um nome ao modelo.",
+          "FORMAT": "Use só letras minúsculas, números e sublinhado.",
+          "TOO_LONG": "O nome está longo demais."
+        },
+        "BODY": {
+          "REQUIRED": "O corpo não pode ficar vazio.",
+          "TOO_LONG": "O corpo está longo demais.",
+          "VARIABLE_ORDER": "Numere as variáveis a partir de 1, sem pular nenhum número.",
+          "DANGLING": "O corpo não pode começar nem terminar com variável. Ponha um texto fixo em volta."
+        },
+        "HEADER": {
+          "TOO_LONG": "O cabeçalho está longo demais.",
+          "ONE_VARIABLE": "O cabeçalho aceita no máximo uma variável."
+        },
+        "FOOTER": {
+          "TOO_LONG": "O rodapé está longo demais.",
+          "NO_VARIABLES": "O rodapé não aceita variável."
+        },
+        "BUTTONS": {
+          "TOO_MANY": "O modelo aceita no máximo 10 botões.",
+          "TEXT_REQUIRED": "Todo botão precisa de um texto.",
+          "URL_REQUIRED": "Botão de link precisa de um endereço."
+        },
+        "EXAMPLES": {
+          "REQUIRED": "Preencha um exemplo para cada variável."
+        }
+      },
+      "UNSUPPORTED": {
+        "TITLE": "Este modelo se edita no painel do WhatsApp",
+        "OPEN_META": "Abrir painel do WhatsApp",
+        "NOT_FOUND": "Não foi possível carregar este modelo. Sincronize os modelos e tente de novo.",
+        "AUTHENTICATION": "Modelo de autenticação segue um formato fixo da Meta.",
+        "MEDIA_HEADER": "Este modelo tem cabeçalho de imagem, vídeo ou documento, que esta tela não sabe remontar.",
+        "EXTRA_COMPONENT": "Este modelo tem conteúdo que esta tela não sabe remontar, e editar aqui apagaria esse conteúdo.",
+        "BUTTON_TYPE": "Este modelo tem um tipo de botão que esta tela não sabe remontar, como ligar, copiar código ou Flow.",
+        "CATEGORY": "Este modelo usa uma categoria que a Meta não aceita mais em envio novo, como transacional ou OTP.",
+        "STATUS": "Este modelo ainda está em análise na Meta. Só dá para editar modelo aprovado, reprovado ou pausado."
+      },
+      "NEW_NOTE": "O modelo vai para análise da Meta e só pode ser usado depois de aprovado.",
+      "EDIT_NOTE": "A Meta permite 1 edição a cada 24 horas e 10 a cada 30 dias. Modelo aprovado é reaprovado automaticamente, a menos que reprove na análise.",
+      "CANCEL": "Cancelar",
+      "BACK": "Voltar",
+      "NEXT": "Próximo",
+      "SUBMIT": "Enviar para análise",
+      "SAVE": "Salvar e enviar",
+      "SUBMITTED": "Modelo enviado para análise da Meta.",
+      "FAILED": "A Meta não aceitou o modelo. Tente de novo."
     }
   }
 }

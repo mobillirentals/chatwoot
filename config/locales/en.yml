@@ -189,6 +189,17 @@ en:
         permission_request_failed: 'Failed to send call permission request'
         permission_request_window_closed: 'Call permission request not sent: the 24-hour messaging window is closed. Ask the contact to send a message first.'
         voicemail_audio_required: 'Choose an audio file (OGG/Opus, under 60 seconds) for the voicemail announcement.'
+      templates:
+        category_not_supported: 'Only Marketing and Utility templates can be created here. Authentication templates follow rules of their own and must be managed in the Meta panel.'
+        body_required: 'The message body is required.'
+        footer_no_variables: 'The footer cannot contain variables.'
+        dangling_variable: 'The body cannot start or end with a variable. Add fixed text around it.'
+        too_long: 'The %{field} is longer than the %{max} characters WhatsApp allows.'
+        too_many_buttons: 'WhatsApp allows at most %{max} buttons.'
+        button_not_supported: 'Only quick reply and link buttons can be created here.'
+        button_url_required: 'A link button needs a URL.'
+        name_format: 'The name can only use lowercase letters, numbers and underscores.'
+        inbox_not_supported: 'This inbox cannot manage templates. Only WhatsApp Cloud inboxes can.'
     openai:
       invalid_api_key: 'OpenAI API key is invalid or revoked. Please check your key in your OpenAI dashboard.'
     inboxes:

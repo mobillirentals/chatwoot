@@ -1,7 +1,7 @@
 {
   "WHATSAPP_TEMPLATE_MGMT": {
     "TITLE": "Templates",
-    "DESCRIPTION": "View the message templates synced from your WhatsApp inboxes. To create or edit a template, manage it with your provider.",
+    "DESCRIPTION": "View the message templates from your WhatsApp inboxes. You can create and edit text templates here; the rest is managed with your provider.",
     "COUNT": "{n} template | {n} templates",
     "LEARN_MORE": "Learn more about WhatsApp templates",
     "SYNC_TEMPLATES": "Sync templates",
@@ -11,6 +11,8 @@
     "SEARCH_PLACEHOLDER": "Search by content or name...",
     "MANAGE_IN_META": "Manage in Meta",
     "MANAGE_IN_TWILIO": "Manage in Twilio",
+    "NEW_TEMPLATE": "Create template",
+    "EDIT_TEMPLATE": "Edit template",
     "LOADING": "Loading WhatsApp templates...",
     "EMPTY": "No WhatsApp templates found.",
     "NO_RESULTS": "No templates match your filters.",
@@ -48,6 +50,134 @@
       "CATEGORY": "Category",
       "LANGUAGE": "Language",
       "INBOXES": "Inboxes"
+    },
+    "EDITOR": {
+      "LOADING": "Loading template...",
+      "NO_INBOX": "Creating templates requires a WhatsApp Cloud inbox connected to a business account.",
+      "BACK_TO_LIST": "Back to templates",
+      "STEPS": {
+        "1": "Category",
+        "2": "Content"
+      },
+      "CATEGORY": {
+        "TITLE": "Category",
+        "DESCRIPTION": "The category sets the price of each send and the rules WhatsApp applies to the message.",
+        "AUTH_NOTE": "Authentication templates follow a fixed format set by Meta and are created in the WhatsApp Manager.",
+        "MARKETING": {
+          "LABEL": "Marketing",
+          "HELP": "Offers, news and anything meant to bring the customer back."
+        },
+        "UTILITY": {
+          "LABEL": "Utility",
+          "HELP": "Follow-up on something the customer asked for: an order, a booking, a payment."
+        }
+      },
+      "TYPE": {
+        "TITLE": "Template type",
+        "STANDARD": {
+          "LABEL": "Text with buttons",
+          "HELP": "Header, body, footer and up to 10 quick reply or link buttons."
+        },
+        "OTHERS_NOTE": "Catalog, Flows, payment and contact-sharing templates are created in the WhatsApp Manager."
+      },
+      "IDENTITY": {
+        "TITLE": "Identification",
+        "INBOX": "Inbox",
+        "INBOX_PLACEHOLDER": "Select an inbox",
+        "LANGUAGE": "Language",
+        "NAME": "Name",
+        "NAME_PLACEHOLDER": "payment_reminder",
+        "NAME_HELP": "Lowercase letters, numbers and underscore only. The customer never sees it.",
+        "LOCKED": "Name, language and inbox cannot be changed after the template is created."
+      },
+      "CONTENT": {
+        "TITLE": "Content",
+        "HEADER": "Header (optional)",
+        "HEADER_PLACEHOLDER": "A short title",
+        "BODY": "Body",
+        "BODY_PLACEHOLDER": "Hi, your booking is confirmed.",
+        "BODY_HELP": "Use variables for anything that changes with each send.",
+        "ADD_VARIABLE": "Add variable",
+        "FOOTER": "Footer (optional)",
+        "FOOTER_PLACEHOLDER": "A closing line, with no variables",
+        "FORMAT": {
+          "BOLD": "Bold",
+          "ITALIC": "Italic",
+          "STRIKE": "Strikethrough",
+          "MONO": "Monospace",
+          "NOTE": "Formatting works in the body only. WhatsApp does not format the header or the footer."
+        },
+        "EXAMPLES": "Example values",
+        "EXAMPLES_HELP": "Meta requires one example per variable and reads it to understand your template. A real value helps approval; a generic one works against it.",
+        "EXAMPLE_PLACEHOLDER": "A real value, e.g. Ana Souza"
+      },
+      "BUTTONS": {
+        "TITLE": "Buttons (optional)",
+        "DESCRIPTION": "Quick replies open a conversation; links take the customer to a page.",
+        "TEXT": "Button text",
+        "URL": "Link",
+        "ADD_QUICK_REPLY": "Quick reply",
+        "ADD_URL": "Link",
+        "KIND": {
+          "QUICK_REPLY": "Quick reply",
+          "URL": "Link"
+        },
+        "URL_PLACEHOLDER": "https://"
+      },
+      "PREVIEW": {
+        "TITLE": "Preview",
+        "EMPTY_BODY": "Your message appears here.",
+        "VARIABLE_NOTE": "Variables show as examples here; the real values go in when the message is sent."
+      },
+      "ERRORS": {
+        "NAME": {
+          "REQUIRED": "Give the template a name.",
+          "FORMAT": "Use lowercase letters, numbers and underscore only.",
+          "TOO_LONG": "The name is too long."
+        },
+        "BODY": {
+          "REQUIRED": "The body cannot be empty.",
+          "TOO_LONG": "The body is too long.",
+          "VARIABLE_ORDER": "Number the variables from 1 with no gaps.",
+          "DANGLING": "The body cannot start or end with a variable. Add fixed text around it."
+        },
+        "HEADER": {
+          "TOO_LONG": "The header is too long.",
+          "ONE_VARIABLE": "The header takes at most one variable."
+        },
+        "FOOTER": {
+          "TOO_LONG": "The footer is too long.",
+          "NO_VARIABLES": "The footer does not accept variables."
+        },
+        "BUTTONS": {
+          "TOO_MANY": "A template takes at most 10 buttons.",
+          "TEXT_REQUIRED": "Every button needs a text.",
+          "URL_REQUIRED": "A link button needs an address."
+        },
+        "EXAMPLES": {
+          "REQUIRED": "Fill in an example for every variable."
+        }
+      },
+      "UNSUPPORTED": {
+        "TITLE": "This template is edited in the WhatsApp Manager",
+        "OPEN_META": "Open WhatsApp Manager",
+        "NOT_FOUND": "This template could not be loaded. Sync the templates and try again.",
+        "AUTHENTICATION": "Authentication templates follow a fixed format set by Meta.",
+        "MEDIA_HEADER": "This template has an image, video or document header, which this screen cannot rebuild.",
+        "EXTRA_COMPONENT": "This template has content this screen cannot rebuild, and editing it here would drop that content.",
+        "BUTTON_TYPE": "This template has a button type this screen cannot rebuild, such as call, copy code or Flow.",
+        "CATEGORY": "This template uses a category Meta no longer accepts on new submissions, such as transactional or OTP.",
+        "STATUS": "This template is still under review by Meta. Only approved, rejected or paused templates can be edited."
+      },
+      "NEW_NOTE": "The template goes to Meta for review and can only be used once approved.",
+      "EDIT_NOTE": "Meta allows 1 edit every 24 hours and 10 every 30 days. An approved template is re-approved automatically unless it fails review.",
+      "CANCEL": "Cancel",
+      "BACK": "Back",
+      "NEXT": "Next",
+      "SUBMIT": "Submit for review",
+      "SAVE": "Save and submit",
+      "SUBMITTED": "Template sent to Meta for review.",
+      "FAILED": "Meta did not accept the template. Please try again."
     }
   }
 }

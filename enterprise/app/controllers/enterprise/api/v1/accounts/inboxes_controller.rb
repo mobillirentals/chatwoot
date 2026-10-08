@@ -4,6 +4,7 @@ module Enterprise::Api::V1::Accounts::InboxesController
   # No corpo do módulo, não em `included do`: este módulo é PREPENDED no controller, e o bloco
   # `included` do ActiveSupport::Concern não dispara em prepend — as ações sumiriam em silêncio.
   include Enterprise::Api::V1::Accounts::Inboxes::CallVoicemailActions
+  include Enterprise::Api::V1::Accounts::Inboxes::MessageTemplateActions
 
   def inbox_attributes
     super + ee_inbox_attributes

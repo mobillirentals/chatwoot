@@ -164,6 +164,17 @@ pt_BR:
         permission_request_failed: 'Falha ao enviar solicitação de permissão de chamada'
         permission_request_window_closed: 'Solicitação de permissão não enviada: a janela de 24 horas está fechada. Peça ao contato que escreva primeiro.'
         voicemail_audio_required: 'Escolha um arquivo de áudio (OGG/Opus, menos de 60 segundos) para o recado.'
+      templates:
+        category_not_supported: 'Só dá para criar modelos de Marketing e Utilidade por aqui. Os de Autenticação seguem regras próprias e precisam ser feitos no painel da Meta.'
+        body_required: 'O corpo da mensagem é obrigatório.'
+        footer_no_variables: 'O rodapé não aceita variáveis.'
+        dangling_variable: 'O corpo não pode começar nem terminar com variável. Ponha um texto fixo em volta.'
+        too_long: 'O campo %{field} passou dos %{max} caracteres que o WhatsApp permite.'
+        too_many_buttons: 'O WhatsApp aceita no máximo %{max} botões.'
+        button_not_supported: 'Só dá para criar botões de resposta rápida e de link por aqui.'
+        button_url_required: 'Botão de link precisa de um endereço.'
+        name_format: 'O nome só aceita letras minúsculas, números e sublinhado.'
+        inbox_not_supported: 'Esta caixa não gerencia modelos. Só as caixas do WhatsApp Cloud conseguem.'
     openai:
       invalid_api_key: 'A chave da API da OpenAI é inválida ou revogada. Por favor, verifique sua chave no seu painel da OpenAI.'
     inboxes:
