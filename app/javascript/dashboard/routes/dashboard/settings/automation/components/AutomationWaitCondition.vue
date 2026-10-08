@@ -66,15 +66,18 @@ const managedAttributeKeys = computed(() => {
   return new Set([...keys, 'message_type', 'private_note']);
 });
 
-const additionalFilterTypes = computed(() => {
-  // Conversation-level waits only support status and inbox, and both are already managed by the
-  // wait controls. Message waits can safely combine their event fields with the remaining filters.
-  if (isStatusTrigger.value) return [];
-
-  return props.filterTypes.filter(
+// A espera observa só o status, mas a condição é reavaliada na hora de executar
+// (ProcessPendingExecutionJob#conditions_still_match?). Sem poder somar outra condição aqui, uma
+// regra do tipo "resolve 1h depois" fecha também a conversa que um atendente assumiu nesse meio
+// tempo — assumir não muda o status, então a contagem segue. Com a condição de agente ausente, a
+// mesma regra passa a fechar só o que ninguém pegou.
+//
+// Status e caixa saem da lista porque já são os controles da espera logo acima.
+const additionalFilterTypes = computed(() =>
+  props.filterTypes.filter(
     filter => !managedAttributeKeys.value.has(filter.attributeKey)
-  );
-});
+  )
+);
 
 const isAdditionalCondition = condition =>
   !managedAttributeKeys.value.has(condition.attribute_key);
