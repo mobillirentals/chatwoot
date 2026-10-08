@@ -178,6 +178,14 @@
       "SAVE": "Save and submit",
       "SUBMITTED": "Template sent to Meta for review.",
       "FAILED": "Meta did not accept the template. Please try again."
+    },
+    "DELETE_TEMPLATE": "Delete template",
+    "CONFIRM_DELETE": {
+      "TITLE": "Delete {name}?",
+      "DESCRIPTION": "This cannot be undone. Meta deletes the template for good, and holds the name for 30 days before anyone can create another one with it. Messages already sent are not affected.",
+      "CONFIRM": "Delete template",
+      "SUCCESS": "Template deleted.",
+      "ERROR": "Meta did not delete the template. Please try again."
     }
   }
 }

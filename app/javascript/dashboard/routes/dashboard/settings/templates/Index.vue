@@ -17,6 +17,7 @@ import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import TemplateCard from './TemplateCard.vue';
 import TemplatePreviewDrawer from './TemplatePreviewDrawer.vue';
+import ConfirmDeleteTemplateDialog from './ConfirmDeleteTemplateDialog.vue';
 import {
   formatTemplateDate,
   formatTemplateLanguage,
@@ -47,6 +48,7 @@ const selectedType = ref('all');
 const selectedTemplate = ref(null);
 const openFilterMenu = ref(null);
 const previewPanelRef = ref(null);
+const deleteDialogRef = ref(null);
 const templateRecordsByInboxId = new Map();
 const lastSyncAttemptsByInboxId = ref({});
 const isSyncing = ref(false);
@@ -326,6 +328,18 @@ const fetchTemplates = async () => {
   }
 };
 
+// O painel fecha antes do diálogo abrir: deixar os dois na tela esconde metade da confirmação.
+const confirmarExclusao = () => {
+  previewPanelRef.value?.close();
+  deleteDialogRef.value?.dialogRef?.open();
+};
+
+// A Meta já apagou; sincronizar é o que tira o modelo da lista, que é só um espelho dela.
+const aoApagar = () => {
+  selectedTemplate.value = null;
+  fetchTemplates();
+};
+
 const syncTemplates = async () => {
   if (isSyncing.value) return;
 
@@ -464,6 +478,13 @@ onDeactivated(abortTemplateRequest);
       ref="previewPanelRef"
       :template="selectedTemplate"
       @edit="openEditor(selectedTemplate)"
+      @delete="confirmarExclusao"
+    />
+
+    <ConfirmDeleteTemplateDialog
+      ref="deleteDialogRef"
+      :template="selectedTemplate"
+      @deleted="aoApagar"
     />
   </SettingsLayout>
 </template>
