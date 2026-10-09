@@ -103,7 +103,7 @@ class Api::V1::Accounts::WhatsappBulkDispatchesController < Api::V1::Accounts::B
   end
 
   # Checagem consultiva contra o whatsapp-number-checker (servico standalone, ver
-  # .ai/features/whatsapp-number-checker/status.md) — puramente informativa, nunca bloqueia a
+  # .agent/features/whatsapp-number-checker/status.md) — puramente informativa, nunca bloqueia a
   # validacao da planilha. Se o servico estiver fora do ar ou nao configurado, tudo cai em
   # `unchecked` e o front so deixa de mostrar a contagem, sem erro nenhum pro operador.
   def whatsapp_check_summary(valid_rows)
