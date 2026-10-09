@@ -1,16 +1,31 @@
 # Chatwoot Development Guidelines
 
-## AI Context — Ler antes de começar
+## Agent Context — Ler antes de começar
 
-Este projeto tem documentação de contexto em `.ai/` (não commitado). **Ler nesta ordem antes de abrir código-fonte:**
+Este projeto tem documentação de contexto em `.agent/`. **Ler nesta ordem antes de abrir código-fonte:**
 
-1. `.ai/project_summary.md` — stack, features customizadas, regras gerais
-2. `.ai/context.md` — arquitetura detalhada das features Mobílli
-3. `.ai/workflow.md` — SSH VM, deploy, git
-4. `.ai/current_tasks.md` — estado atual e tarefas em andamento
+1. `.agent/project_summary.md` — stack, features customizadas, regras gerais
+2. `.agent/context.md` — arquitetura detalhada das features Mobílli
+3. `.agent/workflow.md` — SSH VM, deploy, git
+4. `.agent/current_tasks.md` — estado atual e tarefas em andamento
 5. `docs/bot-flows/service-flow.md` — fluxo do bot de triagem (quando relevante)
 
-**Por que:** Evitar varrer dezenas de arquivos desnecessariamente. Os docs `.ai/` são a fonte primária de contexto.
+**Por que:** Evitar varrer dezenas de arquivos desnecessariamente. Os docs `.agent/` são a fonte primária de contexto.
+
+## Manter a documentação viva
+
+O `.agent/` é versionado: **a doc anda no mesmo PR da mudança**, não depois.
+
+- Mudou o comportamento de uma feature → atualizar o `features/<nome>/status.md` dela
+- Corrigiu algo pontual → uma entrada no topo do `fixes-log.md`, com o **porquê**, não só o quê
+- Descobriu uma armadilha que custou tempo → registrar, mesmo que o código já esteja certo
+
+O valor dessas páginas não é descrever o que o código faz — isso o código já faz melhor. É guardar
+**por que** foi feito assim, e o que já deu errado antes. Um PR que muda comportamento sem tocar a
+doc deixa a próxima pessoa (ou o próximo agente) repetindo um erro que alguém já pagou.
+
+⚠️ Nada de dado pessoal de cliente, credencial ou endereço de servidor nas docs — elas são
+versionadas. Use papéis ("um cliente"), números de exemplo e marcadores como `<IP_DA_VM>`.
 
 ## Build / Test / Lint
 
@@ -46,11 +61,11 @@ Este projeto tem documentação de contexto em `.ai/` (não commitado). **Ler ne
 
 ## Styling
 
-- **Tailwind Only**:  
-  - Do not write custom CSS  
-  - Do not use scoped CSS  
-  - Do not use inline styles  
-  - Always use Tailwind utility classes  
+- **Tailwind Only**:
+  - Do not write custom CSS
+  - Do not use scoped CSS
+  - Do not use inline styles
+  - Always use Tailwind utility classes
 - **Colors**: Refer to `tailwind.config.js` for color definitions
 
 ## General Guidelines

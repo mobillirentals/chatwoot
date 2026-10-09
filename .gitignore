@@ -108,8 +108,6 @@ yarn-debug.log*
 .claude/
 CLAUDE.local.md
 
-# AI memory / context (local only, not committed)
-.ai/
 
 # Histoire deployment
 .netlify
@@ -121,3 +119,7 @@ Procfile.worktree
 # Local dev overrides (per-machine, e.g. pointing at a native Vite instead of Docker)
 docker-compose.override.yml
 .nodeterm/project.json
+
+# Emulador local do Azure Storage (Azurite)
+AzuriteConfig
+__azurite_db*.json

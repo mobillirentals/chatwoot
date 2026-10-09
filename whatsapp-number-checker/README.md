@@ -2,7 +2,7 @@
 
 Serviço standalone pra verificar se um número existe no WhatsApp. Hoje está **ligado** ao
 Chatwoot (Settings → Integrações → "WhatsApp Number Checker", ver
-`.ai/features/whatsapp-number-checker/status.md`), mas continua isolado na infra — build,
+`.agent/features/whatsapp-number-checker/status.md`), mas continua isolado na infra — build,
 Dockerfile e sessão pareada são só deste diretório, nada aqui depende do resto do app pra
 funcionar sozinho.
 
@@ -110,7 +110,7 @@ estiver fora do ar ou não pareado):
    contato pelo mesmo caminho.
 
 Configuração (Settings → Integrações → "WhatsApp Number Checker") e detalhes de decisão →
-`.ai/features/whatsapp-number-checker/status.md`.
+`.agent/features/whatsapp-number-checker/status.md`.
 
 ## Como remover completamente
 
